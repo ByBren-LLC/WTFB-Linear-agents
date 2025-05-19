@@ -1,0 +1,49 @@
+{
+  "name": "wtfb-linear-agents",
+  "version": "0.1.0",
+  "description": "WTFB Linear Agents for SAFe Essentials workflow integration",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ByBren-LLC/WTFB-Linear-agents.git"
+  },
+  "keywords": [
+    "linear",
+    "agent",
+    "safe",
+    "planning",
+    "wtfb"
+  ],
+  "author": "Words to Film By",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ByBren-LLC/WTFB-Linear-agents/issues"
+  },
+  "homepage": "https://github.com/ByBren-LLC/WTFB-Linear-agents#readme",
+  "dependencies": {
+    "@linear/sdk": "^2.6.0",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.22",
+    "@types/jsonwebtoken": "^9.0.1",
+    "@types/node": "^18.19.101",
+    "@types/pg": "^8.6.6",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
