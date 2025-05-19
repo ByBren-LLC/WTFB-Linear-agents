@@ -6,8 +6,16 @@ You are assigned to implement the Token Management user story for the Linear Pla
 ## Linear Project Information
 - **Linear Project**: [SAFe Agents](https://linear.app/wordstofilmby/project/safe-agents-41505bde79df/overview)
 - **Linear Team**: [Linear Agents](https://linear.app/wordstofilmby/team/LIN/all)
-- **Issue Type**: User Story
-- **Priority**: High
+
+## Linear Issue Creation
+As part of this task, you should:
+1. Create a new issue in the Linear project
+2. Set the issue type to "User Story"
+3. Set the priority to "High"
+4. Title the issue "Implement Token Management"
+5. Include a brief description referencing this implementation document
+6. Add the labels "authentication" and "security"
+7. Assign the issue to yourself
 
 ## Implementation Document
 Your detailed implementation document is available in the repository:

@@ -6,8 +6,16 @@ You are assigned to implement the Database Schema Design technical enabler for t
 ## Linear Project Information
 - **Linear Project**: [SAFe Agents](https://linear.app/wordstofilmby/project/safe-agents-41505bde79df/overview)
 - **Linear Team**: [Linear Agents](https://linear.app/wordstofilmby/team/LIN/all)
-- **Issue Type**: Technical Enabler
-- **Priority**: High
+
+## Linear Issue Creation
+As part of this task, you should:
+1. Create a new issue in the Linear project
+2. Set the issue type to "Technical Enabler"
+3. Set the priority to "High"
+4. Title the issue "Database Schema Design"
+5. Include a brief description referencing this implementation document
+6. Add the label "architecture"
+7. Assign the issue to yourself
 
 ## Implementation Document
 Your detailed implementation document is available in the repository:
