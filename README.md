@@ -46,9 +46,55 @@ Example:
 
 ### Running with Docker
 
+#### Production Mode
+
 ```bash
-npm run docker:build
-npm run docker:up
+# Build and start the containers
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the containers
+docker-compose down
+```
+
+#### Development Mode
+
+```bash
+# Build and start the containers in development mode
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the containers
+docker-compose down
+```
+
+### Using the Synchronization CLI
+
+The Linear Planning Agent includes a CLI for managing synchronization between Linear and Confluence:
+
+```bash
+# Start synchronization
+npm run sync:start -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+
+# Stop synchronization
+npm run sync:stop -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+
+# Get synchronization status
+npm run sync:status -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+
+# Manually trigger synchronization
+npm run sync:trigger -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+```
+
+You can also run these commands inside the Docker container:
+
+```bash
+# Start synchronization
+docker-compose exec app npm run sync:start -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
 ```
 
 ### Testing
