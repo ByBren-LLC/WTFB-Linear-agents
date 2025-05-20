@@ -23,13 +23,13 @@ export const query = async (text: string, params: any[] = []) => {
     const start = Date.now();
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    
-    logger.debug('Executed query', { 
-      text, 
-      duration, 
-      rows: res.rowCount 
+
+    logger.debug('Executed query', {
+      text,
+      duration,
+      rows: res.rowCount
     });
-    
+
     return res;
   } catch (error) {
     logger.error('Error executing query', { error, text });
@@ -42,21 +42,24 @@ export const query = async (text: string, params: any[] = []) => {
  */
 export const getClient = async () => {
   const client = await pool.connect();
-  const query = client.query;
-  const release = client.release;
-  
+  const originalQuery = client.query;
+  const originalRelease = client.release;
+
+  // Add a property to store the last query
+  const clientWithLastQuery = client as any;
+
   // Monkey patch the query method to log queries
-  client.query = (...args: any[]) => {
-    client.lastQuery = args[0];
-    return query.apply(client, args);
+  clientWithLastQuery.query = function() {
+    clientWithLastQuery.lastQuery = arguments[0];
+    return originalQuery.apply(client, arguments as any);
   };
-  
+
   // Monkey patch the release method to log release
-  client.release = () => {
-    client.query = query;
-    client.release = release;
-    return release.apply(client);
+  clientWithLastQuery.release = () => {
+    clientWithLastQuery.query = originalQuery;
+    clientWithLastQuery.release = originalRelease;
+    return originalRelease.apply(client);
   };
-  
-  return client;
+
+  return clientWithLastQuery;
 };
