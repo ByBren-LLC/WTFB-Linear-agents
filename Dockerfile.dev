@@ -6,12 +6,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copy application code
-COPY . .
-
-# Build TypeScript
-RUN npm run build
-
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
@@ -19,9 +13,9 @@ RUN mkdir -p /app/data
 EXPOSE 3000
 
 # Set environment variables
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV PORT=3000
 ENV SQLITE_DB_PATH=/app/data/sync.db
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application in development mode
+CMD ["npm", "run", "dev"]

@@ -16,6 +16,10 @@ services:
       - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
       - CONFLUENCE_BASE_URL=${CONFLUENCE_BASE_URL}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - SQLITE_DB_PATH=/app/data/sync.db
+      - NODE_ENV=production
+    volumes:
+      - sqlite_data:/app/data
     depends_on:
       - db
 
@@ -32,3 +36,4 @@ services:
 
 volumes:
   postgres_data:
+  sqlite_data:
