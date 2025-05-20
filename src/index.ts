@@ -5,6 +5,7 @@ import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db/models';
 import * as logger from './utils/logger';
 import planningRoutes from './api/planning';
+import apiRoutes from './routes';
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,9 @@ app.post('/webhook', handleWebhook);
 
 // Planning API routes
 app.use('/api/planning', planningRoutes);
+
+// API routes
+app.use('/api', apiRoutes);
 
 // Initialize the database and start the server
 (async () => {
