@@ -1,91 +1,137 @@
-# Planning Information Extractor
+# Planning Session State Management
 
-This module extracts planning information from parsed Confluence documents. It identifies epics, features, stories, enablers, and their relationships.
-
-## Overview
-
-The Planning Information Extractor analyzes the structure and content of Confluence documents to identify SAFe planning items and their relationships. It provides a clean API for accessing the extracted planning information.
+This module provides state management for planning sessions in the Linear Planning Agent. It tracks the state of planning sessions, including progress, errors, and results, and provides a clean API for updating and querying the state.
 
 ## Components
 
-### Models
+### State Models (`state.ts`)
 
-The `models.ts` file defines the data models for planning items:
+Defines the interfaces and types for planning session state management:
 
-- `PlanningItem`: Base interface for all planning items
-- `Epic`: Represents a large body of work that can be broken down into features
-- `Feature`: Represents a service that fulfills a stakeholder need
-- `Story`: Represents a short description of a small piece of desired functionality
-- `Enabler`: Represents an activity needed to extend the Architectural Runway
-- `PlanningDocument`: Contains all planning items and their relationships
+- `PlanningSessionStatus`: Enum representing the possible states of a planning session (pending, processing, completed, failed)
+- `PlanningSessionError`: Interface representing an error that occurred during a planning session
+- `PlanningSessionWarning`: Interface representing a warning that occurred during a planning session
+- `PlanningSessionResult`: Interface representing the results of a planning session (created issues)
+- `PlanningSessionState`: Interface representing the complete state of a planning session
+- `PlanningSessionUpdate`: Interface representing an update to a planning session state
 
-### Extractor
+### State Manager (`state-manager.ts`)
 
-The `extractor.ts` file defines the main extractor class:
+Provides a class for managing the state of planning sessions:
 
-- `PlanningExtractor`: Extracts planning information from parsed Confluence documents
+- `PlanningSessionStateManager`: Class for managing the state of a planning session
+  - `initialize()`: Initializes the planning session state from the database
+  - `getState()`: Gets the current state of the planning session
+  - `updateState()`: Updates the planning session state
+  - `setProgress()`: Sets the progress of the planning session
+  - `setStatus()`: Sets the status of the planning session
+  - `addError()`: Adds an error to the planning session
+  - `addWarning()`: Adds a warning to the planning session
+  - `setResult()`: Sets the result of the planning session
 
-### Pattern Recognition
+### State Store (`state-store.ts`)
 
-The `pattern-recognition.ts` file contains functions for recognizing different types of planning items:
+Provides a class for storing and retrieving planning session state:
 
-- `isEpicSection`: Checks if a section represents an epic
-- `isFeatureSection`: Checks if a section represents a feature
-- `isStorySection`: Checks if a section represents a story
-- `isEnablerSection`: Checks if a section represents an enabler
-- `extractAcceptanceCriteria`: Extracts acceptance criteria from a section
-- `extractStoryPoints`: Extracts story points from a section
-- `extractAttributes`: Extracts attributes from a section
+- `PlanningSessionStateStore`: Class for storing and retrieving planning session state
+  - `getStateManager()`: Gets a state manager for a planning session
+  - `getState()`: Gets the state of a planning session
+  - `getStatesByOrganization()`: Gets the states of all planning sessions for an organization
+  - `deleteState()`: Deletes a planning session
 
-### Relationship Analyzer
+### Process Manager (`process.ts`)
 
-The `relationship-analyzer.ts` file contains functions for analyzing relationships between planning items:
+Provides a function for starting and managing the planning process:
 
-- `buildEpicFeatureRelationships`: Builds relationships between epics and features
-- `buildFeatureStoryRelationships`: Builds relationships between features and stories
-- `buildFeatureEnablerRelationships`: Builds relationships between features and enablers
+- `startPlanningProcess()`: Starts the planning process for a planning session
 
-### Structure Analyzer
+## API Endpoints (`api/planning.ts`)
 
-The `structure-analyzer.ts` file contains functions for analyzing document structure:
+Provides API endpoints for managing planning sessions:
 
-- `identifyPlanningStructure`: Identifies planning structure in document sections
-- `flattenDocumentStructure`: Flattens document structure
-- `extractEpicsFromSections`: Extracts epics from document sections
-- `extractFeaturesFromSections`: Extracts features from document sections
-- `extractStoriesFromSections`: Extracts stories from document sections
-- `extractEnablersFromSections`: Extracts enablers from document sections
+- `POST /planning/sessions`: Create a new planning session
+- `GET /planning/sessions/:id`: Get a planning session
+- `GET /planning/sessions?organizationId=:organizationId`: Get planning sessions by organization
+- `POST /planning/sessions/:id/start`: Start a planning session
+- `DELETE /planning/sessions/:id`: Delete a planning session
 
 ## Usage
 
+### Creating a Planning Session
+
 ```typescript
-import { PlanningExtractor } from './planning/extractor';
+import { createPlanningSession } from '../db/models';
+import { planningSessionStateStore } from '../planning/state-store';
 
-// Assuming you have parsed Confluence content and document sections
-const extractor = new PlanningExtractor(parsedContent, documentSections);
+// Create a planning session in the database
+const session = await createPlanningSession(
+  organizationId,
+  confluencePageUrl,
+  title
+);
 
-// Get the planning document
-const planningDocument = extractor.getPlanningDocument();
-
-// Get all epics
-const epics = extractor.getEpics();
-
-// Get all features
-const features = extractor.getFeatures();
-
-// Get all stories
-const stories = extractor.getStories();
-
-// Get all enablers
-const enablers = extractor.getEnablers();
+// Initialize the state
+const stateManager = await planningSessionStateStore.getStateManager(session.id.toString());
+await stateManager.initialize();
 ```
 
-## Dependencies
+### Getting a Planning Session State
 
-This module depends on the Parse Confluence Documents module, which provides the parsed Confluence content and document sections.
+```typescript
+import { planningSessionStateStore } from '../planning/state-store';
 
-## Limitations
+// Get the state of a planning session
+const state = await planningSessionStateStore.getState(sessionId);
+```
 
-- The extractor relies on pattern recognition to identify planning items, which may not be 100% accurate
-- The extractor assumes a certain document structure and may not work with all document formats
-- The extractor may not identify all relationships between planning items, especially if they are not explicitly stated
+### Updating a Planning Session State
+
+```typescript
+import { planningSessionStateStore } from '../planning/state-store';
+import { PlanningSessionStatus } from '../planning/state';
+
+// Get a state manager for a planning session
+const stateManager = await planningSessionStateStore.getStateManager(sessionId);
+
+// Update the status
+await stateManager.setStatus(PlanningSessionStatus.PROCESSING);
+
+// Update the progress
+await stateManager.setProgress(50, 'Processing');
+
+// Add an error
+await stateManager.addError('Something went wrong', 'ERROR_CODE', { details: 'Additional details' });
+
+// Add a warning
+await stateManager.addWarning('Something might be wrong', 'WARNING_CODE', { details: 'Additional details' });
+
+// Set the result
+await stateManager.setResult({
+  epics: { 'epic-1': 'linear-epic-1' },
+  features: { 'feature-1': 'linear-feature-1' },
+  stories: { 'story-1': 'linear-story-1' },
+  enablers: { 'enabler-1': 'linear-enabler-1' }
+});
+```
+
+### Starting a Planning Process
+
+```typescript
+import { startPlanningProcess } from '../planning/process';
+
+// Start the planning process
+await startPlanningProcess(sessionId);
+```
+
+## Testing
+
+The module includes comprehensive tests for all components:
+
+- `tests/planning/state-manager.test.ts`: Tests for the `PlanningSessionStateManager` class
+- `tests/planning/state-store.test.ts`: Tests for the `PlanningSessionStateStore` class
+
+Run the tests with:
+
+```bash
+npm test
+```

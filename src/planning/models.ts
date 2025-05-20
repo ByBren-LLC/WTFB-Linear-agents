@@ -19,6 +19,8 @@ export interface PlanningItem {
   parentId?: string;
   /** Additional attributes for the planning item */
   attributes: Record<string, any>;
+  /** Labels associated with the item */
+  labels?: string[];
 }
 
 /**
@@ -45,6 +47,8 @@ export interface Feature extends PlanningItem {
   stories: Story[];
   /** Enablers contained within this feature */
   enablers: Enabler[];
+  /** Whether this is a business feature (true) or enabler feature (false) */
+  isBusinessFeature?: boolean;
 }
 
 /**
@@ -79,14 +83,22 @@ export interface Enabler extends PlanningItem {
  * Planning document containing all planning items.
  */
 export interface PlanningDocument {
+  /** Unique identifier for the planning document */
+  id?: string;
   /** Title of the planning document */
   title: string;
   /** Epics contained in the document */
   epics: Epic[];
+  /** Features in the planning document */
+  features?: Feature[];
+  /** Stories in the planning document */
+  stories?: Story[];
+  /** Enablers in the planning document */
+  enablers?: Enabler[];
   /** Features not associated with any epic */
-  orphanedFeatures: Feature[];
+  orphanedFeatures?: Feature[];
   /** Stories not associated with any feature */
-  orphanedStories: Story[];
+  orphanedStories?: Story[];
   /** Enablers not associated with any feature */
-  orphanedEnablers: Enabler[];
+  orphanedEnablers?: Enabler[];
 }
