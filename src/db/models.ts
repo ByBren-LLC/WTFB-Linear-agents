@@ -176,7 +176,7 @@ export const deleteLinearToken = async (organizationId: string): Promise<boolean
       [organizationId]
     );
 
-    const deleted = result.rowCount > 0;
+    const deleted = (result.rowCount ?? 0) > 0;
     if (deleted) {
       logger.info('Token deleted for organization', { organizationId });
     } else {
@@ -373,7 +373,7 @@ export const deletePlanningSession = async (sessionId: number): Promise<boolean>
 
       await client.query('COMMIT');
 
-      const deleted = result.rowCount > 0;
+      const deleted = (result.rowCount ?? 0) > 0;
       if (deleted) {
         logger.info('Planning session deleted', { sessionId });
       } else {
@@ -564,7 +564,7 @@ export const deletePlanningFeature = async (featureId: number): Promise<boolean>
 
       await client.query('COMMIT');
 
-      const deleted = result.rowCount > 0;
+      const deleted = (result.rowCount ?? 0) > 0;
       if (deleted) {
         logger.info('Planning feature deleted', { featureId });
       } else {
@@ -741,7 +741,7 @@ export const deletePlanningStory = async (storyId: number): Promise<boolean> => 
       [storyId]
     );
 
-    const deleted = result.rowCount > 0;
+    const deleted = (result.rowCount ?? 0) > 0;
     if (deleted) {
       logger.info('Planning story deleted', { storyId });
     } else {
@@ -921,7 +921,7 @@ export const deletePlanningEnabler = async (enablerId: number): Promise<boolean>
       [enablerId]
     );
 
-    const deleted = result.rowCount > 0;
+    const deleted = (result.rowCount ?? 0) > 0;
     if (deleted) {
       logger.info('Planning enabler deleted', { enablerId });
     } else {
