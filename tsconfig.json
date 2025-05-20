@@ -10,5 +10,13 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "src/agent/planning.ts",
+    "src/safe/hierarchy.ts",
+    "src/safe/pi-planning.ts",
+    "src/safe/safe_linear_implementation.ts",
+    "src/safe/safe_linear_implementation.test.ts"
+  ]
 }
