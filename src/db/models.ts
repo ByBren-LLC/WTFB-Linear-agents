@@ -73,6 +73,53 @@ export interface PlanningEnabler {
 }
 
 /**
+ * Synchronization configuration
+ */
+export interface SyncConfig {
+  id: number;
+  organization_id: string;
+  team_id: string;
+  confluence_page_url: string;
+  direction: string;
+  frequency: string;
+  last_sync_time?: Date;
+  enabled: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Synchronization history
+ */
+export interface SyncHistory {
+  id: number;
+  sync_config_id: number;
+  status: string;
+  direction: string;
+  changes_created: number;
+  changes_updated: number;
+  changes_deleted: number;
+  conflicts: number;
+  error?: string;
+  started_at: Date;
+  completed_at?: Date;
+}
+
+/**
+ * Synchronization conflict
+ */
+export interface SyncConflict {
+  id: number;
+  sync_history_id: number;
+  type: string;
+  confluence_data: any;
+  linear_data: any;
+  resolution?: string;
+  resolved_at?: Date;
+  created_at: Date;
+}
+
+/**
  * Initializes the database schema by running migrations
  */
 export const initializeDatabase = async (): Promise<void> => {
@@ -931,6 +978,500 @@ export const deletePlanningEnabler = async (enablerId: number): Promise<boolean>
     return deleted;
   } catch (error) {
     logger.error('Error deleting planning enabler', { error, enablerId });
+    throw error;
+  }
+};
+
+// Sync Config CRUD Operations
+
+/**
+ * Creates a new sync configuration
+ */
+export const createSyncConfig = async (
+  config: {
+    organizationId: string;
+    teamId: string;
+    confluencePageUrl: string;
+    direction: string;
+    frequency: string;
+    enabled?: boolean;
+  }
+): Promise<SyncConfig> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO sync_configs (
+          organization_id, team_id, confluence_page_url, direction, frequency, enabled
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `,
+      [
+        config.organizationId,
+        config.teamId,
+        config.confluencePageUrl,
+        config.direction,
+        config.frequency,
+        config.enabled !== false
+      ]
+    );
+
+    logger.info('Sync configuration created', {
+      organizationId: config.organizationId,
+      teamId: config.teamId,
+      configId: result.rows[0].id
+    });
+
+    return result.rows[0] as SyncConfig;
+  } catch (error) {
+    logger.error('Error creating sync configuration', {
+      error,
+      organizationId: config.organizationId,
+      teamId: config.teamId
+    });
+    throw error;
+  }
+};
+
+/**
+ * Gets a sync configuration by ID
+ */
+export const getSyncConfig = async (configId: number): Promise<SyncConfig | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_configs WHERE id = $1',
+      [configId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No sync configuration found with ID', { configId });
+      return null;
+    }
+
+    return result.rows[0] as SyncConfig;
+  } catch (error) {
+    logger.error('Error retrieving sync configuration', { error, configId });
+    throw error;
+  }
+};
+
+/**
+ * Gets all sync configurations for an organization
+ */
+export const getSyncConfigsByOrganization = async (
+  organizationId: string
+): Promise<SyncConfig[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_configs WHERE organization_id = $1 ORDER BY created_at DESC',
+      [organizationId]
+    );
+
+    return result.rows as SyncConfig[];
+  } catch (error) {
+    logger.error('Error retrieving sync configurations', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Gets all sync configurations for a team
+ */
+export const getSyncConfigsByTeam = async (
+  teamId: string
+): Promise<SyncConfig[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_configs WHERE team_id = $1 ORDER BY created_at DESC',
+      [teamId]
+    );
+
+    return result.rows as SyncConfig[];
+  } catch (error) {
+    logger.error('Error retrieving sync configurations', { error, teamId });
+    throw error;
+  }
+};
+
+/**
+ * Gets all sync configurations for a frequency
+ */
+export const getSyncConfigsByFrequency = async (
+  frequency: string
+): Promise<SyncConfig[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_configs WHERE frequency = $1 AND enabled = true ORDER BY created_at',
+      [frequency]
+    );
+
+    return result.rows as SyncConfig[];
+  } catch (error) {
+    logger.error('Error retrieving sync configurations', { error, frequency });
+    throw error;
+  }
+};
+
+/**
+ * Updates a sync configuration
+ */
+export const updateSyncConfig = async (
+  configId: number,
+  updates: Partial<{
+    confluencePageUrl: string;
+    direction: string;
+    frequency: string;
+    lastSyncTime: Date;
+    enabled: boolean;
+  }>
+): Promise<SyncConfig | null> => {
+  try {
+    // Build the SET clause dynamically based on the provided updates
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updates.confluencePageUrl !== undefined) {
+      updateFields.push(`confluence_page_url = $${paramIndex}`);
+      values.push(updates.confluencePageUrl);
+      paramIndex++;
+    }
+
+    if (updates.direction !== undefined) {
+      updateFields.push(`direction = $${paramIndex}`);
+      values.push(updates.direction);
+      paramIndex++;
+    }
+
+    if (updates.frequency !== undefined) {
+      updateFields.push(`frequency = $${paramIndex}`);
+      values.push(updates.frequency);
+      paramIndex++;
+    }
+
+    if (updates.lastSyncTime !== undefined) {
+      updateFields.push(`last_sync_time = $${paramIndex}`);
+      values.push(updates.lastSyncTime);
+      paramIndex++;
+    }
+
+    if (updates.enabled !== undefined) {
+      updateFields.push(`enabled = $${paramIndex}`);
+      values.push(updates.enabled);
+      paramIndex++;
+    }
+
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = NOW()');
+
+    // If no fields to update, return the current config
+    if (updateFields.length === 1) { // Only updated_at
+      return getSyncConfig(configId);
+    }
+
+    // Add the config ID to the values array
+    values.push(configId);
+
+    const result = await query(
+      `
+        UPDATE sync_configs
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No sync configuration found to update', { configId });
+      return null;
+    }
+
+    logger.info('Sync configuration updated', { configId });
+    return result.rows[0] as SyncConfig;
+  } catch (error) {
+    logger.error('Error updating sync configuration', { error, configId });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a sync configuration
+ */
+export const deleteSyncConfig = async (configId: number): Promise<boolean> => {
+  try {
+    // Start a transaction to delete the config and all related records
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // Delete related sync_history records (which will cascade to sync_conflicts)
+      await client.query(
+        'DELETE FROM sync_history WHERE sync_config_id = $1',
+        [configId]
+      );
+
+      // Delete the sync configuration
+      const result = await client.query(
+        'DELETE FROM sync_configs WHERE id = $1',
+        [configId]
+      );
+
+      await client.query('COMMIT');
+
+      const deleted = (result.rowCount ?? 0) > 0;
+      if (deleted) {
+        logger.info('Sync configuration deleted', { configId });
+      } else {
+        logger.warn('No sync configuration found to delete', { configId });
+      }
+
+      return deleted;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    logger.error('Error deleting sync configuration', { error, configId });
+    throw error;
+  }
+};
+
+// Sync History CRUD Operations
+
+/**
+ * Creates a new sync history record
+ */
+export const createSyncHistory = async (
+  syncConfigId: number,
+  direction: string
+): Promise<SyncHistory> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO sync_history (
+          sync_config_id, status, direction
+        ) VALUES ($1, $2, $3)
+        RETURNING *
+      `,
+      [syncConfigId, 'running', direction]
+    );
+
+    logger.info('Sync history created', {
+      syncConfigId,
+      historyId: result.rows[0].id
+    });
+
+    return result.rows[0] as SyncHistory;
+  } catch (error) {
+    logger.error('Error creating sync history', {
+      error,
+      syncConfigId
+    });
+    throw error;
+  }
+};
+
+/**
+ * Updates a sync history record
+ */
+export const updateSyncHistory = async (
+  historyId: number,
+  updates: Partial<{
+    status: string;
+    changesCreated: number;
+    changesUpdated: number;
+    changesDeleted: number;
+    conflicts: number;
+    error: string;
+    completedAt: Date;
+  }>
+): Promise<SyncHistory | null> => {
+  try {
+    // Build the SET clause dynamically based on the provided updates
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updates.status !== undefined) {
+      updateFields.push(`status = $${paramIndex}`);
+      values.push(updates.status);
+      paramIndex++;
+    }
+
+    if (updates.changesCreated !== undefined) {
+      updateFields.push(`changes_created = $${paramIndex}`);
+      values.push(updates.changesCreated);
+      paramIndex++;
+    }
+
+    if (updates.changesUpdated !== undefined) {
+      updateFields.push(`changes_updated = $${paramIndex}`);
+      values.push(updates.changesUpdated);
+      paramIndex++;
+    }
+
+    if (updates.changesDeleted !== undefined) {
+      updateFields.push(`changes_deleted = $${paramIndex}`);
+      values.push(updates.changesDeleted);
+      paramIndex++;
+    }
+
+    if (updates.conflicts !== undefined) {
+      updateFields.push(`conflicts = $${paramIndex}`);
+      values.push(updates.conflicts);
+      paramIndex++;
+    }
+
+    if (updates.error !== undefined) {
+      updateFields.push(`error = $${paramIndex}`);
+      values.push(updates.error);
+      paramIndex++;
+    }
+
+    if (updates.completedAt !== undefined) {
+      updateFields.push(`completed_at = $${paramIndex}`);
+      values.push(updates.completedAt);
+      paramIndex++;
+    }
+
+    // If no fields to update, return null
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    // Add the history ID to the values array
+    values.push(historyId);
+
+    const result = await query(
+      `
+        UPDATE sync_history
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No sync history found to update', { historyId });
+      return null;
+    }
+
+    logger.info('Sync history updated', { historyId });
+    return result.rows[0] as SyncHistory;
+  } catch (error) {
+    logger.error('Error updating sync history', { error, historyId });
+    throw error;
+  }
+};
+
+/**
+ * Gets sync history records for a sync configuration
+ */
+export const getSyncHistoryByConfig = async (
+  syncConfigId: number,
+  limit: number = 10
+): Promise<SyncHistory[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_history WHERE sync_config_id = $1 ORDER BY started_at DESC LIMIT $2',
+      [syncConfigId, limit]
+    );
+
+    return result.rows as SyncHistory[];
+  } catch (error) {
+    logger.error('Error retrieving sync history', { error, syncConfigId });
+    throw error;
+  }
+};
+
+// Sync Conflict CRUD Operations
+
+/**
+ * Creates a new sync conflict record
+ */
+export const createSyncConflict = async (
+  syncHistoryId: number,
+  type: string,
+  confluenceData: any,
+  linearData: any
+): Promise<SyncConflict> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO sync_conflicts (
+          sync_history_id, type, confluence_data, linear_data
+        ) VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `,
+      [syncHistoryId, type, confluenceData, linearData]
+    );
+
+    logger.info('Sync conflict created', {
+      syncHistoryId,
+      conflictId: result.rows[0].id,
+      type
+    });
+
+    return result.rows[0] as SyncConflict;
+  } catch (error) {
+    logger.error('Error creating sync conflict', {
+      error,
+      syncHistoryId,
+      type
+    });
+    throw error;
+  }
+};
+
+/**
+ * Resolves a sync conflict
+ */
+export const resolveSyncConflict = async (
+  conflictId: number,
+  resolution: string
+): Promise<SyncConflict | null> => {
+  try {
+    const result = await query(
+      `
+        UPDATE sync_conflicts
+        SET resolution = $1, resolved_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `,
+      [resolution, conflictId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No sync conflict found to resolve', { conflictId });
+      return null;
+    }
+
+    logger.info('Sync conflict resolved', { conflictId, resolution });
+    return result.rows[0] as SyncConflict;
+  } catch (error) {
+    logger.error('Error resolving sync conflict', { error, conflictId });
+    throw error;
+  }
+};
+
+/**
+ * Gets unresolved sync conflicts for a sync history
+ */
+export const getUnresolvedConflictsByHistory = async (
+  syncHistoryId: number
+): Promise<SyncConflict[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_conflicts WHERE sync_history_id = $1 AND resolution IS NULL ORDER BY created_at',
+      [syncHistoryId]
+    );
+
+    return result.rows as SyncConflict[];
+  } catch (error) {
+    logger.error('Error retrieving unresolved conflicts', { error, syncHistoryId });
     throw error;
   }
 };

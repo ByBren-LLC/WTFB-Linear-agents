@@ -4,6 +4,8 @@ import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db';
 import * as logger from './utils/logger';
+import syncRouter from './api/sync';
+import { syncScheduler } from './sync/scheduler';
 
 // Load environment variables
 dotenv.config();
@@ -31,6 +33,9 @@ app.get('/auth/callback', handleOAuthCallback);
 // Webhook endpoint
 app.post('/webhook', handleWebhook);
 
+// Synchronization API
+app.use('/api/sync', syncRouter);
+
 // Initialize the database and start the server
 (async () => {
   try {
@@ -42,6 +47,10 @@ app.post('/webhook', handleWebhook);
     app.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
       logger.info(`OAuth callback URL: ${process.env.LINEAR_REDIRECT_URI}`);
+
+      // Start the synchronization scheduler
+      syncScheduler.start();
+      logger.info('Synchronization scheduler started');
     });
   } catch (error) {
     logger.error('Failed to initialize the application', { error });
