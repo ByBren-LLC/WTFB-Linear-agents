@@ -4,6 +4,7 @@ import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db';
 import * as logger from './utils/logger';
+import apiRoutes from './routes';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,9 @@ app.get('/auth/callback', handleOAuthCallback);
 
 // Webhook endpoint
 app.post('/webhook', handleWebhook);
+
+// API routes
+app.use('/api', apiRoutes);
 
 // Initialize the database and start the server
 (async () => {
