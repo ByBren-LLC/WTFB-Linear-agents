@@ -125,6 +125,7 @@ export class ChangeDetector {
    * @param confluencePageIdOrUrl Confluence page ID or URL
    * @param linearTeamId Linear team ID
    * @returns Changes
+   * @throws Error if there's an issue detecting changes
    */
   async detectChanges(
     confluencePageIdOrUrl: string,
@@ -136,24 +137,53 @@ export class ChangeDetector {
         linearTeamId
       });
 
-      const lastSyncTimestamp = await this.syncStore.getLastSyncTimestamp(
-        confluencePageIdOrUrl,
-        linearTeamId
-      );
+      if (!confluencePageIdOrUrl) {
+        throw new Error('Confluence page ID or URL is required');
+      }
+
+      if (!linearTeamId) {
+        throw new Error('Linear team ID is required');
+      }
+
+      let lastSyncTimestamp;
+      try {
+        lastSyncTimestamp = await this.syncStore.getLastSyncTimestamp(
+          confluencePageIdOrUrl,
+          linearTeamId
+        );
+        logger.info('Last sync timestamp', { lastSyncTimestamp });
+      } catch (error) {
+        logger.error('Error getting last sync timestamp', { error });
+        throw new Error(`Failed to get last sync timestamp: ${(error as Error).message}`);
+      }
 
       // Detect Linear changes
-      const linearChanges = await this.detectLinearChanges(
-        linearTeamId,
-        lastSyncTimestamp
-      );
+      let linearChanges;
+      try {
+        linearChanges = await this.detectLinearChanges(
+          linearTeamId,
+          lastSyncTimestamp
+        );
+        logger.info('Linear changes detected', { changeCount: linearChanges.length });
+      } catch (error) {
+        logger.error('Error detecting Linear changes', { error });
+        throw new Error(`Failed to detect Linear changes: ${(error as Error).message}`);
+      }
 
       // Detect Confluence changes
-      const confluenceChanges = await this.detectConfluenceChanges(
-        confluencePageIdOrUrl,
-        lastSyncTimestamp
-      );
+      let confluenceChanges;
+      try {
+        confluenceChanges = await this.detectConfluenceChanges(
+          confluencePageIdOrUrl,
+          lastSyncTimestamp
+        );
+        logger.info('Confluence changes detected', { changeCount: confluenceChanges.length });
+      } catch (error) {
+        logger.error('Error detecting Confluence changes', { error });
+        throw new Error(`Failed to detect Confluence changes: ${(error as Error).message}`);
+      }
 
-      logger.info('Changes detected', {
+      logger.info('All changes detected', {
         linearChanges: linearChanges.length,
         confluenceChanges: confluenceChanges.length
       });

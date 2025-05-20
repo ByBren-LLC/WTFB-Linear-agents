@@ -174,57 +174,152 @@ export class SyncManager {
       };
 
       // Detect changes
-      const changes = await this.changeDetector.detectChanges(
-        this.options.confluencePageIdOrUrl,
-        this.options.linearTeamId
-      );
+      let changes;
+      try {
+        changes = await this.changeDetector.detectChanges(
+          this.options.confluencePageIdOrUrl,
+          this.options.linearTeamId
+        );
 
-      logger.info('Changes detected', {
-        linearChanges: changes.linearChanges.length,
-        confluenceChanges: changes.confluenceChanges.length
-      });
+        logger.info('Changes detected', {
+          linearChanges: changes.linearChanges.length,
+          confluenceChanges: changes.confluenceChanges.length
+        });
+      } catch (error) {
+        logger.error('Error detecting changes', { error });
+        return {
+          success: false,
+          error: `Error detecting changes: ${(error as Error).message}`,
+          createdIssues: 0,
+          updatedIssues: 0,
+          confluenceChanges: 0,
+          conflictsDetected: 0,
+          conflictsResolved: 0,
+          timestamp: Date.now()
+        };
+      }
 
       // Check for conflicts
-      const conflicts = this.changeDetector.detectConflicts(changes);
-      result.conflictsDetected = conflicts.length;
+      let conflicts;
+      try {
+        conflicts = this.changeDetector.detectConflicts(changes);
+        result.conflictsDetected = conflicts.length;
 
+        if (conflicts.length > 0) {
+          logger.info('Conflicts detected', { conflictCount: conflicts.length });
+        }
+      } catch (error) {
+        logger.error('Error detecting conflicts', { error });
+        return {
+          success: false,
+          error: `Error detecting conflicts: ${(error as Error).message}`,
+          createdIssues: 0,
+          updatedIssues: 0,
+          confluenceChanges: 0,
+          conflictsDetected: 0,
+          conflictsResolved: 0,
+          timestamp: Date.now()
+        };
+      }
+
+      // Resolve conflicts
       if (conflicts.length > 0) {
-        logger.info('Conflicts detected', { conflictCount: conflicts.length });
+        try {
+          const resolvedConflicts = await this.conflictResolver.resolveConflicts(conflicts);
+          result.conflictsResolved = resolvedConflicts.length;
 
-        // Resolve conflicts
-        const resolvedConflicts = await this.conflictResolver.resolveConflicts(conflicts);
-        result.conflictsResolved = resolvedConflicts.length;
+          // Update changes with resolved conflicts
+          changes.linearChanges = changes.linearChanges.filter(
+            change => !conflicts.some(conflict => conflict.linearChange?.id === change.id)
+          );
+          changes.linearChanges.push(...resolvedConflicts.map(conflict => conflict.resolvedChange!));
 
-        // Update changes with resolved conflicts
-        changes.linearChanges = changes.linearChanges.filter(
-          change => !conflicts.some(conflict => conflict.linearChange?.id === change.id)
-        );
-        changes.linearChanges.push(...resolvedConflicts.map(conflict => conflict.resolvedChange!));
-
-        changes.confluenceChanges = changes.confluenceChanges.filter(
-          change => !conflicts.some(conflict => conflict.confluenceChange?.id === change.id)
-        );
+          changes.confluenceChanges = changes.confluenceChanges.filter(
+            change => !conflicts.some(conflict => conflict.confluenceChange?.id === change.id)
+          );
+        } catch (error) {
+          logger.error('Error resolving conflicts', { error });
+          return {
+            success: false,
+            error: `Error resolving conflicts: ${(error as Error).message}`,
+            createdIssues: 0,
+            updatedIssues: 0,
+            confluenceChanges: 0,
+            conflictsDetected: conflicts.length,
+            conflictsResolved: 0,
+            timestamp: Date.now()
+          };
+        }
       }
 
       // Apply Linear changes to Confluence
       if (changes.linearChanges.length > 0) {
-        // TODO: Implement applying Linear changes to Confluence
-        result.confluenceChanges = changes.linearChanges.length;
+        try {
+          // TODO: Implement applying Linear changes to Confluence
+          result.confluenceChanges = changes.linearChanges.length;
+          logger.info('Applied Linear changes to Confluence', {
+            changeCount: changes.linearChanges.length
+          });
+        } catch (error) {
+          logger.error('Error applying Linear changes to Confluence', { error });
+          return {
+            success: false,
+            error: `Error applying Linear changes to Confluence: ${(error as Error).message}`,
+            createdIssues: 0,
+            updatedIssues: 0,
+            confluenceChanges: 0,
+            conflictsDetected: result.conflictsDetected,
+            conflictsResolved: result.conflictsResolved,
+            timestamp: Date.now()
+          };
+        }
       }
 
       // Apply Confluence changes to Linear
       if (changes.confluenceChanges.length > 0) {
-        const linearResult = await this.issueCreator.createIssuesFromConfluence();
-        result.createdIssues = linearResult.createdCount;
-        result.updatedIssues = linearResult.updatedCount;
+        try {
+          const linearResult = await this.issueCreator.createIssuesFromConfluence();
+          result.createdIssues = linearResult.createdCount;
+          result.updatedIssues = linearResult.updatedCount;
+          logger.info('Applied Confluence changes to Linear', {
+            createdCount: linearResult.createdCount,
+            updatedCount: linearResult.updatedCount
+          });
+        } catch (error) {
+          logger.error('Error applying Confluence changes to Linear', { error });
+          return {
+            success: false,
+            error: `Error applying Confluence changes to Linear: ${(error as Error).message}`,
+            createdIssues: 0,
+            updatedIssues: 0,
+            confluenceChanges: result.confluenceChanges,
+            conflictsDetected: result.conflictsDetected,
+            conflictsResolved: result.conflictsResolved,
+            timestamp: Date.now()
+          };
+        }
       }
 
       // Update last sync timestamp
-      await this.syncStore.updateLastSyncTimestamp(
-        this.options.confluencePageIdOrUrl,
-        this.options.linearTeamId,
-        Date.now()
-      );
+      try {
+        await this.syncStore.updateLastSyncTimestamp(
+          this.options.confluencePageIdOrUrl,
+          this.options.linearTeamId,
+          Date.now()
+        );
+      } catch (error) {
+        logger.error('Error updating last sync timestamp', { error });
+        return {
+          success: false,
+          error: `Error updating last sync timestamp: ${(error as Error).message}`,
+          createdIssues: result.createdIssues,
+          updatedIssues: result.updatedIssues,
+          confluenceChanges: result.confluenceChanges,
+          conflictsDetected: result.conflictsDetected,
+          conflictsResolved: result.conflictsResolved,
+          timestamp: Date.now()
+        };
+      }
 
       result.success = true;
       logger.info('Synchronization completed successfully', result);
@@ -233,7 +328,7 @@ export class SyncManager {
       logger.error('Error during synchronization', { error });
       return {
         success: false,
-        error: (error as Error).message,
+        error: `Unexpected error during synchronization: ${(error as Error).message}`,
         createdIssues: 0,
         updatedIssues: 0,
         confluenceChanges: 0,

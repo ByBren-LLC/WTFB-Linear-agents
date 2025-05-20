@@ -55,36 +55,80 @@ export class ConflictResolver {
    *
    * @param conflicts Conflicts to resolve
    * @returns Resolved conflicts
+   * @throws Error if there's an issue resolving conflicts
    */
   async resolveConflicts(conflicts: Conflict[]): Promise<Conflict[]> {
     try {
+      if (!conflicts || !Array.isArray(conflicts)) {
+        throw new Error('Invalid conflicts parameter: must be an array');
+      }
+
       logger.info('Resolving conflicts', { conflictCount: conflicts.length });
 
+      if (conflicts.length === 0) {
+        logger.info('No conflicts to resolve');
+        return [];
+      }
+
       const resolvedConflicts: Conflict[] = [];
+      const failedConflicts: { id: string; error: string }[] = [];
 
       for (const conflict of conflicts) {
         try {
+          if (!conflict.id) {
+            logger.warn('Skipping conflict with no ID', { conflict });
+            continue;
+          }
+
           // If auto-resolve is enabled, use the default strategy
           if (this.autoResolveConflicts) {
+            logger.info('Auto-resolving conflict', {
+              conflictId: conflict.id,
+              strategy: ConflictResolutionStrategy.LINEAR
+            });
+
             const resolvedConflict = await this.resolveConflict(
               conflict,
               ConflictResolutionStrategy.LINEAR // Default to Linear as source of truth
             );
             resolvedConflicts.push(resolvedConflict);
+
+            logger.info('Conflict auto-resolved', {
+              conflictId: conflict.id,
+              strategy: ConflictResolutionStrategy.LINEAR
+            });
           } else {
             // Otherwise, store the conflict for manual resolution
+            logger.info('Storing conflict for manual resolution', { conflictId: conflict.id });
             await this.syncStore.storeConflict(conflict);
+            logger.info('Conflict stored for manual resolution', { conflictId: conflict.id });
           }
         } catch (error) {
           logger.error('Error resolving conflict', { error, conflictId: conflict.id });
+          failedConflicts.push({
+            id: conflict.id,
+            error: (error as Error).message
+          });
         }
       }
 
-      logger.info('Conflicts resolved', { resolvedCount: resolvedConflicts.length });
+      if (failedConflicts.length > 0) {
+        logger.warn('Some conflicts failed to resolve', {
+          failedCount: failedConflicts.length,
+          failedConflicts
+        });
+      }
+
+      logger.info('Conflicts resolution completed', {
+        totalCount: conflicts.length,
+        resolvedCount: resolvedConflicts.length,
+        failedCount: failedConflicts.length
+      });
+
       return resolvedConflicts;
     } catch (error) {
       logger.error('Error resolving conflicts', { error });
-      throw error;
+      throw new Error(`Failed to resolve conflicts: ${(error as Error).message}`);
     }
   }
 
