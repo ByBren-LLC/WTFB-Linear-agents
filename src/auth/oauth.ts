@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import * as logger from '../utils/logger';
-import { storeTokens } from './tokens';
+import * as tokenManager from './tokens';
 
 /**
  * Initiates the OAuth flow by redirecting to Linear's authorization page
@@ -72,7 +72,7 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
 
     logger.info('Access token obtained');
 
-    // Get the app user ID and organization ID
+    // Get the app user ID and organization information
     const appUserResponse = await axios.post(
       'https://api.linear.app/graphql',
       {
@@ -96,9 +96,8 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
       }
     );
 
-    const appUserId = appUserResponse.data.data.viewer.id;
-    const organizationId = appUserResponse.data.data.viewer.organization.id;
-    const organizationName = appUserResponse.data.data.viewer.organization.name;
+    const { id: appUserId, organization } = appUserResponse.data.data.viewer;
+    const { id: organizationId, name: organizationName } = organization;
 
     logger.info('User and organization info retrieved', {
       appUserId,
@@ -106,14 +105,22 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
       organizationName
     });
 
-    // Store the tokens in the database
-    await storeTokens(
-      organizationId,
-      access_token,
-      refresh_token,
-      appUserId,
-      expires_in
-    );
+    // Store the tokens securely in the database
+    try {
+      await tokenManager.storeTokens(
+        organizationId,
+        organizationName,
+        access_token,
+        refresh_token,
+        appUserId,
+        expires_in
+      );
+
+      logger.info('Tokens stored successfully', { organizationId, appUserId });
+    } catch (storageError) {
+      logger.error('Failed to store tokens', { error: storageError });
+      return res.status(500).json({ error: 'Failed to store tokens' });
+    }
 
     // Redirect to a success page
     res.send(`

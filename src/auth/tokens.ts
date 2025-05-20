@@ -1,19 +1,28 @@
 /**
  * Token management utility for Linear OAuth tokens
  *
- * This module provides functions for storing, retrieving, and managing
- * Linear OAuth tokens in the database.
+ * This module provides functions for securely storing, retrieving, refreshing,
+ * and revoking Linear OAuth tokens. Tokens are stored in the database with
+ * encryption for security.
  */
 
+import axios from 'axios';
 import * as logger from '../utils/logger';
 import { storeLinearToken, getLinearToken, getAccessToken as getDbAccessToken, deleteLinearToken } from '../db/models';
-import axios from 'axios';
 
 /**
  * Stores OAuth tokens for a Linear organization
+ *
+ * @param organizationId The Linear organization ID
+ * @param organizationName The Linear organization name
+ * @param accessToken The OAuth access token
+ * @param refreshToken The OAuth refresh token
+ * @param appUserId The Linear app user ID
+ * @param expiresIn The token expiration time in seconds
  */
 export const storeTokens = async (
   organizationId: string,
+  organizationName: string,
   accessToken: string,
   refreshToken: string,
   appUserId: string,
@@ -33,7 +42,7 @@ export const storeTokens = async (
       expiresAt
     );
 
-    logger.info(`Tokens stored for organization ${organizationId}`);
+    logger.info('Tokens stored for organization', { organizationId });
   } catch (error) {
     logger.error('Error storing tokens', { error, organizationId });
     throw error;
@@ -42,6 +51,9 @@ export const storeTokens = async (
 
 /**
  * Refreshes an expired access token using the refresh token
+ *
+ * @param organizationId The Linear organization ID
+ * @returns The new access token or null if refresh fails
  */
 export const refreshToken = async (organizationId: string): Promise<string | null> => {
   try {
@@ -52,7 +64,6 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
       logger.error(`No tokens found for organization ${organizationId}`);
       return null;
     }
-
     const clientId = process.env.LINEAR_CLIENT_ID;
     const clientSecret = process.env.LINEAR_CLIENT_SECRET;
 
@@ -89,7 +100,7 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
       expiresAt
     );
 
-    logger.info(`Token refreshed for organization ${organizationId}`);
+    logger.info('Token refreshed for organization', { organizationId });
     return access_token;
   } catch (error) {
     logger.error('Error refreshing token', { error, organizationId });
@@ -99,7 +110,11 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
 
 /**
  * Retrieves the access token for a Linear organization
- * If the token is expired, it will attempt to refresh it
+ *
+ * If the token is expired, it will attempt to refresh it automatically.
+ *
+ * @param organizationId The Linear organization ID
+ * @returns The valid access token or null if not available
  */
 export const getAccessToken = async (organizationId: string): Promise<string | null> => {
   try {
@@ -120,6 +135,9 @@ export const getAccessToken = async (organizationId: string): Promise<string | n
 
 /**
  * Retrieves the app user ID for a Linear organization
+ *
+ * @param organizationId The Linear organization ID
+ * @returns The app user ID or null if not available
  */
 export const getAppUserId = async (organizationId: string): Promise<string | null> => {
   try {
@@ -127,7 +145,7 @@ export const getAppUserId = async (organizationId: string): Promise<string | nul
     const tokenData = await getLinearToken(organizationId);
 
     if (!tokenData) {
-      logger.error(`No tokens found for organization ${organizationId}`);
+      logger.warn('No tokens found for organization', { organizationId });
       return null;
     }
 
@@ -140,6 +158,9 @@ export const getAppUserId = async (organizationId: string): Promise<string | nul
 
 /**
  * Revokes tokens for a Linear organization
+ *
+ * @param organizationId The Linear organization ID
+ * @returns True if tokens were successfully revoked, false otherwise
  */
 export const revokeTokens = async (organizationId: string): Promise<boolean> => {
   try {
@@ -147,9 +168,9 @@ export const revokeTokens = async (organizationId: string): Promise<boolean> => 
     const deleted = await deleteLinearToken(organizationId);
 
     if (deleted) {
-      logger.info(`Tokens revoked for organization ${organizationId}`);
+      logger.info('Tokens revoked for organization', { organizationId });
     } else {
-      logger.warn(`No tokens found to revoke for organization ${organizationId}`);
+      logger.warn('No tokens found to revoke for organization', { organizationId });
     }
 
     return deleted;
