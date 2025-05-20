@@ -11,7 +11,11 @@
     "docker:up": "docker-compose up",
     "docker:down": "docker-compose down",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "sync:start": "ts-node src/cli/sync.ts start",
+    "sync:stop": "ts-node src/cli/sync.ts stop",
+    "sync:status": "ts-node src/cli/sync.ts status",
+    "sync:trigger": "ts-node src/cli/sync.ts trigger"
   },
   "repository": {
     "type": "git",
@@ -33,12 +37,15 @@
   "dependencies": {
     "@linear/sdk": "^2.6.0",
     "axios": "^1.9.0",
+    "commander": "^11.1.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "sqlite3": "^5.1.7",
+    "sqlite": "^5.1.1"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
