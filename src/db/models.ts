@@ -1,6 +1,8 @@
 import { query, getClient } from './connection';
 import * as logger from '../utils/logger';
 import { runMigrations } from './migrations';
+import sqlite3 from 'sqlite3';
+import { open, Database } from 'sqlite';
 
 // TypeScript interfaces for database tables
 
@@ -148,6 +150,50 @@ export interface PIRiskDB {
 }
 
 /**
+ * Synchronization state in the database
+ */
+export interface SyncState {
+  id: number;
+  confluence_page_id: string;
+  linear_team_id: string;
+  timestamp: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Conflict in the database
+ */
+export interface Conflict {
+  id: string;
+  linear_change: string;
+  confluence_change: string;
+  is_resolved: boolean;
+  resolution_strategy?: string;
+  resolved_change?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Synchronization history in the database
+ */
+export interface SyncHistory {
+  id: number;
+  confluence_page_id: string;
+  linear_team_id: string;
+  success: boolean;
+  error?: string;
+  created_issues: number;
+  updated_issues: number;
+  confluence_changes: number;
+  conflicts_detected: number;
+  conflicts_resolved: number;
+  timestamp: number;
+  created_at: Date;
+}
+
+/**
  * Initializes the database schema by running migrations
  */
 export const initializeDatabase = async (): Promise<void> => {
@@ -158,6 +204,69 @@ export const initializeDatabase = async (): Promise<void> => {
     logger.error('Error initializing database schema', { error });
     throw error;
   }
+};
+
+// SQLite database for synchronization
+let db: Database | null = null;
+
+/**
+ * Gets the SQLite database instance
+ */
+export const getDatabase = async (): Promise<Database> => {
+  if (!db) {
+    db = await open({
+      filename: process.env.SQLITE_DB_PATH || './data/sync.db',
+      driver: sqlite3.Database
+    });
+
+    // Create tables if they don't exist
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS sync_state (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        confluence_page_id TEXT NOT NULL,
+        linear_team_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(confluence_page_id, linear_team_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS conflicts (
+        id TEXT PRIMARY KEY,
+        linear_change TEXT NOT NULL,
+        confluence_change TEXT NOT NULL,
+        is_resolved INTEGER NOT NULL DEFAULT 0,
+        resolution_strategy TEXT,
+        resolved_change TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS sync_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        confluence_page_id TEXT NOT NULL,
+        linear_team_id TEXT NOT NULL,
+        success INTEGER NOT NULL,
+        error TEXT,
+        created_issues INTEGER NOT NULL DEFAULT 0,
+        updated_issues INTEGER NOT NULL DEFAULT 0,
+        confluence_changes INTEGER NOT NULL DEFAULT 0,
+        conflicts_detected INTEGER NOT NULL DEFAULT 0,
+        conflicts_resolved INTEGER NOT NULL DEFAULT 0,
+        timestamp INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_sync_state_confluence_page_id ON sync_state(confluence_page_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_state_linear_team_id ON sync_state(linear_team_id);
+      CREATE INDEX IF NOT EXISTS idx_conflicts_is_resolved ON conflicts(is_resolved);
+      CREATE INDEX IF NOT EXISTS idx_sync_history_confluence_page_id ON sync_history(confluence_page_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_history_linear_team_id ON sync_history(linear_team_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_history_timestamp ON sync_history(timestamp);
+    `);
+  }
+
+  return db;
 };
 
 // Linear Token CRUD Operations
