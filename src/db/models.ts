@@ -19,6 +19,20 @@ export interface LinearToken {
 }
 
 /**
+ * Confluence OAuth token
+ */
+export interface ConfluenceToken {
+  id: number;
+  organization_id: string;
+  access_token: string;
+  refresh_token: string;
+  site_url: string;
+  expires_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
  * Planning session
  */
 export interface PlanningSession {
@@ -68,6 +82,67 @@ export interface PlanningEnabler {
   title: string;
   description?: string;
   enabler_type: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Program Increment in the database
+ */
+export interface ProgramIncrementDB {
+  id: number;
+  organization_id: string;
+  pi_id: string;
+  name: string;
+  start_date: Date;
+  end_date: Date;
+  description?: string;
+  status: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Program Increment Feature in the database
+ */
+export interface PIFeatureDB {
+  id: number;
+  program_increment_id: number;
+  feature_id: string;
+  team_id: string;
+  status: string;
+  confidence: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Program Increment Objective in the database
+ */
+export interface PIObjectiveDB {
+  id: number;
+  program_increment_id: number;
+  objective_id: string;
+  team_id: string;
+  description: string;
+  business_value: number;
+  status: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Program Increment Risk in the database
+ */
+export interface PIRiskDB {
+  id: number;
+  program_increment_id: number;
+  risk_id: string;
+  description: string;
+  impact: number;
+  likelihood: number;
+  status: string;
+  mitigation_plan?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -755,6 +830,112 @@ export const deletePlanningStory = async (storyId: number): Promise<boolean> => 
   }
 };
 
+// Confluence Token CRUD Operations
+
+/**
+ * Stores Confluence OAuth tokens for an organization
+ */
+export const storeConfluenceToken = async (
+  organizationId: string,
+  accessToken: string,
+  refreshToken: string,
+  siteUrl: string,
+  expiresAt: Date
+): Promise<void> => {
+  try {
+    await query(
+      `
+        INSERT INTO confluence_tokens (organization_id, access_token, refresh_token, site_url, expires_at)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (organization_id) DO UPDATE SET
+          access_token = $2,
+          refresh_token = $3,
+          site_url = $4,
+          expires_at = $5,
+          updated_at = NOW()
+      `,
+      [organizationId, accessToken, refreshToken, siteUrl, expiresAt]
+    );
+
+    logger.info('Confluence tokens stored for organization', { organizationId });
+  } catch (error) {
+    logger.error('Error storing Confluence tokens', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Retrieves the Confluence token for an organization
+ */
+export const getConfluenceToken = async (organizationId: string): Promise<ConfluenceToken | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM confluence_tokens WHERE organization_id = $1',
+      [organizationId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No Confluence tokens found for organization', { organizationId });
+      return null;
+    }
+
+    return result.rows[0] as ConfluenceToken;
+  } catch (error) {
+    logger.error('Error retrieving Confluence token', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Retrieves the Confluence access token for an organization
+ */
+export const getConfluenceAccessToken = async (organizationId: string): Promise<string | null> => {
+  try {
+    const token = await getConfluenceToken(organizationId);
+
+    if (!token) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (new Date() > new Date(token.expires_at)) {
+      logger.warn('Confluence token expired for organization', { organizationId });
+      // Token is expired, try to refresh it
+      const { refreshConfluenceToken } = require('../auth/confluence-oauth');
+      return await refreshConfluenceToken(organizationId);
+    }
+
+    return token.access_token;
+  } catch (error) {
+    logger.error('Error retrieving Confluence access token', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a Confluence token for an organization
+ */
+export const deleteConfluenceToken = async (organizationId: string): Promise<boolean> => {
+  try {
+    const result = await query(
+      'DELETE FROM confluence_tokens WHERE organization_id = $1',
+      [organizationId]
+    );
+
+    const deleted = (result.rowCount ?? 0) > 0;
+    if (deleted) {
+      logger.info('Confluence token deleted for organization', { organizationId });
+    } else {
+      logger.warn('No Confluence token found to delete for organization', { organizationId });
+    }
+
+    return deleted;
+  } catch (error) {
+    logger.error('Error deleting Confluence token', { error, organizationId });
+    throw error;
+  }
+};
+
 // Planning Enabler CRUD Operations
 
 /**
@@ -931,6 +1112,437 @@ export const deletePlanningEnabler = async (enablerId: number): Promise<boolean>
     return deleted;
   } catch (error) {
     logger.error('Error deleting planning enabler', { error, enablerId });
+    throw error;
+  }
+};
+
+// Program Increment CRUD Operations
+
+/**
+ * Creates a new program increment
+ */
+export const createProgramIncrement = async (
+  organizationId: string,
+  piId: string,
+  name: string,
+  startDate: Date,
+  endDate: Date,
+  description?: string,
+  status: string = 'planning'
+): Promise<ProgramIncrementDB> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO program_increments (
+          organization_id, pi_id, name, start_date, end_date, description, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `,
+      [organizationId, piId, name, startDate, endDate, description, status]
+    );
+
+    logger.info('Program increment created', {
+      organizationId,
+      piId,
+      name
+    });
+
+    return result.rows[0] as ProgramIncrementDB;
+  } catch (error) {
+    logger.error('Error creating program increment', {
+      error,
+      organizationId,
+      piId,
+      name
+    });
+    throw error;
+  }
+};
+
+/**
+ * Gets a program increment by ID
+ */
+export const getProgramIncrement = async (incrementId: number): Promise<ProgramIncrementDB | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM program_increments WHERE id = $1',
+      [incrementId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No program increment found with ID', { incrementId });
+      return null;
+    }
+
+    return result.rows[0] as ProgramIncrementDB;
+  } catch (error) {
+    logger.error('Error retrieving program increment', { error, incrementId });
+    throw error;
+  }
+};
+
+/**
+ * Gets a program increment by Linear ID
+ */
+export const getProgramIncrementByPiId = async (piId: string): Promise<ProgramIncrementDB | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM program_increments WHERE pi_id = $1',
+      [piId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No program increment found with PI ID', { piId });
+      return null;
+    }
+
+    return result.rows[0] as ProgramIncrementDB;
+  } catch (error) {
+    logger.error('Error retrieving program increment by PI ID', { error, piId });
+    throw error;
+  }
+};
+
+/**
+ * Gets all program increments for an organization
+ */
+export const getProgramIncrementsByOrganization = async (
+  organizationId: string
+): Promise<ProgramIncrementDB[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM program_increments WHERE organization_id = $1 ORDER BY start_date DESC',
+      [organizationId]
+    );
+
+    return result.rows as ProgramIncrementDB[];
+  } catch (error) {
+    logger.error('Error retrieving program increments', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Gets the current program increment for an organization
+ */
+export const getCurrentProgramIncrement = async (
+  organizationId: string
+): Promise<ProgramIncrementDB | null> => {
+  try {
+    const now = new Date();
+    const result = await query(
+      'SELECT * FROM program_increments WHERE organization_id = $1 AND start_date <= $2 AND end_date >= $2 LIMIT 1',
+      [organizationId, now]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No current program increment found for organization', { organizationId });
+      return null;
+    }
+
+    return result.rows[0] as ProgramIncrementDB;
+  } catch (error) {
+    logger.error('Error retrieving current program increment', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Updates a program increment
+ */
+export const updateProgramIncrement = async (
+  incrementId: number,
+  updates: Partial<ProgramIncrementDB>
+): Promise<ProgramIncrementDB | null> => {
+  try {
+    // Build the SET clause dynamically based on the provided updates
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Add each field to the update query if it exists in the updates object
+    if (updates.name !== undefined) {
+      updateFields.push(`name = $${paramIndex}`);
+      values.push(updates.name);
+      paramIndex++;
+    }
+
+    if (updates.start_date !== undefined) {
+      updateFields.push(`start_date = $${paramIndex}`);
+      values.push(updates.start_date);
+      paramIndex++;
+    }
+
+    if (updates.end_date !== undefined) {
+      updateFields.push(`end_date = $${paramIndex}`);
+      values.push(updates.end_date);
+      paramIndex++;
+    }
+
+    if (updates.description !== undefined) {
+      updateFields.push(`description = $${paramIndex}`);
+      values.push(updates.description);
+      paramIndex++;
+    }
+
+    if (updates.status !== undefined) {
+      updateFields.push(`status = $${paramIndex}`);
+      values.push(updates.status);
+      paramIndex++;
+    }
+
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = NOW()');
+
+    // If no fields to update, return the current program increment
+    if (updateFields.length === 1) { // Only updated_at
+      return getProgramIncrement(incrementId);
+    }
+
+    // Add the increment ID to the values array
+    values.push(incrementId);
+
+    const result = await query(
+      `
+        UPDATE program_increments
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No program increment found to update', { incrementId });
+      return null;
+    }
+
+    logger.info('Program increment updated', { incrementId });
+    return result.rows[0] as ProgramIncrementDB;
+  } catch (error) {
+    logger.error('Error updating program increment', { error, incrementId });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a program increment
+ */
+export const deleteProgramIncrement = async (incrementId: number): Promise<boolean> => {
+  try {
+    // Start a transaction to delete the increment and all related records
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // Delete related PI features
+      await client.query(
+        'DELETE FROM pi_features WHERE program_increment_id = $1',
+        [incrementId]
+      );
+
+      // Delete related PI objectives
+      await client.query(
+        'DELETE FROM pi_objectives WHERE program_increment_id = $1',
+        [incrementId]
+      );
+
+      // Delete related PI risks
+      await client.query(
+        'DELETE FROM pi_risks WHERE program_increment_id = $1',
+        [incrementId]
+      );
+
+      // Delete the program increment
+      const result = await client.query(
+        'DELETE FROM program_increments WHERE id = $1',
+        [incrementId]
+      );
+
+      await client.query('COMMIT');
+
+      const deleted = (result.rowCount ?? 0) > 0;
+      if (deleted) {
+        logger.info('Program increment deleted', { incrementId });
+      } else {
+        logger.warn('No program increment found to delete', { incrementId });
+      }
+
+      return deleted;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    logger.error('Error deleting program increment', { error, incrementId });
+    throw error;
+  }
+};
+
+// PI Feature CRUD Operations
+
+/**
+ * Creates a new PI feature
+ */
+export const createPIFeature = async (
+  programIncrementId: number,
+  featureId: string,
+  teamId: string,
+  status: string = 'planned',
+  confidence: number = 3
+): Promise<PIFeatureDB> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO pi_features (
+          program_increment_id, feature_id, team_id, status, confidence
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `,
+      [programIncrementId, featureId, teamId, status, confidence]
+    );
+
+    logger.info('PI feature created', {
+      programIncrementId,
+      featureId,
+      teamId
+    });
+
+    return result.rows[0] as PIFeatureDB;
+  } catch (error) {
+    logger.error('Error creating PI feature', {
+      error,
+      programIncrementId,
+      featureId,
+      teamId
+    });
+    throw error;
+  }
+};
+
+/**
+ * Gets a PI feature by ID
+ */
+export const getPIFeature = async (featureId: number): Promise<PIFeatureDB | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM pi_features WHERE id = $1',
+      [featureId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No PI feature found with ID', { featureId });
+      return null;
+    }
+
+    return result.rows[0] as PIFeatureDB;
+  } catch (error) {
+    logger.error('Error retrieving PI feature', { error, featureId });
+    throw error;
+  }
+};
+
+/**
+ * Gets all PI features for a program increment
+ */
+export const getPIFeaturesByProgramIncrement = async (
+  programIncrementId: number
+): Promise<PIFeatureDB[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM pi_features WHERE program_increment_id = $1',
+      [programIncrementId]
+    );
+
+    return result.rows as PIFeatureDB[];
+  } catch (error) {
+    logger.error('Error retrieving PI features', { error, programIncrementId });
+    throw error;
+  }
+};
+
+/**
+ * Updates a PI feature
+ */
+export const updatePIFeature = async (
+  featureId: number,
+  updates: Partial<PIFeatureDB>
+): Promise<PIFeatureDB | null> => {
+  try {
+    // Build the SET clause dynamically based on the provided updates
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Add each field to the update query if it exists in the updates object
+    if (updates.status !== undefined) {
+      updateFields.push(`status = $${paramIndex}`);
+      values.push(updates.status);
+      paramIndex++;
+    }
+
+    if (updates.confidence !== undefined) {
+      updateFields.push(`confidence = $${paramIndex}`);
+      values.push(updates.confidence);
+      paramIndex++;
+    }
+
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = NOW()');
+
+    // If no fields to update, return the current PI feature
+    if (updateFields.length === 1) { // Only updated_at
+      return getPIFeature(featureId);
+    }
+
+    // Add the feature ID to the values array
+    values.push(featureId);
+
+    const result = await query(
+      `
+        UPDATE pi_features
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No PI feature found to update', { featureId });
+      return null;
+    }
+
+    logger.info('PI feature updated', { featureId });
+    return result.rows[0] as PIFeatureDB;
+  } catch (error) {
+    logger.error('Error updating PI feature', { error, featureId });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a PI feature
+ */
+export const deletePIFeature = async (featureId: number): Promise<boolean> => {
+  try {
+    const result = await query(
+      'DELETE FROM pi_features WHERE id = $1',
+      [featureId]
+    );
+
+    const deleted = (result.rowCount ?? 0) > 0;
+    if (deleted) {
+      logger.info('PI feature deleted', { featureId });
+    } else {
+      logger.warn('No PI feature found to delete', { featureId });
+    }
+
+    return deleted;
+  } catch (error) {
+    logger.error('Error deleting PI feature', { error, featureId });
     throw error;
   }
 };
