@@ -19,6 +19,20 @@ export interface LinearToken {
 }
 
 /**
+ * Confluence OAuth token
+ */
+export interface ConfluenceToken {
+  id: number;
+  organization_id: string;
+  access_token: string;
+  refresh_token: string;
+  site_url: string;
+  expires_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
  * Planning session
  */
 export interface PlanningSession {
@@ -751,6 +765,112 @@ export const deletePlanningStory = async (storyId: number): Promise<boolean> => 
     return deleted;
   } catch (error) {
     logger.error('Error deleting planning story', { error, storyId });
+    throw error;
+  }
+};
+
+// Confluence Token CRUD Operations
+
+/**
+ * Stores Confluence OAuth tokens for an organization
+ */
+export const storeConfluenceToken = async (
+  organizationId: string,
+  accessToken: string,
+  refreshToken: string,
+  siteUrl: string,
+  expiresAt: Date
+): Promise<void> => {
+  try {
+    await query(
+      `
+        INSERT INTO confluence_tokens (organization_id, access_token, refresh_token, site_url, expires_at)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (organization_id) DO UPDATE SET
+          access_token = $2,
+          refresh_token = $3,
+          site_url = $4,
+          expires_at = $5,
+          updated_at = NOW()
+      `,
+      [organizationId, accessToken, refreshToken, siteUrl, expiresAt]
+    );
+
+    logger.info('Confluence tokens stored for organization', { organizationId });
+  } catch (error) {
+    logger.error('Error storing Confluence tokens', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Retrieves the Confluence token for an organization
+ */
+export const getConfluenceToken = async (organizationId: string): Promise<ConfluenceToken | null> => {
+  try {
+    const result = await query(
+      'SELECT * FROM confluence_tokens WHERE organization_id = $1',
+      [organizationId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No Confluence tokens found for organization', { organizationId });
+      return null;
+    }
+
+    return result.rows[0] as ConfluenceToken;
+  } catch (error) {
+    logger.error('Error retrieving Confluence token', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Retrieves the Confluence access token for an organization
+ */
+export const getConfluenceAccessToken = async (organizationId: string): Promise<string | null> => {
+  try {
+    const token = await getConfluenceToken(organizationId);
+
+    if (!token) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (new Date() > new Date(token.expires_at)) {
+      logger.warn('Confluence token expired for organization', { organizationId });
+      // Token is expired, try to refresh it
+      const { refreshConfluenceToken } = require('../auth/confluence-oauth');
+      return await refreshConfluenceToken(organizationId);
+    }
+
+    return token.access_token;
+  } catch (error) {
+    logger.error('Error retrieving Confluence access token', { error, organizationId });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a Confluence token for an organization
+ */
+export const deleteConfluenceToken = async (organizationId: string): Promise<boolean> => {
+  try {
+    const result = await query(
+      'DELETE FROM confluence_tokens WHERE organization_id = $1',
+      [organizationId]
+    );
+
+    const deleted = (result.rowCount ?? 0) > 0;
+    if (deleted) {
+      logger.info('Confluence token deleted for organization', { organizationId });
+    } else {
+      logger.warn('No Confluence token found to delete for organization', { organizationId });
+    }
+
+    return deleted;
+  } catch (error) {
+    logger.error('Error deleting Confluence token', { error, organizationId });
     throw error;
   }
 };
