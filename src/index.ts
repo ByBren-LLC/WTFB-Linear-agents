@@ -2,8 +2,9 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { handleWebhook } from './webhooks/handler';
-import { initializeDatabase } from './db';
+import { initializeDatabase } from './db/models';
 import * as logger from './utils/logger';
+import planningRoutes from './api/planning';
 import apiRoutes from './routes';
 
 // Load environment variables
@@ -31,6 +32,9 @@ app.get('/auth/callback', handleOAuthCallback);
 
 // Webhook endpoint
 app.post('/webhook', handleWebhook);
+
+// Planning API routes
+app.use('/api/planning', planningRoutes);
 
 // API routes
 app.use('/api', apiRoutes);
