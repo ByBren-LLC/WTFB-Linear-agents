@@ -9,6 +9,9 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import * as logger from '../utils/logger';
 import { RateLimiter } from './rate-limiter';
 import { handleConfluenceError } from './error-handler';
+import { ConfluenceParser, ConfluenceDocument } from './parser';
+import { ContentExtractor } from './content-extractor';
+import { StructureAnalyzer, DocumentStructure } from './structure-analyzer';
 
 /**
  * Confluence API client class
@@ -158,13 +161,13 @@ export class ConfluenceClient {
         }
       });
 
-      logger.info('Searched Confluence content', { 
-        cql, 
-        limit, 
-        start, 
-        resultCount: response.data.results.length 
+      logger.info('Searched Confluence content', {
+        cql,
+        limit,
+        start,
+        resultCount: response.data.results.length
       });
-      
+
       return response.data;
     } catch (error) {
       logger.error('Error searching Confluence content', { error, cql });
@@ -190,13 +193,13 @@ export class ConfluenceClient {
         }
       });
 
-      logger.info('Retrieved Confluence space content', { 
-        spaceKey, 
-        limit, 
-        start, 
-        resultCount: response.data.results.length 
+      logger.info('Retrieved Confluence space content', {
+        spaceKey,
+        limit,
+        start,
+        resultCount: response.data.results.length
       });
-      
+
       return response.data;
     } catch (error) {
       logger.error('Error retrieving Confluence space content', { error, spaceKey });
@@ -227,11 +230,100 @@ export class ConfluenceClient {
 
       // Format 3: https://your-domain.atlassian.net/wiki/display/SPACE/Page+Title
       // For this format, we need to search by title, which is not implemented here
-      
+
       return null;
     } catch (error) {
       logger.error('Error extracting page ID from URL', { error, url });
       return null;
+    }
+  }
+
+  /**
+   * Parses a Confluence page
+   *
+   * @param pageId The ID of the page to parse
+   * @returns The parsed document
+   */
+  async parsePage(pageId: string): Promise<ConfluenceDocument> {
+    try {
+      // Get the page data
+      const page = await this.getPage(pageId);
+
+      // Parse the page content
+      const parser = new ConfluenceParser(page.body.storage.value, page.title);
+      const document = parser.parse();
+
+      logger.info('Parsed Confluence page', { pageId });
+      return document;
+    } catch (error) {
+      logger.error('Error parsing Confluence page', { error, pageId });
+      throw error;
+    }
+  }
+
+  /**
+   * Parses a Confluence page by URL
+   *
+   * @param url The URL of the page to parse
+   * @returns The parsed document
+   */
+  async parsePageByUrl(url: string): Promise<ConfluenceDocument> {
+    try {
+      // Extract the page ID from the URL
+      const pageId = this.extractPageIdFromUrl(url);
+      if (!pageId) {
+        throw new Error(`Invalid Confluence URL: ${url}`);
+      }
+
+      return await this.parsePage(pageId);
+    } catch (error) {
+      logger.error('Error parsing Confluence page by URL', { error, url });
+      throw error;
+    }
+  }
+
+  /**
+   * Analyzes the structure of a Confluence page
+   *
+   * @param pageId The ID of the page to analyze
+   * @returns The document structure
+   */
+  async analyzePageStructure(pageId: string): Promise<DocumentStructure> {
+    try {
+      // Parse the page
+      const document = await this.parsePage(pageId);
+
+      // Analyze the document structure
+      const analyzer = new StructureAnalyzer(document);
+      const structure = analyzer.analyze();
+
+      logger.info('Analyzed Confluence page structure', { pageId });
+      return structure;
+    } catch (error) {
+      logger.error('Error analyzing Confluence page structure', { error, pageId });
+      throw error;
+    }
+  }
+
+  /**
+   * Extracts content from a Confluence page
+   *
+   * @param pageId The ID of the page to extract content from
+   * @returns The content extractor
+   */
+  async extractPageContent(pageId: string): Promise<ContentExtractor> {
+    try {
+      // Parse the page
+      const document = await this.parsePage(pageId);
+
+      // Create a content extractor
+      const extractor = new ContentExtractor(document);
+
+      logger.info('Created content extractor for Confluence page', { pageId });
+      return extractor;
+    } catch (error) {
+      logger.error('Error extracting content from Confluence page', { error, pageId });
+      throw error;
     }
   }
 }
