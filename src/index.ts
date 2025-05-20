@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { initiateOAuth, handleOAuthCallback } from './auth/oauth';
 import { handleWebhook } from './webhooks/handler';
+import { initializeDatabase } from './db';
+import * as logger from './utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -29,8 +31,20 @@ app.get('/auth/callback', handleOAuthCallback);
 // Webhook endpoint
 app.post('/webhook', handleWebhook);
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  console.log(`OAuth callback URL: ${process.env.LINEAR_REDIRECT_URI}`);
-});
+// Initialize the database and start the server
+(async () => {
+  try {
+    // Initialize the database
+    await initializeDatabase();
+    logger.info('Database initialized successfully');
+
+    // Start the server
+    app.listen(port, () => {
+      logger.info(`Server is running on port ${port}`);
+      logger.info(`OAuth callback URL: ${process.env.LINEAR_REDIRECT_URI}`);
+    });
+  } catch (error) {
+    logger.error('Failed to initialize the application', { error });
+    process.exit(1);
+  }
+})();
