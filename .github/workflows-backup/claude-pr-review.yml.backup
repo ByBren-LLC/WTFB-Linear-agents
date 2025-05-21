@@ -1,0 +1,64 @@
+name: Claude PR Review
+
+# Permissions needed for Claude to operate
+permissions:
+  contents: read     # To read repository contents
+  pull-requests: write # To comment on PRs
+  id-token: write    # Required for OIDC authentication (if using Bedrock/Vertex)
+
+on:
+  # Trigger on new PRs and when PRs are updated
+  pull_request:
+    types: [opened, synchronize]
+    # Only run on PRs targeting the dev branch
+    branches:
+      - dev
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better context
+      
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          # Use the GitHub secret for the API key
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Use the latest Claude model
+          anthropic_model: "claude-3-7-sonnet-20250219"
+          
+          # Direct prompt for automated review
+          direct_prompt: |
+            Please review this PR with a focus on:
+            
+            1. Code quality and adherence to best practices
+            2. Potential bugs or edge cases
+            3. Performance considerations
+            4. Security implications
+            5. Compatibility with the Linear API
+            6. Adherence to SAFe Essentials methodology
+            
+            Provide constructive feedback and suggestions for improvement.
+            If you find any issues that should be addressed before merging, clearly highlight them.
+            
+          # Set a reasonable timeout
+          timeout_minutes: "30"
+          
+          # Allow specific tools for Claude to use
+          allowed_tools: |
+            [
+              # Git inspection commands (read-only)
+              "Bash(git diff --name-only HEAD~1)",
+              "Bash(git diff HEAD~1)",
+              
+              # File exploration tools
+              "View",        # Read file contents
+              "GlobTool",    # Find files by pattern
+              "GrepTool"     # Search file contents
+            ]
