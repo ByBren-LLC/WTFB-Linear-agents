@@ -7,7 +7,9 @@ This module provides integration with the Confluence API for the Linear Planning
 - OAuth 2.0 authentication with Confluence
 - Retrieving Confluence pages and attachments
 - Searching for Confluence content using CQL
-- Extracting structured data from Confluence pages
+- Parsing Confluence documents into structured representations
+- Analyzing document structure and extracting content
+- Handling Confluence macros and formatting
 - Converting Confluence content to Markdown
 - Rate limiting to respect Confluence API limits
 - Error handling and retry logic
@@ -75,6 +77,89 @@ const structuredData = extractStructuredData(page);
 
 // Convert to Markdown
 const markdown = convertToMarkdown(page.body.storage.value);
+```
+
+### Parsing Confluence Documents
+
+You can parse Confluence documents into structured representations using the `ConfluenceParser` class:
+
+```typescript
+import { ConfluenceParser } from '../confluence/parser';
+
+// Create a parser with the storage format and title
+const parser = new ConfluenceParser(page.body.storage.value, page.title);
+
+// Parse the document
+const document = parser.parse();
+```
+
+The parser is also integrated with the Confluence client:
+
+```typescript
+// Parse a page
+const document = await client.parsePage('123456789');
+
+// Parse a page by URL
+const document = await client.parsePageByUrl('https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789');
+```
+
+### Analyzing Document Structure
+
+You can analyze the structure of Confluence documents using the `StructureAnalyzer` class:
+
+```typescript
+import { StructureAnalyzer } from '../confluence/structure-analyzer';
+
+// Create an analyzer with a parsed document
+const analyzer = new StructureAnalyzer(document);
+
+// Analyze the document structure
+const structure = analyzer.analyze();
+
+// Get the table of contents
+const toc = analyzer.getTableOfContents(1, 3); // Levels 1-3
+
+// Find sections by title
+const sections = analyzer.findSectionsByTitle('Section Title');
+```
+
+The analyzer is also integrated with the Confluence client:
+
+```typescript
+// Analyze page structure
+const structure = await client.analyzePageStructure('123456789');
+```
+
+### Extracting Content with ContentExtractor
+
+You can extract content from parsed Confluence documents using the `ContentExtractor` class:
+
+```typescript
+import { ContentExtractor } from '../confluence/content-extractor';
+
+// Create an extractor with a parsed document
+const extractor = new ContentExtractor(document);
+
+// Extract text content
+const text = extractor.extractText();
+
+// Extract headings
+const headings = extractor.extractHeadings(1, 3); // Levels 1-3
+
+// Search for text
+const results = extractor.search('search text', {
+  caseSensitive: false,
+  wholeWord: true,
+  includeHeadings: true,
+  includeParagraphs: true
+});
+```
+
+The extractor is also integrated with the Confluence client:
+
+```typescript
+// Extract page content
+const extractor = await client.extractPageContent('123456789');
 ```
 
 ## Error Handling
