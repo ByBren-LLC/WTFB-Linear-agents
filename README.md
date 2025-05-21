@@ -1,112 +1,151 @@
-# WTFB Linear Agents
+# Linear Planning Agent
 
-This repository contains the WTFB Linear Agents project, which implements custom Linear agents for SAFe Essentials workflow integration.
+A powerful CLI tool for integrating Linear with Confluence, implementing SAFe methodology, and automating planning workflows.
 
 ## Overview
 
-The WTFB Linear Agents project provides custom Linear agents that help with planning, tracking, and managing work items in Linear following SAFe methodology. The agents integrate with Confluence for documentation and follow the WTFB workflow standards.
+The Linear Planning Agent is a command-line tool that:
 
-## Project Structure
+1. **Parses Confluence documents** to extract planning information
+2. **Creates Linear issues** following SAFe hierarchy (Epics, Features, Stories, Enablers)
+3. **Maintains SAFe relationships** between issues
+4. **Synchronizes bidirectionally** between Linear and Confluence
+5. **Resolves conflicts** when changes occur in both systems
 
-- `/scripts`: Contains shell scripts for initializing and managing agents
-- `/specs`: Contains templates and specifications for planning and implementation
-- `/src`: Contains the source code for the Linear agent implementation
+This agent is designed for automation and agent-to-agent workflows, making it perfect for integration into larger automated systems.
 
-## Getting Started
+## Installation
 
 ### Prerequisites
 
-- Node.js and npm installed
-- Docker and Docker Compose installed (for local testing)
+- Node.js 16+ and npm installed
+- Docker and Docker Compose (optional, for containerized deployment)
 - Linear workspace with admin access
 - Confluence access
 
 ### Setup
 
 1. Clone the repository
-2. Install dependencies: `npm install`
-3. Copy `.env.template` to `.env` and fill in the required values
-4. Run the agent locally: `npm run dev`
+   ```bash
+   git clone https://github.com/ByBren-LLC/WTFB-Linear-agents.git
+   cd WTFB-Linear-agents
+   ```
 
-### Using the Planning Agent
+2. Install dependencies
+   ```bash
+   npm install
+   ```
 
-To use the planning agent to analyze Confluence documentation and create Linear issues:
+3. Configure environment
+   ```bash
+   cp .env.template .env
+   # Edit .env with your credentials
+   ```
+
+4. Build the CLI
+   ```bash
+   npm run cli:build
+   ```
+
+## CLI Usage
+
+The Linear Planning Agent provides a unified CLI for all operations:
 
 ```bash
-./scripts/start-planning-agent.sh [CONFLUENCE_PAGE_URL] [PLANNING_TITLE]
+# Show help
+npm run cli -- --help
+
+# Parse a Confluence document
+npm run parse -- --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
+
+# Create Linear issues from a Confluence document
+npm run create -- --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456" --org-id="your-org-id" --team-id="your-team-id"
+
+# Start synchronization
+npm run sync:start -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
+
+# Get synchronization status
+npm run sync:status -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
+
+# Manually trigger synchronization
+npm run sync:trigger -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
+
+# Stop synchronization
+npm run sync:stop -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
 ```
 
-Example:
+## Agent-to-Agent Workflow Examples
+
+The CLI design enables powerful agent-to-agent workflows:
+
+### Example 1: Automated Planning Pipeline
 
 ```bash
-./scripts/start-planning-agent.sh "https://cheddarfox.atlassian.net/wiki/spaces/WA/pages/123456789" "Collaborative Screenplay Editing"
+# Agent 1: Parse Confluence document and save planning data
+npm run parse -- --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456" --output=json > planning-data.json
+
+# Agent 2: Create Linear issues from planning data
+npm run create -- --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456" --org-id="your-org-id" --team-id="your-team-id"
+
+# Agent 3: Start synchronization to keep Linear and Confluence in sync
+npm run sync:start -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
 ```
 
-## Development
+### Example 2: Monitoring and Reporting
 
-### Running with Docker
+```bash
+# Agent 1: Check synchronization status
+STATUS=$(npm run sync:status -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456" --output=json)
 
-#### Production Mode
+# Agent 2: Generate report based on status
+echo $STATUS | report-generator --format=markdown > sync-report.md
+
+# Agent 3: Publish report to Confluence
+confluence-publisher --file=sync-report.md --space=PLAN --parent=123456
+```
+
+## Docker Deployment
+
+### Production Mode
 
 ```bash
 # Build and start the containers
 docker-compose up --build -d
 
-# View logs
-docker-compose logs -f
-
-# Stop the containers
-docker-compose down
+# Run CLI commands inside the container
+docker-compose exec app npm run cli -- --help
 ```
 
-#### Development Mode
+### Development Mode
 
 ```bash
 # Build and start the containers in development mode
 docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
-
-# View logs
-docker-compose logs -f
-
-# Stop the containers
-docker-compose down
 ```
 
-### Using the Synchronization CLI
+## Project Structure
 
-The Linear Planning Agent includes a CLI for managing synchronization between Linear and Confluence:
+- `/scripts`: Shell scripts for initializing and managing agents
+- `/specs`: Templates and specifications for planning and implementation
+- `/src`: Source code for the Linear Planning Agent
+  - `/src/cli`: CLI implementation
+  - `/src/confluence`: Confluence API integration
+  - `/src/linear`: Linear API integration
+  - `/src/planning`: Planning data extraction and processing
+  - `/src/safe`: SAFe methodology implementation
+  - `/src/sync`: Synchronization between Linear and Confluence
 
-```bash
-# Start synchronization
-npm run sync:start -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+## Documentation
 
-# Stop synchronization
-npm run sync:stop -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
+For detailed setup and usage instructions, see:
 
-# Get synchronization status
-npm run sync:status -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
-
-# Manually trigger synchronization
-npm run sync:trigger -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
-```
-
-You can also run these commands inside the Docker container:
-
-```bash
-# Start synchronization
-docker-compose exec app npm run sync:start -- --org-id=your-organization-id --team-id=your-linear-team-id --page-id=your-confluence-page-id
-```
-
-### Testing
-
-```bash
-npm test
-```
+- [Linear Setup Guide](docs/linear-setup-guide.md)
+- [Confluence Setup Guide](docs/confluence-setup-guide.md)
+- [Synchronization Documentation](docs/synchronization.md)
 
 ## Resources
 
-- [Linear Agent Development Guidelines](https://linear.app/developers/agents)
-- [Linear OAuth 2.0 Authentication](https://linear.app/developers/oauth-2-0-authentication)
-- [Linear Webhooks Documentation](https://linear.app/developers/webhooks)
+- [Linear API Documentation](https://linear.app/docs/api)
+- [Linear OAuth 2.0 Authentication](https://linear.app/docs/oauth/authentication)
+- [Confluence API Documentation](https://developer.atlassian.com/cloud/confluence/rest/v1/intro/)
 - [SAFe Framework](https://www.scaledagileframework.com/)
-All our Linear agents!
