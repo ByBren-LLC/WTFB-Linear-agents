@@ -1,0 +1,97 @@
+name: Claude Assistant
+
+# Permissions needed for Claude to operate
+permissions:
+  contents: write    # To read/write repository contents
+  pull-requests: write # To create and comment on PRs
+  issues: write      # To comment on issues
+  id-token: write    # Required for OIDC authentication (if using Bedrock/Vertex)
+
+on:
+  # Trigger on comments in issues and PRs that mention Claude
+  issue_comment:
+    types: [created]
+  
+  # Trigger on comments in PR reviews
+  pull_request_review_comment:
+    types: [created]
+  
+  # Trigger on new issues or when issues are assigned
+  issues:
+    types: [opened, assigned]
+  
+  # Trigger on PR review submissions
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude-response:
+    # Only run if the comment contains @claude or if the issue was assigned to claude
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better context
+      
+      - name: Run Claude Assistant
+        uses: anthropics/claude-code-action@beta
+        with:
+          # Use the GitHub secret for the API key
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Use the latest Claude model
+          anthropic_model: "claude-3-7-sonnet-20250219"
+          
+          # Default trigger phrase
+          trigger_phrase: "@claude"
+          
+          # Set a reasonable timeout
+          timeout_minutes: "45"
+          
+          # Allow specific tools for Claude to use
+          allowed_tools: |
+            [
+              # Git inspection commands (read-only)
+              "Bash(git status)",
+              "Bash(git log)",
+              "Bash(git show)",
+              "Bash(git blame)",
+              "Bash(git reflog)",
+              "Bash(git stash list)",
+              "Bash(git ls-files)",
+              "Bash(git branch)",
+              "Bash(git tag)",
+              "Bash(git diff)",
+              
+              # File exploration tools
+              "View",        # Read file contents
+              "GlobTool",    # Find files by pattern
+              "GrepTool",    # Search file contents
+              "BatchTool",   # Run multiple tools in parallel
+              
+              # Project-specific tools
+              "Bash(npm list)",
+              "Bash(npm test)",
+              "Bash(npm run lint)"
+            ]
+          
+          # Custom instructions specific to your project
+          custom_instructions: |
+            You are working with the WTFB-Linear-agents project, which implements Linear.app agents for SAFe Essentials.
+            
+            When working with this codebase:
+            1. Follow the SAFe Essentials methodology
+            2. Respect the existing architecture and code patterns
+            3. Ensure all code changes maintain compatibility with the Linear API
+            4. When creating PRs, target the dev branch, not main
+            5. Label all PRs with appropriate categories
+            6. Include detailed descriptions in PRs explaining the changes
+            7. Reference any related Linear issues using the LIN-XX format
