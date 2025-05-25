@@ -110,7 +110,34 @@ Before you begin, make sure you have:
 
 ## Confluence Setup
 
-### Creating an API Token
+### Creating a Confluence OAuth Application
+
+1. **Log in to Atlassian Developer Console**:
+   - Go to [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/).
+   - Log in with your Atlassian account.
+
+2. **Create OAuth 2.0 (3LO) App**:
+   - Click "Create" and select "OAuth 2.0 (3LO)".
+   - Enter your app details:
+     - **App name**: Linear Planning Agent
+     - **Description**: SAFe integration for Linear and Confluence
+     - **Privacy policy URL**: Your privacy policy URL (optional)
+     - **Terms of use URL**: Your terms of use URL (optional)
+
+3. **Configure OAuth Settings**:
+   - In the "Authorization" tab:
+     - **Callback URL**: Add your redirect URI (e.g., `https://your-domain.com/auth/confluence/callback` or `http://localhost:3000/auth/confluence/callback` for local development)
+   - In the "Permissions" tab, add the following scopes:
+     - `read:confluence-content.all`
+     - `write:confluence-content`
+     - `read:confluence-space.summary`
+     - `read:confluence-user`
+
+4. **Get OAuth Credentials**:
+   - In the "Settings" tab, you'll find your Client ID and Client Secret.
+   - Copy these values and store them securely. You'll need them for your environment variables.
+
+### Creating an API Token (Legacy Authentication)
 
 1. **Log in to Atlassian Account**:
    - Go to [Atlassian Account Settings](https://id.atlassian.com/manage/api-tokens).
@@ -253,11 +280,17 @@ LINEAR_REDIRECT_URI=https://your-domain.com/auth/callback
 # Webhook Configuration
 WEBHOOK_SECRET=your_webhook_secret
 
-# Linear Organization and Team IDs
-LINEAR_ORGANIZATION_ID=your_organization_id
-LINEAR_TEAM_ID=your_team_id
+# Confluence OAuth Application Credentials
+CONFLUENCE_CLIENT_ID=your_confluence_client_id
+CONFLUENCE_CLIENT_SECRET=your_confluence_client_secret
 
-# Confluence API Credentials
+# Application Configuration for OAuth
+APP_URL=https://your-domain.com
+
+# Session Management
+SESSION_SECRET=generate_a_random_session_secret_at_least_32_chars
+
+# Legacy Confluence API Credentials (for backward compatibility)
 CONFLUENCE_USERNAME=your_atlassian_email
 CONFLUENCE_API_TOKEN=your_api_token
 CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
@@ -275,6 +308,43 @@ ENCRYPTION_KEY=generate_a_strong_random_key_at_least_32_chars
 ```
 
 Replace the placeholder values with your actual credentials and configuration.
+
+### Environment Variable Descriptions
+
+#### OAuth Configuration
+- **CONFLUENCE_CLIENT_ID**: Client ID from your Confluence OAuth application
+- **CONFLUENCE_CLIENT_SECRET**: Client Secret from your Confluence OAuth application
+- **APP_URL**: The base URL of your application (used for OAuth callback construction)
+- **SESSION_SECRET**: A random string at least 32 characters long for session management
+
+#### Security Best Practices
+- **Session Secret Generation**: Use a cryptographically secure random string generator:
+  ```bash
+  # Generate a secure session secret
+  openssl rand -base64 32
+  ```
+- **Environment Security**: Never commit your `.env` file to version control
+- **Production Configuration**: Use HTTPS URLs for all OAuth callbacks in production
+- **Credential Management**: Store OAuth credentials securely and rotate them regularly
+
+### OAuth Setup Validation
+
+To validate your OAuth configuration:
+
+1. **Check Environment Variables**:
+   ```bash
+   # Verify all required OAuth variables are set
+   grep -E "(CONFLUENCE_CLIENT_ID|CONFLUENCE_CLIENT_SECRET|APP_URL|SESSION_SECRET)" .env
+   ```
+
+2. **Test OAuth Flow**:
+   - Start your application
+   - Navigate to `/auth/confluence` to test Confluence OAuth
+   - Verify successful authentication and callback handling
+
+3. **Validate Callback URLs**:
+   - Ensure your OAuth application callback URLs match your `APP_URL` configuration
+   - Test both local development and production URLs
 
 ## Testing the Integration
 
@@ -324,9 +394,36 @@ For detailed troubleshooting information, refer to the following guides:
    - Check that your PostgreSQL and SQLite connection strings are correct.
    - Ensure that the databases exist and are accessible.
 
-4. **Synchronization Issues**:
+4. **OAuth Configuration Issues**:
+   - **Missing Environment Variables**: Ensure all OAuth variables are set in your `.env` file:
+     ```bash
+     grep -E "(CONFLUENCE_CLIENT_ID|CONFLUENCE_CLIENT_SECRET|APP_URL|SESSION_SECRET)" .env
+     ```
+   - **Invalid Callback URLs**: Verify that your OAuth application callback URLs match your `APP_URL`
+   - **Session Secret Issues**: Ensure `SESSION_SECRET` is at least 32 characters long
+   - **HTTPS Requirements**: Use HTTPS URLs for production OAuth callbacks
+
+5. **Docker Environment Issues**:
+   - **Missing Variables in Docker**: Verify all new environment variables are passed to the Docker container
+   - **Environment File Loading**: Ensure your `.env` file is in the same directory as `docker-compose.yml`
+   - **Variable Substitution**: Check that Docker Compose can access all environment variables:
+     ```bash
+     docker-compose config
+     ```
+
+6. **Synchronization Issues**:
    - Verify that your Confluence page follows the expected structure.
    - Ensure that your Linear team and organization IDs are correct.
    - Check the logs for detailed error messages.
+
+### OAuth Troubleshooting Checklist
+
+- [ ] All OAuth environment variables are set in `.env`
+- [ ] Session secret is at least 32 characters long
+- [ ] OAuth application callback URLs are correctly configured
+- [ ] APP_URL matches your application's base URL
+- [ ] Docker Compose includes all new environment variables
+- [ ] OAuth routes are accessible (test `/auth/confluence`)
+- [ ] Application logs show no environment variable errors
 
 If you encounter any other issues, check the logs of your application for more detailed error messages.
