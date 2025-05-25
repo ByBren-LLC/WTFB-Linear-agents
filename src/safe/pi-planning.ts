@@ -52,8 +52,8 @@ export class PIManager {
         teamId,
         name: `PI-${name}`,
         description,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDate,
+        endsAt: endDate
       });
 
       if (!cycle.success || !cycle.cycle) {
@@ -163,8 +163,8 @@ export class PIManager {
           return {
             id: cycle.id,
             name: cycle.name,
-            startDate: new Date(cycle.startsAt),
-            endDate: new Date(cycle.endsAt),
+            startDate: cycle.startsAt ? new Date(cycle.startsAt) : new Date(),
+            endDate: cycle.endsAt ? new Date(cycle.endsAt) : new Date(),
             description: cycle.description || undefined,
             features: features.map(f => f.featureId),
             status: this.getPIStatus(cycle)
