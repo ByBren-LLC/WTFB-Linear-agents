@@ -35,11 +35,11 @@ export const handleConfluenceError = (error: any): Error => {
     const axiosError = error as AxiosError;
     const statusCode = axiosError.response?.status;
     const responseData = axiosError.response?.data as any;
-    
+
     // Extract error details from the response
     const errorMessage = responseData?.message || axiosError.message;
     const errorCode = responseData?.code || 'UNKNOWN_ERROR';
-    
+
     // Log the error with context
     logger.error('Confluence API error', {
       statusCode,
@@ -48,7 +48,7 @@ export const handleConfluenceError = (error: any): Error => {
       url: axiosError.config?.url,
       method: axiosError.config?.method
     });
-    
+
     // Handle specific error cases
     if (statusCode === 401) {
       return new ConfluenceError('Unauthorized: Invalid or expired token', statusCode, 'UNAUTHORIZED', responseData);
@@ -81,13 +81,13 @@ export const handleConfluenceError = (error: any): Error => {
 export const isRetryableError = (error: any): boolean => {
   if (error instanceof ConfluenceError) {
     // Retry on rate limiting or server errors
-    return error.statusCode === 429 || (error.statusCode && error.statusCode >= 500);
+    return error.statusCode === 429 || (error.statusCode !== undefined && error.statusCode >= 500);
   } else if (axios.isAxiosError(error)) {
     const statusCode = error.response?.status;
     // Retry on network errors, rate limiting, or server errors
     return !statusCode || statusCode === 429 || statusCode >= 500;
   }
-  
+
   return false;
 };
 
@@ -105,7 +105,7 @@ export const withRetry = async <T>(
   initialDelay: number = 1000
 ): Promise<T> => {
   let retries = 0;
-  
+
   while (true) {
     try {
       return await fn();
@@ -113,15 +113,15 @@ export const withRetry = async <T>(
       if (retries >= maxRetries || !isRetryableError(error)) {
         throw error;
       }
-      
+
       // Calculate exponential backoff delay
       const delay = initialDelay * Math.pow(2, retries);
-      
+
       logger.warn(`Retrying after error (attempt ${retries + 1}/${maxRetries})`, { error, delay });
-      
+
       // Wait for the backoff period
       await new Promise(resolve => setTimeout(resolve, delay));
-      
+
       retries++;
     }
   }

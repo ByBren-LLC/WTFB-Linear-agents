@@ -1,17 +1,17 @@
 /**
  * Issue mapper for Linear issues
- * 
+ *
  * This module provides functions to map planning information to Linear issues.
  * It handles conversion of attributes, labels, and other metadata.
  */
 
-import { IssueCreateInput, IssueUpdateInput } from '@linear/sdk';
+import { CompatibleIssueCreateInput as IssueCreateInput, CompatibleIssueUpdateInput as IssueUpdateInput } from './compatibility-layer';
 import { Epic, Feature, Story, Enabler } from '../planning/models';
 import { EnablerType } from '../safe/safe_linear_implementation';
 
 /**
  * Maps an Epic to a Linear issue create input
- * 
+ *
  * @param epic The Epic to map
  * @param teamId The Linear team ID
  * @returns The Linear issue create input
@@ -23,7 +23,7 @@ export const mapEpicToIssueInput = async (
 ): Promise<IssueCreateInput> => {
   // Map attributes to labels if any
   const attributeLabels = epic.attributes ? await mapAttributesToLabels(epic.attributes) : [];
-  
+
   return {
     teamId,
     title: `[EPIC] ${epic.title}`,
@@ -35,7 +35,7 @@ export const mapEpicToIssueInput = async (
 
 /**
  * Maps a Feature to a Linear issue create input
- * 
+ *
  * @param feature The Feature to map
  * @param teamId The Linear team ID
  * @param epicId The parent Epic ID (optional)
@@ -49,7 +49,7 @@ export const mapFeatureToIssueInput = async (
 ): Promise<IssueCreateInput> => {
   // Map attributes to labels if any
   const attributeLabels = feature.attributes ? await mapAttributesToLabels(feature.attributes) : [];
-  
+
   return {
     teamId,
     title: `[FEATURE] ${feature.title}`,
@@ -63,7 +63,7 @@ export const mapFeatureToIssueInput = async (
 
 /**
  * Maps a Story to a Linear issue create input
- * 
+ *
  * @param story The Story to map
  * @param teamId The Linear team ID
  * @param featureId The parent Feature ID (optional)
@@ -77,7 +77,7 @@ export const mapStoryToIssueInput = async (
 ): Promise<IssueCreateInput> => {
   // Map attributes to labels if any
   const attributeLabels = story.attributes ? await mapAttributesToLabels(story.attributes) : [];
-  
+
   // Format acceptance criteria if present
   let description = story.description;
   if (story.acceptanceCriteria && story.acceptanceCriteria.length > 0) {
@@ -86,7 +86,7 @@ export const mapStoryToIssueInput = async (
       description += `- [ ] ${criteria}\n`;
     });
   }
-  
+
   return {
     teamId,
     title: story.title,
@@ -100,7 +100,7 @@ export const mapStoryToIssueInput = async (
 
 /**
  * Maps an Enabler to a Linear issue create input
- * 
+ *
  * @param enabler The Enabler to map
  * @param teamId The Linear team ID
  * @param featureId The parent Feature ID (optional)
@@ -114,7 +114,7 @@ export const mapEnablerToIssueInput = async (
 ): Promise<IssueCreateInput> => {
   // Map attributes to labels if any
   const attributeLabels = enabler.attributes ? await mapAttributesToLabels(enabler.attributes) : [];
-  
+
   return {
     teamId,
     title: `[ENABLER] ${enabler.title}`,
@@ -128,7 +128,7 @@ export const mapEnablerToIssueInput = async (
 
 /**
  * Maps attributes to Linear label IDs
- * 
+ *
  * @param attributes The attributes to map
  * @returns Array of label IDs
  */
@@ -140,7 +140,7 @@ export const mapAttributesToLabels = async (attributes: Record<string, any>): Pr
 
 /**
  * Maps story points to Linear estimate
- * 
+ *
  * @param storyPoints The story points to map
  * @returns The Linear estimate value
  */
@@ -148,11 +148,11 @@ export const mapStoryPointsToEstimate = (storyPoints?: number): number | undefin
   if (storyPoints === undefined) {
     return undefined;
   }
-  
+
   // Linear estimates are typically 1, 2, 3, 5, 8, 13
   // Map story points to the closest Linear estimate
   const linearEstimates = [1, 2, 3, 5, 8, 13];
-  
+
   // Find the closest estimate
   return linearEstimates.reduce((prev, curr) => {
     return (Math.abs(curr - storyPoints) < Math.abs(prev - storyPoints) ? curr : prev);
@@ -161,7 +161,7 @@ export const mapStoryPointsToEstimate = (storyPoints?: number): number | undefin
 
 /**
  * Maps priority string to Linear priority number
- * 
+ *
  * @param priority The priority string
  * @returns The Linear priority number
  */
@@ -169,7 +169,7 @@ export const mapPriorityToLinear = (priority?: string): number | undefined => {
   if (!priority) {
     return undefined;
   }
-  
+
   // Linear priorities: 0 (none), 1 (urgent), 2 (high), 3 (medium), 4 (low)
   switch (priority.toLowerCase()) {
     case 'urgent':
@@ -189,7 +189,7 @@ export const mapPriorityToLinear = (priority?: string): number | undefined => {
 
 /**
  * Maps enabler type string to SAFe EnablerType
- * 
+ *
  * @param type The enabler type string
  * @returns The SAFe EnablerType
  */
@@ -197,7 +197,7 @@ export const mapEnablerTypeToSAFe = (type?: string): EnablerType => {
   if (!type) {
     return EnablerType.TECHNICAL_DEBT;
   }
-  
+
   switch (type.toLowerCase()) {
     case 'architecture':
     case 'architectural':

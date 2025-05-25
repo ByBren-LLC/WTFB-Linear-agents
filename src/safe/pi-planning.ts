@@ -3,7 +3,8 @@
  *
  * This module handles PI planning activities in Linear following SAFe methodology.
  */
-import { LinearClient, Cycle, Issue } from '@linear/sdk';
+import { LinearClient } from '../linear';
+import { Cycle, Issue } from '@linear/sdk';
 import * as logger from '../utils/logger';
 import { ProgramIncrement, PIFeature, PIIteration, PIObjective, PIRisk } from './pi-model';
 import { SAFeLinearImplementation } from './safe_linear_implementation';

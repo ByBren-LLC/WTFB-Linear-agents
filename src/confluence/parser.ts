@@ -6,7 +6,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import { Element as CheerioElement } from 'cheerio';
+import type { Element as CheerioElement } from 'cheerio';
 import * as logger from '../utils/logger';
 import {
   parseHeading,
