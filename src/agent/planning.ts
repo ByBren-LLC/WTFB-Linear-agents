@@ -74,11 +74,15 @@ export class PlanningAgent {
         labelIds: []
       });
 
-      logger.info('Created Epic', { epicId: epic.id, title: planningTitle });
+      if (!epic.success || !epic.issue) {
+        throw new Error('Failed to create Epic');
+      }
+
+      logger.info('Created Epic', { epicId: epic.issue.id, title: planningTitle });
 
       return {
         success: true,
-        epicId: epic.id,
+        epicId: epic.issue.id,
         message: `Created Epic: ${planningTitle}`
       };
     } catch (error) {

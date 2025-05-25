@@ -55,15 +55,17 @@ export class LinearIssueCreator {
       const response = await this.linearClient.createIssue(createData);
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create issue: ${response.error}`);
+        throw new Error('Failed to create issue');
       }
 
+      const issue = await response.issue;
+
       logger.info('Created issue', {
-        issueId: response.issue.id,
+        issueId: issue.id,
         title
       });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error creating issue', { error, title });
       throw error;
@@ -310,7 +312,8 @@ export class LinearIssueCreator {
         throw new Error(`Failed to create ${labelName} label`);
       }
 
-      return response.issueLabel.id;
+      const issueLabel = await response.issueLabel;
+      return issueLabel.id;
     } catch (error) {
       logger.error(`Error getting ${labelName} label ID`, { error });
       return null;

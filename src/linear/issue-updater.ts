@@ -33,12 +33,14 @@ export class LinearIssueUpdater {
       const response = await this.linearClient.updateIssue(issueId, updateData);
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to update issue: ${response.error}`);
+        throw new Error('Failed to update issue');
       }
+
+      const issue = await response.issue;
 
       logger.info('Updated issue', { issueId, updateData });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error updating issue', { error, issueId, updateData });
       throw error;
