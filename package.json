@@ -49,9 +49,7 @@
     "express-session": "^1.18.1",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.0",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",

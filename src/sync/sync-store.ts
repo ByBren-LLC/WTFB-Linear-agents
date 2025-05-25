@@ -5,7 +5,17 @@
  */
 import { Conflict } from './change-detector';
 import * as logger from '../utils/logger';
-import { initializeDatabase, getDatabase } from '../db/models';
+import {
+  initializeDatabase,
+  getLastSyncTimestamp as dbGetLastSyncTimestamp,
+  updateLastSyncTimestamp as dbUpdateLastSyncTimestamp,
+  storeConflict as dbStoreConflict,
+  getUnresolvedConflicts as dbGetUnresolvedConflicts,
+  getResolvedConflicts as dbGetResolvedConflicts,
+  getAllConflicts as dbGetAllConflicts,
+  deleteConflict as dbDeleteConflict,
+  clearConflicts as dbClearConflicts
+} from '../db/models';
 
 /**
  * Synchronization store
@@ -31,13 +41,7 @@ export class SyncStore {
     linearTeamId: string
   ): Promise<number | null> {
     try {
-      const db = getDatabase();
-      const syncState = await db.get(
-        'SELECT timestamp FROM sync_state WHERE confluence_page_id = ? AND linear_team_id = ?',
-        [confluencePageIdOrUrl, linearTeamId]
-      );
-
-      return syncState ? syncState.timestamp : null;
+      return await dbGetLastSyncTimestamp(confluencePageIdOrUrl, linearTeamId);
     } catch (error) {
       logger.error('Error getting last sync timestamp', { error });
       return null;
@@ -57,14 +61,7 @@ export class SyncStore {
     timestamp: number
   ): Promise<void> {
     try {
-      const db = getDatabase();
-      await db.run(
-        `INSERT INTO sync_state (confluence_page_id, linear_team_id, timestamp)
-         VALUES (?, ?, ?)
-         ON CONFLICT(confluence_page_id, linear_team_id)
-         DO UPDATE SET timestamp = ?`,
-        [confluencePageIdOrUrl, linearTeamId, timestamp, timestamp]
-      );
+      await dbUpdateLastSyncTimestamp(confluencePageIdOrUrl, linearTeamId, timestamp);
     } catch (error) {
       logger.error('Error updating last sync timestamp', { error });
       throw error;
@@ -78,23 +75,12 @@ export class SyncStore {
    */
   async storeConflict(conflict: Conflict): Promise<void> {
     try {
-      const db = getDatabase();
-      await db.run(
-        `INSERT INTO conflicts (id, linear_change, confluence_change, is_resolved, resolution_strategy)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(id)
-         DO UPDATE SET linear_change = ?, confluence_change = ?, is_resolved = ?, resolution_strategy = ?`,
-        [
-          conflict.id,
-          JSON.stringify(conflict.linearChange),
-          JSON.stringify(conflict.confluenceChange),
-          conflict.isResolved ? 1 : 0,
-          conflict.resolutionStrategy || null,
-          JSON.stringify(conflict.linearChange),
-          JSON.stringify(conflict.confluenceChange),
-          conflict.isResolved ? 1 : 0,
-          conflict.resolutionStrategy || null
-        ]
+      await dbStoreConflict(
+        conflict.id,
+        conflict.linearChange,
+        conflict.confluenceChange,
+        conflict.isResolved,
+        conflict.resolutionStrategy
       );
     } catch (error) {
       logger.error('Error storing conflict', { error });
@@ -113,25 +99,13 @@ export class SyncStore {
         throw new Error('Conflict is not resolved');
       }
 
-      const db = getDatabase();
-      await db.run(
-        `INSERT INTO conflicts (id, linear_change, confluence_change, is_resolved, resolution_strategy, resolved_change)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id)
-         DO UPDATE SET linear_change = ?, confluence_change = ?, is_resolved = ?, resolution_strategy = ?, resolved_change = ?`,
-        [
-          conflict.id,
-          JSON.stringify(conflict.linearChange),
-          JSON.stringify(conflict.confluenceChange),
-          1,
-          conflict.resolutionStrategy,
-          JSON.stringify(conflict.resolvedChange),
-          JSON.stringify(conflict.linearChange),
-          JSON.stringify(conflict.confluenceChange),
-          1,
-          conflict.resolutionStrategy,
-          JSON.stringify(conflict.resolvedChange)
-        ]
+      await dbStoreConflict(
+        conflict.id,
+        conflict.linearChange,
+        conflict.confluenceChange,
+        true,
+        conflict.resolutionStrategy,
+        conflict.resolvedChange
       );
     } catch (error) {
       logger.error('Error storing resolved conflict', { error });
@@ -146,17 +120,13 @@ export class SyncStore {
    */
   async getUnresolvedConflicts(): Promise<Conflict[]> {
     try {
-      const db = getDatabase();
-      const rows = await db.all(
-        'SELECT * FROM conflicts WHERE is_resolved = 0'
-      );
-
-      return rows.map(row => ({
+      const conflicts = await dbGetUnresolvedConflicts();
+      return conflicts.map(row => ({
         id: row.id,
-        linearChange: JSON.parse(row.linear_change),
-        confluenceChange: JSON.parse(row.confluence_change),
-        isResolved: false,
-        resolutionStrategy: row.resolution_strategy
+        linearChange: row.linearChange,
+        confluenceChange: row.confluenceChange,
+        isResolved: row.isResolved,
+        resolutionStrategy: row.resolutionStrategy
       }));
     } catch (error) {
       logger.error('Error getting unresolved conflicts', { error });
@@ -171,18 +141,14 @@ export class SyncStore {
    */
   async getResolvedConflicts(): Promise<Conflict[]> {
     try {
-      const db = getDatabase();
-      const rows = await db.all(
-        'SELECT * FROM conflicts WHERE is_resolved = 1'
-      );
-
-      return rows.map(row => ({
+      const conflicts = await dbGetResolvedConflicts();
+      return conflicts.map(row => ({
         id: row.id,
-        linearChange: JSON.parse(row.linear_change),
-        confluenceChange: JSON.parse(row.confluence_change),
-        resolvedChange: JSON.parse(row.resolved_change),
-        isResolved: true,
-        resolutionStrategy: row.resolution_strategy
+        linearChange: row.linearChange,
+        confluenceChange: row.confluenceChange,
+        resolvedChange: row.resolvedChange,
+        isResolved: row.isResolved,
+        resolutionStrategy: row.resolutionStrategy
       }));
     } catch (error) {
       logger.error('Error getting resolved conflicts', { error });
@@ -197,16 +163,14 @@ export class SyncStore {
    */
   async getAllConflicts(): Promise<Conflict[]> {
     try {
-      const db = getDatabase();
-      const rows = await db.all('SELECT * FROM conflicts');
-
-      return rows.map(row => ({
+      const conflicts = await dbGetAllConflicts();
+      return conflicts.map(row => ({
         id: row.id,
-        linearChange: JSON.parse(row.linear_change),
-        confluenceChange: JSON.parse(row.confluence_change),
-        resolvedChange: row.resolved_change ? JSON.parse(row.resolved_change) : undefined,
-        isResolved: row.is_resolved === 1,
-        resolutionStrategy: row.resolution_strategy
+        linearChange: row.linearChange,
+        confluenceChange: row.confluenceChange,
+        resolvedChange: row.resolvedChange,
+        isResolved: row.isResolved,
+        resolutionStrategy: row.resolutionStrategy
       }));
     } catch (error) {
       logger.error('Error getting all conflicts', { error });
@@ -221,8 +185,7 @@ export class SyncStore {
    */
   async deleteConflict(conflictId: string): Promise<void> {
     try {
-      const db = getDatabase();
-      await db.run('DELETE FROM conflicts WHERE id = ?', [conflictId]);
+      await dbDeleteConflict(conflictId);
     } catch (error) {
       logger.error('Error deleting conflict', { error });
       throw error;
@@ -234,8 +197,7 @@ export class SyncStore {
    */
   async clearConflicts(): Promise<void> {
     try {
-      const db = getDatabase();
-      await db.run('DELETE FROM conflicts');
+      await dbClearConflicts();
     } catch (error) {
       logger.error('Error clearing conflicts', { error });
       throw error;
