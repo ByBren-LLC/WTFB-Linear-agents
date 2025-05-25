@@ -10,19 +10,22 @@
 Resolve database schema conflicts and integration issues between the existing OAuth token management schema and the newly integrated planning session and synchronization schemas. Ensure all database models work together cohesively.
 
 ## Justification
-The integration brought in database schemas for planning sessions, synchronization state, and additional token management that may conflict with existing schemas. These need to be harmonized to ensure:
+The integration brought in database schemas for planning sessions, synchronization state, and additional token management that may conflict with existing schemas. **CRITICAL**: LIN-19 introduced SQLite database calls that conflict with our PostgreSQL architecture. These need to be harmonized to ensure:
+- **Pure PostgreSQL implementation** (remove all SQLite references)
 - No table/column conflicts
 - Proper foreign key relationships
 - Consistent data types and constraints
 - Unified migration strategy
 
 ## Acceptance Criteria
+- [ ] **All SQLite references removed** (critical fix for LIN-19 conflicts)
+- [ ] All database operations use PostgreSQL syntax and `query` function
 - [ ] All database schemas are compatible and non-conflicting
 - [ ] Database migrations run successfully
 - [ ] All database operations work correctly
 - [ ] Foreign key relationships are properly established
 - [ ] Data integrity constraints are maintained
-- [ ] Both PostgreSQL and SQLite schemas are aligned
+- [ ] **Pure PostgreSQL implementation** (no dual database)
 - [ ] Existing OAuth functionality continues to work
 
 ## Technical Context
@@ -49,9 +52,10 @@ Database schema integration will:
 
 ### Technical Constraints
 - Must maintain existing OAuth token functionality
-- Must support both PostgreSQL and SQLite
+- **Must use ONLY PostgreSQL** (remove all SQLite references)
 - Cannot break existing data
 - Must follow existing migration patterns
+- **Must fix LIN-19 SQLite conflicts** in sync-store.ts
 
 ## Implementation Plan
 ### Files to Create/Modify
@@ -126,25 +130,30 @@ CREATE TABLE linear_issues_cache (
 
 ### Integration Tests
 - Test full database operations
-- Test with both PostgreSQL and SQLite
+- Test with PostgreSQL only
 - Test migration rollback scenarios
 - Test data integrity constraints
 
 ## Implementation Steps
-1. Analyze existing database schema and identify conflicts
-2. Design unified schema that supports all functionality
-3. Create migration files for new tables and schema changes
-4. Update database model functions for new schemas
-5. Test migrations on both PostgreSQL and SQLite
-6. Verify all existing functionality still works
-7. Test new planning and sync functionality with database
-8. Create comprehensive tests for all database operations
-9. Document schema changes and migration strategy
+1. **CRITICAL FIRST**: Fix LIN-19 SQLite conflicts in `src/sync/sync-store.ts`
+   - Replace `getDatabase()` calls with `import { query } from '../db/connection'`
+   - Change SQLite syntax (`?`) to PostgreSQL syntax (`$1`, `$2`)
+   - Replace `db.get()` with `query()` and access `result.rows[0]`
+   - Replace `db.all()` with `query()` and access `result.rows`
+2. Analyze existing database schema and identify conflicts
+3. Design unified schema that supports all functionality
+4. Create migration files for new tables and schema changes
+5. Update database model functions for new schemas
+6. Test migrations on PostgreSQL only
+7. Verify all existing functionality still works
+8. Test new planning and sync functionality with database
+9. Create comprehensive tests for all database operations
+10. Document schema changes and migration strategy
 
 ## Definition of Done
 - [ ] All acceptance criteria are met
 - [ ] Database schemas are compatible and non-conflicting
-- [ ] Migrations run successfully on both PostgreSQL and SQLite
+- [ ] Migrations run successfully on PostgreSQL
 - [ ] All database operations work correctly
 - [ ] Foreign key relationships are properly established
 - [ ] Existing OAuth functionality continues to work
@@ -153,9 +162,11 @@ CREATE TABLE linear_issues_cache (
 - [ ] Documentation updated
 
 ## Notes for Implementation
+- **PRIORITY 1**: Fix LIN-19 SQLite conflicts immediately
 - Carefully analyze existing schema before making changes
-- Test migrations thoroughly on both database types
+- Test migrations thoroughly on PostgreSQL only
 - Ensure backward compatibility with existing data
 - Follow existing naming conventions and patterns
 - Consider performance implications of new schemas
 - Document any breaking changes clearly
+- Remove all SQLite references and dependencies
