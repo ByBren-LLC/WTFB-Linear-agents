@@ -1,228 +1,163 @@
 /**
- * Conflict Resolver
+ * Conflict resolver for Linear Planning Agent
  *
- * This module provides functionality to resolve conflicts between Linear issues and Confluence documents.
+ * This module provides functionality to resolve conflicts between Linear and Confluence.
  */
-import { ConfluenceClient } from '../confluence/client';
-import { LinearClientWrapper } from '../linear/client';
-import { SyncStore } from './sync-store';
-import { Conflict, Change, ChangeSource } from './change-detector';
+
 import * as logger from '../utils/logger';
+import { SyncConflict } from './models';
 
 /**
  * Conflict resolution strategy
  */
 export enum ConflictResolutionStrategy {
-  /** Use Linear as the source of truth */
-  LINEAR = 'linear',
-  /** Use Confluence as the source of truth */
-  CONFLUENCE = 'confluence',
-  /** Manually resolve the conflict */
+  PREFER_LINEAR = 'prefer_linear',
+  PREFER_CONFLUENCE = 'prefer_confluence',
+  PREFER_NEWER = 'prefer_newer',
   MANUAL = 'manual'
 }
 
 /**
- * Conflict resolver
+ * Conflict resolver class
  */
 export class ConflictResolver {
-  private confluenceClient: ConfluenceClient;
-  private linearClient: LinearClientWrapper;
-  private syncStore: SyncStore;
-  private autoResolveConflicts: boolean;
+  private strategy: ConflictResolutionStrategy;
 
   /**
    * Creates a new conflict resolver
    *
-   * @param confluenceClient Confluence client
-   * @param linearClient Linear client
-   * @param syncStore Synchronization store
-   * @param autoResolveConflicts Whether to automatically resolve conflicts
+   * @param strategy The conflict resolution strategy to use
    */
-  constructor(
-    confluenceClient: ConfluenceClient,
-    linearClient: LinearClientWrapper,
-    syncStore: SyncStore,
-    autoResolveConflicts: boolean
-  ) {
-    this.confluenceClient = confluenceClient;
-    this.linearClient = linearClient;
-    this.syncStore = syncStore;
-    this.autoResolveConflicts = autoResolveConflicts;
+  constructor(strategy: ConflictResolutionStrategy = ConflictResolutionStrategy.PREFER_NEWER) {
+    this.strategy = strategy;
   }
 
   /**
-   * Resolves conflicts
+   * Resolves a conflict between Linear and Confluence
    *
-   * @param conflicts Conflicts to resolve
-   * @returns Resolved conflicts
-   * @throws Error if there's an issue resolving conflicts
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
    */
-  async resolveConflicts(conflicts: Conflict[]): Promise<Conflict[]> {
+  resolveConflict(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
     try {
-      if (!conflicts || !Array.isArray(conflicts)) {
-        throw new Error('Invalid conflicts parameter: must be an array');
+      // If the conflict already has a resolution, return it
+      if (conflict.resolution) {
+        return conflict.resolution;
       }
 
-      logger.info('Resolving conflicts', { conflictCount: conflicts.length });
-
-      if (conflicts.length === 0) {
-        logger.info('No conflicts to resolve');
-        return [];
-      }
-
-      const resolvedConflicts: Conflict[] = [];
-      const failedConflicts: { id: string; error: string }[] = [];
-
-      for (const conflict of conflicts) {
-        try {
-          if (!conflict.id) {
-            logger.warn('Skipping conflict with no ID', { conflict });
-            continue;
-          }
-
-          // If auto-resolve is enabled, use the default strategy
-          if (this.autoResolveConflicts) {
-            logger.info('Auto-resolving conflict', {
-              conflictId: conflict.id,
-              strategy: ConflictResolutionStrategy.LINEAR
-            });
-
-            const resolvedConflict = await this.resolveConflict(
-              conflict,
-              ConflictResolutionStrategy.LINEAR // Default to Linear as source of truth
-            );
-            resolvedConflicts.push(resolvedConflict);
-
-            logger.info('Conflict auto-resolved', {
-              conflictId: conflict.id,
-              strategy: ConflictResolutionStrategy.LINEAR
-            });
-          } else {
-            // Otherwise, store the conflict for manual resolution
-            logger.info('Storing conflict for manual resolution', { conflictId: conflict.id });
-            await this.syncStore.storeConflict(conflict);
-            logger.info('Conflict stored for manual resolution', { conflictId: conflict.id });
-          }
-        } catch (error) {
-          logger.error('Error resolving conflict', { error, conflictId: conflict.id });
-          failedConflicts.push({
-            id: conflict.id,
-            error: (error as Error).message
-          });
-        }
-      }
-
-      if (failedConflicts.length > 0) {
-        logger.warn('Some conflicts failed to resolve', {
-          failedCount: failedConflicts.length,
-          failedConflicts
-        });
-      }
-
-      logger.info('Conflicts resolution completed', {
-        totalCount: conflicts.length,
-        resolvedCount: resolvedConflicts.length,
-        failedCount: failedConflicts.length
-      });
-
-      return resolvedConflicts;
-    } catch (error) {
-      logger.error('Error resolving conflicts', { error });
-      throw new Error(`Failed to resolve conflicts: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Resolves a conflict
-   *
-   * @param conflict Conflict to resolve
-   * @param strategy Resolution strategy
-   * @returns Resolved conflict
-   */
-  async resolveConflict(
-    conflict: Conflict,
-    strategy: ConflictResolutionStrategy
-  ): Promise<Conflict> {
-    try {
-      logger.info('Resolving conflict', { conflictId: conflict.id, strategy });
-
-      if (!conflict.linearChange || !conflict.confluenceChange) {
-        throw new Error('Invalid conflict: missing changes');
-      }
-
-      let resolvedChange: Change;
-
-      switch (strategy) {
-        case ConflictResolutionStrategy.LINEAR:
-          // Use Linear as the source of truth
-          resolvedChange = {
-            ...conflict.linearChange,
-            id: `resolved-${conflict.id}`,
-            source: ChangeSource.LINEAR
-          };
-          break;
-
-        case ConflictResolutionStrategy.CONFLUENCE:
-          // Use Confluence as the source of truth
-          resolvedChange = {
-            ...conflict.confluenceChange,
-            id: `resolved-${conflict.id}`,
-            source: ChangeSource.CONFLUENCE
-          };
-          break;
-
+      // Apply the resolution strategy
+      switch (this.strategy) {
+        case ConflictResolutionStrategy.PREFER_LINEAR:
+          return 'linear';
+        case ConflictResolutionStrategy.PREFER_CONFLUENCE:
+          return 'confluence';
+        case ConflictResolutionStrategy.PREFER_NEWER:
+          return this.resolveByTimestamp(conflict);
         case ConflictResolutionStrategy.MANUAL:
-          // Manual resolution not implemented yet
-          throw new Error('Manual conflict resolution not implemented');
-
         default:
-          throw new Error(`Invalid resolution strategy: ${strategy}`);
+          return 'manual';
       }
-
-      // Update the conflict
-      const resolvedConflict: Conflict = {
-        ...conflict,
-        resolvedChange,
-        isResolved: true,
-        resolutionStrategy: strategy
-      };
-
-      // Store the resolved conflict
-      await this.syncStore.storeResolvedConflict(resolvedConflict);
-
-      logger.info('Conflict resolved', { conflictId: conflict.id, strategy });
-      return resolvedConflict;
     } catch (error) {
-      logger.error('Error resolving conflict', { error, conflictId: conflict.id });
-      throw error;
+      logger.error('Error resolving conflict', { error, conflict });
+      return 'manual';
     }
   }
 
   /**
-   * Gets unresolved conflicts
+   * Resolves a conflict based on the type of entity
    *
-   * @returns Unresolved conflicts
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
    */
-  async getUnresolvedConflicts(): Promise<Conflict[]> {
-    try {
-      return await this.syncStore.getUnresolvedConflicts();
-    } catch (error) {
-      logger.error('Error getting unresolved conflicts', { error });
-      throw error;
+  private resolveByType(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
+    switch (conflict.type) {
+      case 'epic':
+        return this.resolveEpicConflict(conflict);
+      case 'feature':
+        return this.resolveFeatureConflict(conflict);
+      case 'story':
+        return this.resolveStoryConflict(conflict);
+      case 'enabler':
+        return this.resolveEnablerConflict(conflict);
+      default:
+        logger.warn('Unknown conflict type', { conflict });
+        return 'manual';
     }
   }
 
   /**
-   * Gets resolved conflicts
+   * Resolves a conflict based on timestamps
    *
-   * @returns Resolved conflicts
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
    */
-  async getResolvedConflicts(): Promise<Conflict[]> {
+  private resolveByTimestamp(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
     try {
-      return await this.syncStore.getResolvedConflicts();
+      // Get the timestamps from the conflict data
+      const confluenceTimestamp = new Date(conflict.confluenceData.updatedAt || conflict.confluenceData.createdAt);
+      const linearTimestamp = new Date(conflict.linearData.updatedAt || conflict.linearData.createdAt);
+
+      // Compare the timestamps
+      if (confluenceTimestamp > linearTimestamp) {
+        return 'confluence';
+      } else if (linearTimestamp > confluenceTimestamp) {
+        return 'linear';
+      } else {
+        // If timestamps are equal, prefer Linear
+        return 'linear';
+      }
     } catch (error) {
-      logger.error('Error getting resolved conflicts', { error });
-      throw error;
+      logger.error('Error resolving conflict by timestamp', { error, conflict });
+      return 'manual';
     }
+  }
+
+  /**
+   * Resolves an epic conflict
+   *
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
+   */
+  private resolveEpicConflict(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
+    // For epics, we'll use a field-by-field approach
+    // Title and description conflicts are resolved based on the strategy
+    // Status conflicts prefer Linear
+    // Other fields may have specific rules
+
+    // For now, we'll use the timestamp-based approach
+    return this.resolveByTimestamp(conflict);
+  }
+
+  /**
+   * Resolves a feature conflict
+   *
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
+   */
+  private resolveFeatureConflict(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
+    // For features, we'll use a similar approach to epics
+    return this.resolveByTimestamp(conflict);
+  }
+
+  /**
+   * Resolves a story conflict
+   *
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
+   */
+  private resolveStoryConflict(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
+    // For stories, we'll use a similar approach to epics
+    return this.resolveByTimestamp(conflict);
+  }
+
+  /**
+   * Resolves an enabler conflict
+   *
+   * @param conflict The conflict to resolve
+   * @returns The resolution ('confluence', 'linear', or 'manual')
+   */
+  private resolveEnablerConflict(conflict: SyncConflict): 'confluence' | 'linear' | 'manual' {
+    // For enablers, we'll use a similar approach to epics
+    return this.resolveByTimestamp(conflict);
   }
 }

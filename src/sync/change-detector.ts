@@ -1,404 +1,726 @@
 /**
- * Change Detector
+ * Change detector for Linear Planning Agent
  *
- * This module provides functionality to detect changes between Linear issues and Confluence documents.
+ * This module provides functionality to detect changes between Linear and Confluence.
  */
+
+import * as logger from '../utils/logger';
 import { ConfluenceClient } from '../confluence/client';
-import { LinearClientWrapper } from '../linear/client';
-import { SyncStore } from './sync-store';
+import { ConfluenceParser } from '../confluence/parser';
 import { PlanningExtractor } from '../planning/extractor';
 import { LinearIssueFinder } from '../linear/issue-finder';
-import * as logger from '../utils/logger';
+import { SyncConfig, SyncChange, SyncConflict, SyncChanges } from './models';
 
 /**
- * Change type
- */
-export enum ChangeType {
-  /** Item was created */
-  CREATED = 'created',
-  /** Item was updated */
-  UPDATED = 'updated',
-  /** Item was deleted */
-  DELETED = 'deleted'
-}
-
-/**
- * Change source
- */
-export enum ChangeSource {
-  /** Change originated from Linear */
-  LINEAR = 'linear',
-  /** Change originated from Confluence */
-  CONFLUENCE = 'confluence'
-}
-
-/**
- * Change item type
- */
-export enum ChangeItemType {
-  /** Epic */
-  EPIC = 'epic',
-  /** Feature */
-  FEATURE = 'feature',
-  /** Story */
-  STORY = 'story',
-  /** Enabler */
-  ENABLER = 'enabler'
-}
-
-/**
- * Change
- */
-export interface Change {
-  /** Change ID */
-  id: string;
-  /** Change type */
-  type: ChangeType;
-  /** Change source */
-  source: ChangeSource;
-  /** Item type */
-  itemType: ChangeItemType;
-  /** Item ID */
-  itemId: string;
-  /** Item data */
-  itemData: any;
-  /** Timestamp of the change */
-  timestamp: number;
-}
-
-/**
- * Changes
- */
-export interface Changes {
-  /** Linear changes */
-  linearChanges: Change[];
-  /** Confluence changes */
-  confluenceChanges: Change[];
-}
-
-/**
- * Conflict
- */
-export interface Conflict {
-  /** Conflict ID */
-  id: string;
-  /** Linear change */
-  linearChange?: Change;
-  /** Confluence change */
-  confluenceChange?: Change;
-  /** Resolved change */
-  resolvedChange?: Change;
-  /** Whether the conflict is resolved */
-  isResolved: boolean;
-  /** Resolution strategy */
-  resolutionStrategy?: 'linear' | 'confluence' | 'manual';
-}
-
-/**
- * Change detector
+ * Change detector class
  */
 export class ChangeDetector {
   private confluenceClient: ConfluenceClient;
-  private linearClient: LinearClientWrapper;
-  private syncStore: SyncStore;
+  private linearIssueFinder: LinearIssueFinder;
 
   /**
    * Creates a new change detector
    *
-   * @param confluenceClient Confluence client
-   * @param linearClient Linear client
-   * @param syncStore Synchronization store
+   * @param confluenceClient The Confluence client
+   * @param linearIssueFinder The Linear issue finder
    */
-  constructor(
-    confluenceClient: ConfluenceClient,
-    linearClient: LinearClientWrapper,
-    syncStore: SyncStore
-  ) {
+  constructor(confluenceClient: ConfluenceClient, linearIssueFinder: LinearIssueFinder) {
     this.confluenceClient = confluenceClient;
-    this.linearClient = linearClient;
-    this.syncStore = syncStore;
+    this.linearIssueFinder = linearIssueFinder;
   }
 
   /**
-   * Detects changes between Linear issues and Confluence documents
+   * Detects changes between Linear and Confluence
    *
-   * @param confluencePageIdOrUrl Confluence page ID or URL
-   * @param linearTeamId Linear team ID
-   * @returns Changes
-   * @throws Error if there's an issue detecting changes
+   * @param config The synchronization configuration
+   * @returns The detected changes
    */
-  async detectChanges(
-    confluencePageIdOrUrl: string,
-    linearTeamId: string
-  ): Promise<Changes> {
+  async detectChanges(config: SyncConfig): Promise<SyncChanges> {
     try {
-      logger.info('Detecting changes', {
-        confluencePageIdOrUrl,
-        linearTeamId
-      });
+      logger.info('Detecting changes', { config });
 
-      if (!confluencePageIdOrUrl) {
-        throw new Error('Confluence page ID or URL is required');
-      }
-
-      if (!linearTeamId) {
-        throw new Error('Linear team ID is required');
-      }
-
-      let lastSyncTimestamp;
-      try {
-        lastSyncTimestamp = await this.syncStore.getLastSyncTimestamp(
-          confluencePageIdOrUrl,
-          linearTeamId
-        );
-        logger.info('Last sync timestamp', { lastSyncTimestamp });
-      } catch (error) {
-        logger.error('Error getting last sync timestamp', { error });
-        throw new Error(`Failed to get last sync timestamp: ${(error as Error).message}`);
-      }
-
-      // Detect Linear changes
-      let linearChanges;
-      try {
-        linearChanges = await this.detectLinearChanges(
-          linearTeamId,
-          lastSyncTimestamp
-        );
-        logger.info('Linear changes detected', { changeCount: linearChanges.length });
-      } catch (error) {
-        logger.error('Error detecting Linear changes', { error });
-        throw new Error(`Failed to detect Linear changes: ${(error as Error).message}`);
-      }
-
-      // Detect Confluence changes
-      let confluenceChanges;
-      try {
-        confluenceChanges = await this.detectConfluenceChanges(
-          confluencePageIdOrUrl,
-          lastSyncTimestamp
-        );
-        logger.info('Confluence changes detected', { changeCount: confluenceChanges.length });
-      } catch (error) {
-        logger.error('Error detecting Confluence changes', { error });
-        throw new Error(`Failed to detect Confluence changes: ${(error as Error).message}`);
-      }
-
-      logger.info('All changes detected', {
+      // Get Confluence document
+      const pageId = this.extractPageIdFromUrl(config.confluencePageUrl);
+      const page = await this.confluenceClient.getPage(pageId);
+      
+      // Parse Confluence document
+      const parser = new ConfluenceParser(page.body.storage.value);
+      const document = parser.getFullContent();
+      const sections = parser.getDocumentStructure();
+      
+      // Extract planning information
+      const extractor = new PlanningExtractor(document, sections);
+      const planningDocument = extractor.getPlanningDocument();
+      
+      // Get Linear issues
+      const epics = await this.linearIssueFinder.findEpics();
+      const features = await this.linearIssueFinder.findFeatures();
+      const stories = await this.linearIssueFinder.findStories();
+      const enablers = await this.linearIssueFinder.findEnablers();
+      
+      // Initialize result arrays
+      const confluenceChanges: SyncChange[] = [];
+      const linearChanges: SyncChange[] = [];
+      const conflicts: SyncConflict[] = [];
+      
+      // Detect changes in epics
+      await this.detectEpicChanges(planningDocument.epics, epics, confluenceChanges, linearChanges, conflicts);
+      
+      // Detect changes in features
+      await this.detectFeatureChanges(planningDocument.features, features, confluenceChanges, linearChanges, conflicts);
+      
+      // Detect changes in stories
+      await this.detectStoryChanges(planningDocument.stories, stories, confluenceChanges, linearChanges, conflicts);
+      
+      // Detect changes in enablers
+      await this.detectEnablerChanges(planningDocument.enablers, enablers, confluenceChanges, linearChanges, conflicts);
+      
+      logger.info('Changes detected', {
+        confluenceChanges: confluenceChanges.length,
         linearChanges: linearChanges.length,
-        confluenceChanges: confluenceChanges.length
+        conflicts: conflicts.length
       });
-
+      
       return {
+        confluenceChanges,
         linearChanges,
-        confluenceChanges
+        conflicts
       };
     } catch (error) {
-      logger.error('Error detecting changes', { error });
+      logger.error('Error detecting changes', { error, config });
       throw error;
     }
   }
 
   /**
-   * Detects conflicts between Linear and Confluence changes
+   * Extracts the page ID from a Confluence URL
    *
-   * @param changes Changes
-   * @returns Conflicts
+   * @param url The Confluence page URL
+   * @returns The page ID
    */
-  detectConflicts(changes: Changes): Conflict[] {
+  private extractPageIdFromUrl(url: string): string {
     try {
-      const conflicts: Conflict[] = [];
+      // Extract the page ID from the URL
+      // Example URL: https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title
+      const match = url.match(/pages\/(\d+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      
+      // If no match, try another format
+      // Example URL: https://example.atlassian.net/wiki/spaces/SPACE/page/123456789
+      const altMatch = url.match(/page\/(\d+)/);
+      if (altMatch && altMatch[1]) {
+        return altMatch[1];
+      }
+      
+      throw new Error(`Could not extract page ID from URL: ${url}`);
+    } catch (error) {
+      logger.error('Error extracting page ID from URL', { error, url });
+      throw error;
+    }
+  }
 
-      // Check for conflicts (same item changed in both Linear and Confluence)
-      for (const linearChange of changes.linearChanges) {
-        const conflictingChange = changes.confluenceChanges.find(
-          confluenceChange => confluenceChange.itemId === linearChange.itemId
-        );
-
-        if (conflictingChange) {
-          conflicts.push({
-            id: `conflict-${linearChange.itemId}`,
-            linearChange,
-            confluenceChange: conflictingChange,
-            isResolved: false
+  /**
+   * Detects changes in epics
+   *
+   * @param confluenceEpics The epics from Confluence
+   * @param linearEpics The epics from Linear
+   * @param confluenceChanges The array to store Confluence changes
+   * @param linearChanges The array to store Linear changes
+   * @param conflicts The array to store conflicts
+   */
+  private async detectEpicChanges(
+    confluenceEpics: any[],
+    linearEpics: any[],
+    confluenceChanges: SyncChange[],
+    linearChanges: SyncChange[],
+    conflicts: SyncConflict[]
+  ): Promise<void> {
+    try {
+      // Create maps for easier lookup
+      const confluenceEpicMap = new Map(confluenceEpics.map(epic => [epic.id, epic]));
+      const linearEpicMap = new Map(linearEpics.map(epic => [epic.id, epic]));
+      
+      // Check for epics in Confluence that don't exist in Linear
+      for (const confluenceEpic of confluenceEpics) {
+        if (!linearEpicMap.has(confluenceEpic.id)) {
+          // Epic exists in Confluence but not in Linear
+          confluenceChanges.push({
+            id: this.generateChangeId(),
+            type: 'epic',
+            action: 'created',
+            source: 'confluence',
+            sourceId: confluenceEpic.id,
+            data: confluenceEpic
           });
         }
       }
-
-      logger.info('Conflicts detected', { conflictCount: conflicts.length });
-      return conflicts;
+      
+      // Check for epics in Linear that don't exist in Confluence
+      for (const linearEpic of linearEpics) {
+        if (!confluenceEpicMap.has(linearEpic.id)) {
+          // Epic exists in Linear but not in Confluence
+          linearChanges.push({
+            id: this.generateChangeId(),
+            type: 'epic',
+            action: 'created',
+            source: 'linear',
+            sourceId: linearEpic.id,
+            data: linearEpic
+          });
+        }
+      }
+      
+      // Check for epics that exist in both but have differences
+      for (const [epicId, confluenceEpic] of confluenceEpicMap.entries()) {
+        const linearEpic = linearEpicMap.get(epicId);
+        if (linearEpic) {
+          // Epic exists in both, check for differences
+          const comparison = this.compareEpics(confluenceEpic, linearEpic);
+          
+          switch (comparison) {
+            case 'equal':
+              // No changes
+              break;
+            case 'confluence_changed':
+              // Confluence has newer changes
+              confluenceChanges.push({
+                id: this.generateChangeId(),
+                type: 'epic',
+                action: 'updated',
+                source: 'confluence',
+                sourceId: epicId,
+                targetId: epicId,
+                data: confluenceEpic
+              });
+              break;
+            case 'linear_changed':
+              // Linear has newer changes
+              linearChanges.push({
+                id: this.generateChangeId(),
+                type: 'epic',
+                action: 'updated',
+                source: 'linear',
+                sourceId: epicId,
+                targetId: epicId,
+                data: linearEpic
+              });
+              break;
+            case 'both_changed':
+              // Both have changes, create a conflict
+              conflicts.push({
+                id: this.generateChangeId(),
+                type: 'epic',
+                confluenceData: confluenceEpic,
+                linearData: linearEpic
+              });
+              break;
+          }
+        }
+      }
     } catch (error) {
-      logger.error('Error detecting conflicts', { error });
+      logger.error('Error detecting epic changes', { error });
       throw error;
     }
   }
 
   /**
-   * Detects changes in Linear issues
+   * Detects changes in features
    *
-   * @param linearTeamId Linear team ID
-   * @param lastSyncTimestamp Last synchronization timestamp
-   * @returns Linear changes
+   * @param confluenceFeatures The features from Confluence
+   * @param linearFeatures The features from Linear
+   * @param confluenceChanges The array to store Confluence changes
+   * @param linearChanges The array to store Linear changes
+   * @param conflicts The array to store conflicts
    */
-  private async detectLinearChanges(
-    linearTeamId: string,
-    lastSyncTimestamp: number | null
-  ): Promise<Change[]> {
+  private async detectFeatureChanges(
+    confluenceFeatures: any[],
+    linearFeatures: any[],
+    confluenceChanges: SyncChange[],
+    linearChanges: SyncChange[],
+    conflicts: SyncConflict[]
+  ): Promise<void> {
     try {
-      const changes: Change[] = [];
-
-      // If this is the first sync, don't detect Linear changes
-      if (!lastSyncTimestamp) {
-        return changes;
+      // Create maps for easier lookup
+      const confluenceFeatureMap = new Map(confluenceFeatures.map(feature => [feature.id, feature]));
+      const linearFeatureMap = new Map(linearFeatures.map(feature => [feature.id, feature]));
+      
+      // Check for features in Confluence that don't exist in Linear
+      for (const confluenceFeature of confluenceFeatures) {
+        if (!linearFeatureMap.has(confluenceFeature.id)) {
+          // Feature exists in Confluence but not in Linear
+          confluenceChanges.push({
+            id: this.generateChangeId(),
+            type: 'feature',
+            action: 'created',
+            source: 'confluence',
+            sourceId: confluenceFeature.id,
+            data: confluenceFeature
+          });
+        }
       }
+      
+      // Check for features in Linear that don't exist in Confluence
+      for (const linearFeature of linearFeatures) {
+        if (!confluenceFeatureMap.has(linearFeature.id)) {
+          // Feature exists in Linear but not in Confluence
+          linearChanges.push({
+            id: this.generateChangeId(),
+            type: 'feature',
+            action: 'created',
+            source: 'linear',
+            sourceId: linearFeature.id,
+            data: linearFeature
+          });
+        }
+      }
+      
+      // Check for features that exist in both but have differences
+      for (const [featureId, confluenceFeature] of confluenceFeatureMap.entries()) {
+        const linearFeature = linearFeatureMap.get(featureId);
+        if (linearFeature) {
+          // Feature exists in both, check for differences
+          const comparison = this.compareFeatures(confluenceFeature, linearFeature);
+          
+          switch (comparison) {
+            case 'equal':
+              // No changes
+              break;
+            case 'confluence_changed':
+              // Confluence has newer changes
+              confluenceChanges.push({
+                id: this.generateChangeId(),
+                type: 'feature',
+                action: 'updated',
+                source: 'confluence',
+                sourceId: featureId,
+                targetId: featureId,
+                data: confluenceFeature
+              });
+              break;
+            case 'linear_changed':
+              // Linear has newer changes
+              linearChanges.push({
+                id: this.generateChangeId(),
+                type: 'feature',
+                action: 'updated',
+                source: 'linear',
+                sourceId: featureId,
+                targetId: featureId,
+                data: linearFeature
+              });
+              break;
+            case 'both_changed':
+              // Both have changes, create a conflict
+              conflicts.push({
+                id: this.generateChangeId(),
+                type: 'feature',
+                confluenceData: confluenceFeature,
+                linearData: linearFeature
+              });
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error detecting feature changes', { error });
+      throw error;
+    }
+  }
 
-      // Get issues updated since last sync
-      const updatedIssues = await this.linearClient.executeQuery(
-        () => this.linearClient.getTeamIssues(linearTeamId, {
-          updatedAt: { gt: new Date(lastSyncTimestamp).toISOString() }
-        }),
-        'getTeamIssues'
+  /**
+   * Detects changes in stories
+   *
+   * @param confluenceStories The stories from Confluence
+   * @param linearStories The stories from Linear
+   * @param confluenceChanges The array to store Confluence changes
+   * @param linearChanges The array to store Linear changes
+   * @param conflicts The array to store conflicts
+   */
+  private async detectStoryChanges(
+    confluenceStories: any[],
+    linearStories: any[],
+    confluenceChanges: SyncChange[],
+    linearChanges: SyncChange[],
+    conflicts: SyncConflict[]
+  ): Promise<void> {
+    try {
+      // Create maps for easier lookup
+      const confluenceStoryMap = new Map(confluenceStories.map(story => [story.id, story]));
+      const linearStoryMap = new Map(linearStories.map(story => [story.id, story]));
+      
+      // Check for stories in Confluence that don't exist in Linear
+      for (const confluenceStory of confluenceStories) {
+        if (!linearStoryMap.has(confluenceStory.id)) {
+          // Story exists in Confluence but not in Linear
+          confluenceChanges.push({
+            id: this.generateChangeId(),
+            type: 'story',
+            action: 'created',
+            source: 'confluence',
+            sourceId: confluenceStory.id,
+            data: confluenceStory
+          });
+        }
+      }
+      
+      // Check for stories in Linear that don't exist in Confluence
+      for (const linearStory of linearStories) {
+        if (!confluenceStoryMap.has(linearStory.id)) {
+          // Story exists in Linear but not in Confluence
+          linearChanges.push({
+            id: this.generateChangeId(),
+            type: 'story',
+            action: 'created',
+            source: 'linear',
+            sourceId: linearStory.id,
+            data: linearStory
+          });
+        }
+      }
+      
+      // Check for stories that exist in both but have differences
+      for (const [storyId, confluenceStory] of confluenceStoryMap.entries()) {
+        const linearStory = linearStoryMap.get(storyId);
+        if (linearStory) {
+          // Story exists in both, check for differences
+          const comparison = this.compareStories(confluenceStory, linearStory);
+          
+          switch (comparison) {
+            case 'equal':
+              // No changes
+              break;
+            case 'confluence_changed':
+              // Confluence has newer changes
+              confluenceChanges.push({
+                id: this.generateChangeId(),
+                type: 'story',
+                action: 'updated',
+                source: 'confluence',
+                sourceId: storyId,
+                targetId: storyId,
+                data: confluenceStory
+              });
+              break;
+            case 'linear_changed':
+              // Linear has newer changes
+              linearChanges.push({
+                id: this.generateChangeId(),
+                type: 'story',
+                action: 'updated',
+                source: 'linear',
+                sourceId: storyId,
+                targetId: storyId,
+                data: linearStory
+              });
+              break;
+            case 'both_changed':
+              // Both have changes, create a conflict
+              conflicts.push({
+                id: this.generateChangeId(),
+                type: 'story',
+                confluenceData: confluenceStory,
+                linearData: linearStory
+              });
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error detecting story changes', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Detects changes in enablers
+   *
+   * @param confluenceEnablers The enablers from Confluence
+   * @param linearEnablers The enablers from Linear
+   * @param confluenceChanges The array to store Confluence changes
+   * @param linearChanges The array to store Linear changes
+   * @param conflicts The array to store conflicts
+   */
+  private async detectEnablerChanges(
+    confluenceEnablers: any[],
+    linearEnablers: any[],
+    confluenceChanges: SyncChange[],
+    linearChanges: SyncChange[],
+    conflicts: SyncConflict[]
+  ): Promise<void> {
+    try {
+      // Create maps for easier lookup
+      const confluenceEnablerMap = new Map(confluenceEnablers.map(enabler => [enabler.id, enabler]));
+      const linearEnablerMap = new Map(linearEnablers.map(enabler => [enabler.id, enabler]));
+      
+      // Check for enablers in Confluence that don't exist in Linear
+      for (const confluenceEnabler of confluenceEnablers) {
+        if (!linearEnablerMap.has(confluenceEnabler.id)) {
+          // Enabler exists in Confluence but not in Linear
+          confluenceChanges.push({
+            id: this.generateChangeId(),
+            type: 'enabler',
+            action: 'created',
+            source: 'confluence',
+            sourceId: confluenceEnabler.id,
+            data: confluenceEnabler
+          });
+        }
+      }
+      
+      // Check for enablers in Linear that don't exist in Confluence
+      for (const linearEnabler of linearEnablers) {
+        if (!confluenceEnablerMap.has(linearEnabler.id)) {
+          // Enabler exists in Linear but not in Confluence
+          linearChanges.push({
+            id: this.generateChangeId(),
+            type: 'enabler',
+            action: 'created',
+            source: 'linear',
+            sourceId: linearEnabler.id,
+            data: linearEnabler
+          });
+        }
+      }
+      
+      // Check for enablers that exist in both but have differences
+      for (const [enablerId, confluenceEnabler] of confluenceEnablerMap.entries()) {
+        const linearEnabler = linearEnablerMap.get(enablerId);
+        if (linearEnabler) {
+          // Enabler exists in both, check for differences
+          const comparison = this.compareEnablers(confluenceEnabler, linearEnabler);
+          
+          switch (comparison) {
+            case 'equal':
+              // No changes
+              break;
+            case 'confluence_changed':
+              // Confluence has newer changes
+              confluenceChanges.push({
+                id: this.generateChangeId(),
+                type: 'enabler',
+                action: 'updated',
+                source: 'confluence',
+                sourceId: enablerId,
+                targetId: enablerId,
+                data: confluenceEnabler
+              });
+              break;
+            case 'linear_changed':
+              // Linear has newer changes
+              linearChanges.push({
+                id: this.generateChangeId(),
+                type: 'enabler',
+                action: 'updated',
+                source: 'linear',
+                sourceId: enablerId,
+                targetId: enablerId,
+                data: linearEnabler
+              });
+              break;
+            case 'both_changed':
+              // Both have changes, create a conflict
+              conflicts.push({
+                id: this.generateChangeId(),
+                type: 'enabler',
+                confluenceData: confluenceEnabler,
+                linearData: linearEnabler
+              });
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Error detecting enabler changes', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Compares two epics to determine if they are equal or which one has changed
+   *
+   * @param confluenceEpic The epic from Confluence
+   * @param linearEpic The epic from Linear
+   * @returns The comparison result
+   */
+  private compareEpics(
+    confluenceEpic: any,
+    linearEpic: any
+  ): 'equal' | 'confluence_changed' | 'linear_changed' | 'both_changed' {
+    try {
+      // Compare the epics based on their content
+      // This is a simplified comparison, in a real implementation you would compare all relevant fields
+      
+      // Get the timestamps
+      const confluenceTimestamp = new Date(confluenceEpic.updatedAt || confluenceEpic.createdAt);
+      const linearTimestamp = new Date(linearEpic.updatedAt || linearEpic.createdAt);
+      
+      // Compare the content
+      const contentEqual = (
+        confluenceEpic.title === linearEpic.title &&
+        confluenceEpic.description === linearEpic.description
       );
-
-      // Process updated issues
-      for (const issue of updatedIssues.nodes) {
-        // Determine item type
-        let itemType: ChangeItemType;
-        const labels = issue.labels?.nodes || [];
-        const labelNames = labels.map(label => label.name);
-
-        if (labelNames.includes('Epic')) {
-          itemType = ChangeItemType.EPIC;
-        } else if (labelNames.includes('Feature')) {
-          itemType = ChangeItemType.FEATURE;
-        } else if (labelNames.includes('Enabler')) {
-          itemType = ChangeItemType.ENABLER;
-        } else {
-          itemType = ChangeItemType.STORY;
-        }
-
-        // Determine change type
-        let changeType: ChangeType;
-        if (new Date(issue.createdAt).getTime() > lastSyncTimestamp) {
-          changeType = ChangeType.CREATED;
-        } else {
-          changeType = ChangeType.UPDATED;
-        }
-
-        // Add change
-        changes.push({
-          id: `linear-change-${issue.id}`,
-          type: changeType,
-          source: ChangeSource.LINEAR,
-          itemType,
-          itemId: issue.id,
-          itemData: issue,
-          timestamp: new Date(issue.updatedAt).getTime()
-        });
+      
+      if (contentEqual) {
+        return 'equal';
       }
-
-      // TODO: Detect deleted issues
-
-      logger.info('Linear changes detected', { changeCount: changes.length });
-      return changes;
+      
+      // If content is different, determine which one has changed more recently
+      if (confluenceTimestamp > linearTimestamp) {
+        return 'confluence_changed';
+      } else if (linearTimestamp > confluenceTimestamp) {
+        return 'linear_changed';
+      } else {
+        // If timestamps are equal, consider both changed
+        return 'both_changed';
+      }
     } catch (error) {
-      logger.error('Error detecting Linear changes', { error });
-      throw error;
+      logger.error('Error comparing epics', { error, confluenceEpic, linearEpic });
+      // Default to both changed to be safe
+      return 'both_changed';
     }
   }
 
   /**
-   * Detects changes in Confluence documents
+   * Compares two features to determine if they are equal or which one has changed
    *
-   * @param confluencePageIdOrUrl Confluence page ID or URL
-   * @param lastSyncTimestamp Last synchronization timestamp
-   * @returns Confluence changes
+   * @param confluenceFeature The feature from Confluence
+   * @param linearFeature The feature from Linear
+   * @returns The comparison result
    */
-  private async detectConfluenceChanges(
-    confluencePageIdOrUrl: string,
-    lastSyncTimestamp: number | null
-  ): Promise<Change[]> {
+  private compareFeatures(
+    confluenceFeature: any,
+    linearFeature: any
+  ): 'equal' | 'confluence_changed' | 'linear_changed' | 'both_changed' {
     try {
-      const changes: Change[] = [];
-
-      // Parse the Confluence page
-      let document;
-      if (confluencePageIdOrUrl.startsWith('http')) {
-        document = await this.confluenceClient.parsePageByUrl(confluencePageIdOrUrl);
-      } else {
-        document = await this.confluenceClient.parsePage(confluencePageIdOrUrl);
+      // Similar to compareEpics, but for features
+      
+      // Get the timestamps
+      const confluenceTimestamp = new Date(confluenceFeature.updatedAt || confluenceFeature.createdAt);
+      const linearTimestamp = new Date(linearFeature.updatedAt || linearFeature.createdAt);
+      
+      // Compare the content
+      const contentEqual = (
+        confluenceFeature.title === linearFeature.title &&
+        confluenceFeature.description === linearFeature.description
+      );
+      
+      if (contentEqual) {
+        return 'equal';
       }
-
-      // Extract planning information
-      const extractor = new PlanningExtractor(document);
-      const planningDocument = extractor.getPlanningDocument();
-
-      // If this is the first sync, treat all items as created
-      if (!lastSyncTimestamp) {
-        // Add epics
-        for (const epic of planningDocument.epics) {
-          changes.push({
-            id: `confluence-change-${epic.id}`,
-            type: ChangeType.CREATED,
-            source: ChangeSource.CONFLUENCE,
-            itemType: ChangeItemType.EPIC,
-            itemId: epic.id,
-            itemData: epic,
-            timestamp: Date.now()
-          });
-        }
-
-        // Add features
-        const features = planningDocument.features || [];
-        for (const feature of features) {
-          changes.push({
-            id: `confluence-change-${feature.id}`,
-            type: ChangeType.CREATED,
-            source: ChangeSource.CONFLUENCE,
-            itemType: ChangeItemType.FEATURE,
-            itemId: feature.id,
-            itemData: feature,
-            timestamp: Date.now()
-          });
-        }
-
-        // Add stories
-        const stories = planningDocument.stories || [];
-        for (const story of stories) {
-          changes.push({
-            id: `confluence-change-${story.id}`,
-            type: ChangeType.CREATED,
-            source: ChangeSource.CONFLUENCE,
-            itemType: ChangeItemType.STORY,
-            itemId: story.id,
-            itemData: story,
-            timestamp: Date.now()
-          });
-        }
-
-        // Add enablers
-        const enablers = planningDocument.enablers || [];
-        for (const enabler of enablers) {
-          changes.push({
-            id: `confluence-change-${enabler.id}`,
-            type: ChangeType.CREATED,
-            source: ChangeSource.CONFLUENCE,
-            itemType: ChangeItemType.ENABLER,
-            itemId: enabler.id,
-            itemData: enabler,
-            timestamp: Date.now()
-          });
-        }
+      
+      // If content is different, determine which one has changed more recently
+      if (confluenceTimestamp > linearTimestamp) {
+        return 'confluence_changed';
+      } else if (linearTimestamp > confluenceTimestamp) {
+        return 'linear_changed';
       } else {
-        // TODO: Implement change detection for subsequent syncs
-        // This would require storing the previous state of the planning document
-        // and comparing it with the current state
+        // If timestamps are equal, consider both changed
+        return 'both_changed';
       }
-
-      logger.info('Confluence changes detected', { changeCount: changes.length });
-      return changes;
     } catch (error) {
-      logger.error('Error detecting Confluence changes', { error });
-      throw error;
+      logger.error('Error comparing features', { error, confluenceFeature, linearFeature });
+      // Default to both changed to be safe
+      return 'both_changed';
     }
+  }
+
+  /**
+   * Compares two stories to determine if they are equal or which one has changed
+   *
+   * @param confluenceStory The story from Confluence
+   * @param linearStory The story from Linear
+   * @returns The comparison result
+   */
+  private compareStories(
+    confluenceStory: any,
+    linearStory: any
+  ): 'equal' | 'confluence_changed' | 'linear_changed' | 'both_changed' {
+    try {
+      // Similar to compareEpics, but for stories
+      
+      // Get the timestamps
+      const confluenceTimestamp = new Date(confluenceStory.updatedAt || confluenceStory.createdAt);
+      const linearTimestamp = new Date(linearStory.updatedAt || linearStory.createdAt);
+      
+      // Compare the content
+      const contentEqual = (
+        confluenceStory.title === linearStory.title &&
+        confluenceStory.description === linearStory.description
+      );
+      
+      if (contentEqual) {
+        return 'equal';
+      }
+      
+      // If content is different, determine which one has changed more recently
+      if (confluenceTimestamp > linearTimestamp) {
+        return 'confluence_changed';
+      } else if (linearTimestamp > confluenceTimestamp) {
+        return 'linear_changed';
+      } else {
+        // If timestamps are equal, consider both changed
+        return 'both_changed';
+      }
+    } catch (error) {
+      logger.error('Error comparing stories', { error, confluenceStory, linearStory });
+      // Default to both changed to be safe
+      return 'both_changed';
+    }
+  }
+
+  /**
+   * Compares two enablers to determine if they are equal or which one has changed
+   *
+   * @param confluenceEnabler The enabler from Confluence
+   * @param linearEnabler The enabler from Linear
+   * @returns The comparison result
+   */
+  private compareEnablers(
+    confluenceEnabler: any,
+    linearEnabler: any
+  ): 'equal' | 'confluence_changed' | 'linear_changed' | 'both_changed' {
+    try {
+      // Similar to compareEpics, but for enablers
+      
+      // Get the timestamps
+      const confluenceTimestamp = new Date(confluenceEnabler.updatedAt || confluenceEnabler.createdAt);
+      const linearTimestamp = new Date(linearEnabler.updatedAt || linearEnabler.createdAt);
+      
+      // Compare the content
+      const contentEqual = (
+        confluenceEnabler.title === linearEnabler.title &&
+        confluenceEnabler.description === linearEnabler.description &&
+        confluenceEnabler.enablerType === linearEnabler.enablerType
+      );
+      
+      if (contentEqual) {
+        return 'equal';
+      }
+      
+      // If content is different, determine which one has changed more recently
+      if (confluenceTimestamp > linearTimestamp) {
+        return 'confluence_changed';
+      } else if (linearTimestamp > confluenceTimestamp) {
+        return 'linear_changed';
+      } else {
+        // If timestamps are equal, consider both changed
+        return 'both_changed';
+      }
+    } catch (error) {
+      logger.error('Error comparing enablers', { error, confluenceEnabler, linearEnabler });
+      // Default to both changed to be safe
+      return 'both_changed';
+    }
+  }
+
+  /**
+   * Generates a unique ID for a change or conflict
+   *
+   * @returns A unique ID
+   */
+  private generateChangeId(): string {
+    return `change-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 }

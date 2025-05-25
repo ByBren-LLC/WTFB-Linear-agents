@@ -1,262 +1,136 @@
-# Synchronize Linear with Confluence
+# Linear-Confluence Synchronization
 
-This module provides functionality to synchronize Linear issues with Confluence documents. It ensures that changes made in either system are reflected in the other, maintaining a consistent state between the two systems.
+This module provides functionality to synchronize Linear issues with Confluence documents. It ensures that changes to planning documents in Confluence are reflected in Linear issues, and vice versa.
+
+## Features
+
+- Bidirectional synchronization between Linear and Confluence
+- Automatic detection of changes in both systems
+- Conflict resolution with configurable strategies
+- Scheduled synchronization with configurable frequency
+- API endpoints for managing synchronization configurations
+- Detailed synchronization history and conflict tracking
 
 ## Components
 
-### Synchronization Manager (`sync-manager.ts`)
+### Synchronization Manager
 
-The `SyncManager` class manages the synchronization process:
+The `SynchronizationManager` class is the main entry point for synchronization. It coordinates the synchronization process between Linear and Confluence.
 
 ```typescript
-import { SyncManager } from './sync/sync-manager';
+import { SynchronizationManager } from './sync/manager';
+import { SyncDirection, SyncFrequency } from './sync/models';
 
 // Create a synchronization manager
-const syncManager = new SyncManager({
-  linearAccessToken: 'your-linear-access-token',
-  linearTeamId: 'your-linear-team-id',
-  linearOrganizationId: 'your-linear-organization-id',
-  confluenceAccessToken: 'your-confluence-access-token',
-  confluenceBaseUrl: 'https://your-domain.atlassian.net',
-  confluencePageIdOrUrl: 'https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789',
-  syncIntervalMs: 5 * 60 * 1000, // 5 minutes
-  autoResolveConflicts: false
+const manager = new SynchronizationManager('organization-id', 'team-id');
+
+// Synchronize Linear with Confluence
+const result = await manager.synchronize({
+  id: 1,
+  organizationId: 'organization-id',
+  teamId: 'team-id',
+  confluencePageUrl: 'https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title',
+  direction: SyncDirection.BIDIRECTIONAL,
+  frequency: SyncFrequency.DAILY,
+  enabled: true
 });
-
-// Start synchronization
-await syncManager.start();
-
-// Stop synchronization
-syncManager.stop();
-
-// Manually trigger synchronization
-const result = await syncManager.sync();
-
-// Get synchronization status
-const status = await syncManager.getStatus();
 ```
 
-### Change Detector (`change-detector.ts`)
+### Change Detector
 
-The `ChangeDetector` class detects changes between Linear issues and Confluence documents:
+The `ChangeDetector` class detects changes between Linear and Confluence. It compares the content of Confluence documents with Linear issues and identifies created, updated, and deleted items.
 
-```typescript
-import { ChangeDetector } from './sync/change-detector';
+### Conflict Resolver
 
-// Create a change detector
-const changeDetector = new ChangeDetector(
-  confluenceClient,
-  linearClient,
-  syncStore
-);
+The `ConflictResolver` class resolves conflicts between Linear and Confluence. It uses a configurable strategy to determine which system's changes should take precedence.
 
-// Detect changes
-const changes = await changeDetector.detectChanges(
-  confluencePageIdOrUrl,
-  linearTeamId
-);
+### Synchronization Scheduler
 
-// Detect conflicts
-const conflicts = changeDetector.detectConflicts(changes);
-```
+The `SyncScheduler` class schedules synchronization based on the configured frequency. It can run synchronization hourly, daily, or weekly.
 
-### Conflict Resolver (`conflict-resolver.ts`)
+### Synchronization API
 
-The `ConflictResolver` class resolves conflicts between Linear issues and Confluence documents:
-
-```typescript
-import { ConflictResolver, ConflictResolutionStrategy } from './sync/conflict-resolver';
-
-// Create a conflict resolver
-const conflictResolver = new ConflictResolver(
-  confluenceClient,
-  linearClient,
-  syncStore,
-  autoResolveConflicts
-);
-
-// Resolve conflicts
-const resolvedConflicts = await conflictResolver.resolveConflicts(conflicts);
-
-// Resolve a specific conflict
-const resolvedConflict = await conflictResolver.resolveConflict(
-  conflict,
-  ConflictResolutionStrategy.LINEAR
-);
-
-// Get unresolved conflicts
-const unresolvedConflicts = await conflictResolver.getUnresolvedConflicts();
-
-// Get resolved conflicts
-const resolvedConflicts = await conflictResolver.getResolvedConflicts();
-```
-
-### Synchronization Store (`sync-store.ts`)
-
-The `SyncStore` class stores synchronization state:
-
-```typescript
-import { SyncStore } from './sync/sync-store';
-
-// Create a synchronization store
-const syncStore = new SyncStore();
-
-// Get the last synchronization timestamp
-const lastSyncTimestamp = await syncStore.getLastSyncTimestamp(
-  confluencePageIdOrUrl,
-  linearTeamId
-);
-
-// Update the last synchronization timestamp
-await syncStore.updateLastSyncTimestamp(
-  confluencePageIdOrUrl,
-  linearTeamId,
-  Date.now()
-);
-
-// Store a conflict
-await syncStore.storeConflict(conflict);
-
-// Store a resolved conflict
-await syncStore.storeResolvedConflict(resolvedConflict);
-
-// Get unresolved conflicts
-const unresolvedConflicts = await syncStore.getUnresolvedConflicts();
-
-// Get resolved conflicts
-const resolvedConflicts = await syncStore.getResolvedConflicts();
-
-// Get all conflicts
-const allConflicts = await syncStore.getAllConflicts();
-
-// Delete a conflict
-await syncStore.deleteConflict(conflictId);
-
-// Clear all conflicts
-await syncStore.clearConflicts();
-```
+The synchronization API provides endpoints for managing synchronization configurations and triggering synchronization.
 
 ## API Endpoints
 
-The synchronization module provides the following API endpoints:
-
-### Start Synchronization
-
-```
-POST /api/sync/start
-```
-
-Request body:
-```json
-{
-  "organizationId": "your-organization-id",
-  "linearTeamId": "your-linear-team-id",
-  "confluencePageIdOrUrl": "https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789",
-  "syncIntervalMs": 300000,
-  "autoResolveConflicts": false
-}
-```
-
-### Stop Synchronization
-
-```
-POST /api/sync/stop
-```
-
-Request body:
-```json
-{
-  "organizationId": "your-organization-id",
-  "linearTeamId": "your-linear-team-id",
-  "confluencePageIdOrUrl": "https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789"
-}
-```
-
-### Get Synchronization Status
-
-```
-GET /api/sync/status?organizationId=your-organization-id&linearTeamId=your-linear-team-id&confluencePageIdOrUrl=https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789
-```
-
-### Manually Trigger Synchronization
-
-```
-POST /api/sync/trigger
-```
-
-Request body:
-```json
-{
-  "organizationId": "your-organization-id",
-  "linearTeamId": "your-linear-team-id",
-  "confluencePageIdOrUrl": "https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789"
-}
-```
-
-## Synchronization Process
-
-1. **Detect Changes**: The change detector identifies changes in both Linear issues and Confluence documents since the last synchronization.
-2. **Detect Conflicts**: The change detector identifies conflicts between Linear and Confluence changes.
-3. **Resolve Conflicts**: The conflict resolver resolves conflicts based on the configured resolution strategy.
-4. **Apply Changes**: The synchronization manager applies the changes to both systems.
-5. **Update State**: The synchronization store updates the synchronization state.
-
-## Conflict Resolution
-
-Conflicts occur when the same item is changed in both Linear and Confluence. The conflict resolver can resolve conflicts in the following ways:
-
-- **Linear as Source of Truth**: Use the Linear change and discard the Confluence change.
-- **Confluence as Source of Truth**: Use the Confluence change and discard the Linear change.
-- **Manual Resolution**: Store the conflict for manual resolution.
+- `POST /api/sync/configs`: Create a new sync configuration
+- `GET /api/sync/configs/:id`: Get a sync configuration by ID
+- `GET /api/sync/configs`: Get sync configurations by organization or team
+- `PUT /api/sync/configs/:id`: Update a sync configuration
+- `DELETE /api/sync/configs/:id`: Delete a sync configuration
+- `POST /api/sync/:id`: Synchronize a configuration
+- `GET /api/sync/history/:id`: Get sync history for a configuration
 
 ## Database Schema
 
-The synchronization module uses SQLite to store synchronization state:
+The synchronization module uses the following database tables:
 
-### Sync State Table
+- `sync_configs`: Stores synchronization configurations
+- `sync_history`: Stores synchronization history
+- `sync_conflicts`: Stores synchronization conflicts
 
-```sql
-CREATE TABLE IF NOT EXISTS sync_state (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  confluence_page_id TEXT NOT NULL,
-  linear_team_id TEXT NOT NULL,
-  timestamp INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(confluence_page_id, linear_team_id)
-);
+## Usage
+
+### Creating a Sync Configuration
+
+```typescript
+import { createSyncConfig } from '../db/models';
+import { SyncDirection, SyncFrequency } from './models';
+
+const config = await createSyncConfig({
+  organizationId: 'organization-id',
+  teamId: 'team-id',
+  confluencePageUrl: 'https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title',
+  direction: SyncDirection.BIDIRECTIONAL,
+  frequency: SyncFrequency.DAILY,
+  enabled: true
+});
 ```
 
-### Conflicts Table
+### Triggering Synchronization
 
-```sql
-CREATE TABLE IF NOT EXISTS conflicts (
-  id TEXT PRIMARY KEY,
-  linear_change TEXT NOT NULL,
-  confluence_change TEXT NOT NULL,
-  is_resolved INTEGER NOT NULL DEFAULT 0,
-  resolution_strategy TEXT,
-  resolved_change TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```typescript
+import { SynchronizationManager } from './manager';
+import { getSyncConfig } from '../db/models';
+
+const config = await getSyncConfig(1);
+const manager = new SynchronizationManager(config.organization_id, config.team_id);
+const result = await manager.synchronize({
+  id: config.id,
+  organizationId: config.organization_id,
+  teamId: config.team_id,
+  confluencePageUrl: config.confluence_page_url,
+  direction: config.direction,
+  frequency: config.frequency,
+  lastSyncTime: config.last_sync_time,
+  enabled: config.enabled
+});
 ```
 
-### Sync History Table
+### Starting the Scheduler
 
-```sql
-CREATE TABLE IF NOT EXISTS sync_history (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  confluence_page_id TEXT NOT NULL,
-  linear_team_id TEXT NOT NULL,
-  success INTEGER NOT NULL,
-  error TEXT,
-  created_issues INTEGER NOT NULL DEFAULT 0,
-  updated_issues INTEGER NOT NULL DEFAULT 0,
-  confluence_changes INTEGER NOT NULL DEFAULT 0,
-  conflicts_detected INTEGER NOT NULL DEFAULT 0,
-  conflicts_resolved INTEGER NOT NULL DEFAULT 0,
-  timestamp INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```typescript
+import { syncScheduler } from './scheduler';
+
+// Start the scheduler
+syncScheduler.start();
+
+// Stop the scheduler
+syncScheduler.stop();
 ```
+
+## Testing
+
+The synchronization module includes comprehensive unit tests for all components. Run the tests with:
+
+```bash
+npm test
+```
+
+## Dependencies
+
+- `@linear/sdk`: Linear API client
+- `axios`: HTTP client for Confluence API
+- `express`: Web framework for API endpoints
+- `pg`: PostgreSQL client for database access

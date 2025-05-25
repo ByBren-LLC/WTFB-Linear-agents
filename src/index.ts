@@ -8,6 +8,8 @@ import { initializeDatabase } from './db/models';
 import * as logger from './utils/logger';
 import planningRoutes from './api/planning';
 import apiRoutes from './routes';
+import syncRouter from './api/sync';
+import { syncScheduler } from './sync/scheduler';
 
 // Load environment variables
 dotenv.config();
@@ -84,6 +86,9 @@ app.use('/api/planning', planningRoutes);
 // API routes
 app.use('/api', apiRoutes);
 
+// Synchronization API
+app.use('/api/sync', syncRouter);
+
 // Initialize the database and start the server
 (async () => {
   try {
@@ -95,6 +100,10 @@ app.use('/api', apiRoutes);
     app.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
       logger.info(`OAuth callback URL: ${process.env.LINEAR_REDIRECT_URI}`);
+
+      // Start the synchronization scheduler
+      syncScheduler.start();
+      logger.info('Synchronization scheduler started');
     });
   } catch (error) {
     logger.error('Failed to initialize the application', { error });

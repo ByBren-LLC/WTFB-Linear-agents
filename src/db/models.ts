@@ -1,8 +1,6 @@
 import { query, getClient } from './connection';
 import * as logger from '../utils/logger';
 import { runMigrations } from './migrations';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
 
 // TypeScript interfaces for database tables
 
@@ -15,20 +13,6 @@ export interface LinearToken {
   access_token: string;
   refresh_token: string;
   app_user_id: string;
-  expires_at: Date;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Confluence OAuth token
- */
-export interface ConfluenceToken {
-  id: number;
-  organization_id: string;
-  access_token: string;
-  refresh_token: string;
-  site_url: string;
   expires_at: Date;
   created_at: Date;
   updated_at: Date;
@@ -89,107 +73,49 @@ export interface PlanningEnabler {
 }
 
 /**
- * Program Increment in the database
+ * Synchronization configuration
  */
-export interface ProgramIncrementDB {
+export interface SyncConfig {
   id: number;
   organization_id: string;
-  pi_id: string;
-  name: string;
-  start_date: Date;
-  end_date: Date;
-  description?: string;
-  status: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Program Increment Feature in the database
- */
-export interface PIFeatureDB {
-  id: number;
-  program_increment_id: number;
-  feature_id: string;
   team_id: string;
-  status: string;
-  confidence: number;
+  confluence_page_url: string;
+  direction: string;
+  frequency: string;
+  last_sync_time?: Date;
+  enabled: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
 /**
- * Program Increment Objective in the database
- */
-export interface PIObjectiveDB {
-  id: number;
-  program_increment_id: number;
-  objective_id: string;
-  team_id: string;
-  description: string;
-  business_value: number;
-  status: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Program Increment Risk in the database
- */
-export interface PIRiskDB {
-  id: number;
-  program_increment_id: number;
-  risk_id: string;
-  description: string;
-  impact: number;
-  likelihood: number;
-  status: string;
-  mitigation_plan?: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Synchronization state in the database
- */
-export interface SyncState {
-  id: number;
-  confluence_page_id: string;
-  linear_team_id: string;
-  timestamp: number;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Conflict in the database
- */
-export interface Conflict {
-  id: string;
-  linear_change: string;
-  confluence_change: string;
-  is_resolved: boolean;
-  resolution_strategy?: string;
-  resolved_change?: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * Synchronization history in the database
+ * Synchronization history
  */
 export interface SyncHistory {
   id: number;
-  confluence_page_id: string;
-  linear_team_id: string;
-  success: boolean;
+  sync_config_id: number;
+  status: string;
+  direction: string;
+  changes_created: number;
+  changes_updated: number;
+  changes_deleted: number;
+  conflicts: number;
   error?: string;
-  created_issues: number;
-  updated_issues: number;
-  confluence_changes: number;
-  conflicts_detected: number;
-  conflicts_resolved: number;
-  timestamp: number;
+  started_at: Date;
+  completed_at?: Date;
+}
+
+/**
+ * Synchronization conflict
+ */
+export interface SyncConflict {
+  id: number;
+  sync_history_id: number;
+  type: string;
+  confluence_data: any;
+  linear_data: any;
+  resolution?: string;
+  resolved_at?: Date;
   created_at: Date;
 }
 
@@ -204,69 +130,6 @@ export const initializeDatabase = async (): Promise<void> => {
     logger.error('Error initializing database schema', { error });
     throw error;
   }
-};
-
-// SQLite database for synchronization
-let db: Database | null = null;
-
-/**
- * Gets the SQLite database instance
- */
-export const getDatabase = async (): Promise<Database> => {
-  if (!db) {
-    db = await open({
-      filename: process.env.SQLITE_DB_PATH || './data/sync.db',
-      driver: sqlite3.Database
-    });
-
-    // Create tables if they don't exist
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS sync_state (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        confluence_page_id TEXT NOT NULL,
-        linear_team_id TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(confluence_page_id, linear_team_id)
-      );
-
-      CREATE TABLE IF NOT EXISTS conflicts (
-        id TEXT PRIMARY KEY,
-        linear_change TEXT NOT NULL,
-        confluence_change TEXT NOT NULL,
-        is_resolved INTEGER NOT NULL DEFAULT 0,
-        resolution_strategy TEXT,
-        resolved_change TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS sync_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        confluence_page_id TEXT NOT NULL,
-        linear_team_id TEXT NOT NULL,
-        success INTEGER NOT NULL,
-        error TEXT,
-        created_issues INTEGER NOT NULL DEFAULT 0,
-        updated_issues INTEGER NOT NULL DEFAULT 0,
-        confluence_changes INTEGER NOT NULL DEFAULT 0,
-        conflicts_detected INTEGER NOT NULL DEFAULT 0,
-        conflicts_resolved INTEGER NOT NULL DEFAULT 0,
-        timestamp INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_sync_state_confluence_page_id ON sync_state(confluence_page_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_state_linear_team_id ON sync_state(linear_team_id);
-      CREATE INDEX IF NOT EXISTS idx_conflicts_is_resolved ON conflicts(is_resolved);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_confluence_page_id ON sync_history(confluence_page_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_linear_team_id ON sync_history(linear_team_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_timestamp ON sync_history(timestamp);
-    `);
-  }
-
-  return db;
 };
 
 // Linear Token CRUD Operations
@@ -939,112 +802,6 @@ export const deletePlanningStory = async (storyId: number): Promise<boolean> => 
   }
 };
 
-// Confluence Token CRUD Operations
-
-/**
- * Stores Confluence OAuth tokens for an organization
- */
-export const storeConfluenceToken = async (
-  organizationId: string,
-  accessToken: string,
-  refreshToken: string,
-  siteUrl: string,
-  expiresAt: Date
-): Promise<void> => {
-  try {
-    await query(
-      `
-        INSERT INTO confluence_tokens (organization_id, access_token, refresh_token, site_url, expires_at)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (organization_id) DO UPDATE SET
-          access_token = $2,
-          refresh_token = $3,
-          site_url = $4,
-          expires_at = $5,
-          updated_at = NOW()
-      `,
-      [organizationId, accessToken, refreshToken, siteUrl, expiresAt]
-    );
-
-    logger.info('Confluence tokens stored for organization', { organizationId });
-  } catch (error) {
-    logger.error('Error storing Confluence tokens', { error, organizationId });
-    throw error;
-  }
-};
-
-/**
- * Retrieves the Confluence token for an organization
- */
-export const getConfluenceToken = async (organizationId: string): Promise<ConfluenceToken | null> => {
-  try {
-    const result = await query(
-      'SELECT * FROM confluence_tokens WHERE organization_id = $1',
-      [organizationId]
-    );
-
-    if (result.rows.length === 0) {
-      logger.warn('No Confluence tokens found for organization', { organizationId });
-      return null;
-    }
-
-    return result.rows[0] as ConfluenceToken;
-  } catch (error) {
-    logger.error('Error retrieving Confluence token', { error, organizationId });
-    throw error;
-  }
-};
-
-/**
- * Retrieves the Confluence access token for an organization
- */
-export const getConfluenceAccessToken = async (organizationId: string): Promise<string | null> => {
-  try {
-    const token = await getConfluenceToken(organizationId);
-
-    if (!token) {
-      return null;
-    }
-
-    // Check if token is expired
-    if (new Date() > new Date(token.expires_at)) {
-      logger.warn('Confluence token expired for organization', { organizationId });
-      // Token is expired, try to refresh it
-      const { refreshConfluenceToken } = require('../auth/confluence-oauth');
-      return await refreshConfluenceToken(organizationId);
-    }
-
-    return token.access_token;
-  } catch (error) {
-    logger.error('Error retrieving Confluence access token', { error, organizationId });
-    throw error;
-  }
-};
-
-/**
- * Deletes a Confluence token for an organization
- */
-export const deleteConfluenceToken = async (organizationId: string): Promise<boolean> => {
-  try {
-    const result = await query(
-      'DELETE FROM confluence_tokens WHERE organization_id = $1',
-      [organizationId]
-    );
-
-    const deleted = (result.rowCount ?? 0) > 0;
-    if (deleted) {
-      logger.info('Confluence token deleted for organization', { organizationId });
-    } else {
-      logger.warn('No Confluence token found to delete for organization', { organizationId });
-    }
-
-    return deleted;
-  } catch (error) {
-    logger.error('Error deleting Confluence token', { error, organizationId });
-    throw error;
-  }
-};
-
 // Planning Enabler CRUD Operations
 
 /**
@@ -1225,195 +982,198 @@ export const deletePlanningEnabler = async (enablerId: number): Promise<boolean>
   }
 };
 
-// Program Increment CRUD Operations
+// Sync Config CRUD Operations
 
 /**
- * Creates a new program increment
+ * Creates a new sync configuration
  */
-export const createProgramIncrement = async (
-  organizationId: string,
-  piId: string,
-  name: string,
-  startDate: Date,
-  endDate: Date,
-  description?: string,
-  status: string = 'planning'
-): Promise<ProgramIncrementDB> => {
+export const createSyncConfig = async (
+  config: {
+    organizationId: string;
+    teamId: string;
+    confluencePageUrl: string;
+    direction: string;
+    frequency: string;
+    enabled?: boolean;
+  }
+): Promise<SyncConfig> => {
   try {
     const result = await query(
       `
-        INSERT INTO program_increments (
-          organization_id, pi_id, name, start_date, end_date, description, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO sync_configs (
+          organization_id, team_id, confluence_page_url, direction, frequency, enabled
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `,
-      [organizationId, piId, name, startDate, endDate, description, status]
+      [
+        config.organizationId,
+        config.teamId,
+        config.confluencePageUrl,
+        config.direction,
+        config.frequency,
+        config.enabled !== false
+      ]
     );
 
-    logger.info('Program increment created', {
-      organizationId,
-      piId,
-      name
+    logger.info('Sync configuration created', {
+      organizationId: config.organizationId,
+      teamId: config.teamId,
+      configId: result.rows[0].id
     });
 
-    return result.rows[0] as ProgramIncrementDB;
+    return result.rows[0] as SyncConfig;
   } catch (error) {
-    logger.error('Error creating program increment', {
+    logger.error('Error creating sync configuration', {
       error,
-      organizationId,
-      piId,
-      name
+      organizationId: config.organizationId,
+      teamId: config.teamId
     });
     throw error;
   }
 };
 
 /**
- * Gets a program increment by ID
+ * Gets a sync configuration by ID
  */
-export const getProgramIncrement = async (incrementId: number): Promise<ProgramIncrementDB | null> => {
+export const getSyncConfig = async (configId: number): Promise<SyncConfig | null> => {
   try {
     const result = await query(
-      'SELECT * FROM program_increments WHERE id = $1',
-      [incrementId]
+      'SELECT * FROM sync_configs WHERE id = $1',
+      [configId]
     );
 
     if (result.rows.length === 0) {
-      logger.warn('No program increment found with ID', { incrementId });
+      logger.warn('No sync configuration found with ID', { configId });
       return null;
     }
 
-    return result.rows[0] as ProgramIncrementDB;
+    return result.rows[0] as SyncConfig;
   } catch (error) {
-    logger.error('Error retrieving program increment', { error, incrementId });
+    logger.error('Error retrieving sync configuration', { error, configId });
     throw error;
   }
 };
 
 /**
- * Gets a program increment by Linear ID
+ * Gets all sync configurations for an organization
  */
-export const getProgramIncrementByPiId = async (piId: string): Promise<ProgramIncrementDB | null> => {
-  try {
-    const result = await query(
-      'SELECT * FROM program_increments WHERE pi_id = $1',
-      [piId]
-    );
-
-    if (result.rows.length === 0) {
-      logger.warn('No program increment found with PI ID', { piId });
-      return null;
-    }
-
-    return result.rows[0] as ProgramIncrementDB;
-  } catch (error) {
-    logger.error('Error retrieving program increment by PI ID', { error, piId });
-    throw error;
-  }
-};
-
-/**
- * Gets all program increments for an organization
- */
-export const getProgramIncrementsByOrganization = async (
+export const getSyncConfigsByOrganization = async (
   organizationId: string
-): Promise<ProgramIncrementDB[]> => {
+): Promise<SyncConfig[]> => {
   try {
     const result = await query(
-      'SELECT * FROM program_increments WHERE organization_id = $1 ORDER BY start_date DESC',
+      'SELECT * FROM sync_configs WHERE organization_id = $1 ORDER BY created_at DESC',
       [organizationId]
     );
 
-    return result.rows as ProgramIncrementDB[];
+    return result.rows as SyncConfig[];
   } catch (error) {
-    logger.error('Error retrieving program increments', { error, organizationId });
+    logger.error('Error retrieving sync configurations', { error, organizationId });
     throw error;
   }
 };
 
 /**
- * Gets the current program increment for an organization
+ * Gets all sync configurations for a team
  */
-export const getCurrentProgramIncrement = async (
-  organizationId: string
-): Promise<ProgramIncrementDB | null> => {
+export const getSyncConfigsByTeam = async (
+  teamId: string
+): Promise<SyncConfig[]> => {
   try {
-    const now = new Date();
     const result = await query(
-      'SELECT * FROM program_increments WHERE organization_id = $1 AND start_date <= $2 AND end_date >= $2 LIMIT 1',
-      [organizationId, now]
+      'SELECT * FROM sync_configs WHERE team_id = $1 ORDER BY created_at DESC',
+      [teamId]
     );
 
-    if (result.rows.length === 0) {
-      logger.warn('No current program increment found for organization', { organizationId });
-      return null;
-    }
-
-    return result.rows[0] as ProgramIncrementDB;
+    return result.rows as SyncConfig[];
   } catch (error) {
-    logger.error('Error retrieving current program increment', { error, organizationId });
+    logger.error('Error retrieving sync configurations', { error, teamId });
     throw error;
   }
 };
 
 /**
- * Updates a program increment
+ * Gets all sync configurations for a frequency
  */
-export const updateProgramIncrement = async (
-  incrementId: number,
-  updates: Partial<ProgramIncrementDB>
-): Promise<ProgramIncrementDB | null> => {
+export const getSyncConfigsByFrequency = async (
+  frequency: string
+): Promise<SyncConfig[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_configs WHERE frequency = $1 AND enabled = true ORDER BY created_at',
+      [frequency]
+    );
+
+    return result.rows as SyncConfig[];
+  } catch (error) {
+    logger.error('Error retrieving sync configurations', { error, frequency });
+    throw error;
+  }
+};
+
+/**
+ * Updates a sync configuration
+ */
+export const updateSyncConfig = async (
+  configId: number,
+  updates: Partial<{
+    confluencePageUrl: string;
+    direction: string;
+    frequency: string;
+    lastSyncTime: Date;
+    enabled: boolean;
+  }>
+): Promise<SyncConfig | null> => {
   try {
     // Build the SET clause dynamically based on the provided updates
     const updateFields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
-    // Add each field to the update query if it exists in the updates object
-    if (updates.name !== undefined) {
-      updateFields.push(`name = $${paramIndex}`);
-      values.push(updates.name);
+    if (updates.confluencePageUrl !== undefined) {
+      updateFields.push(`confluence_page_url = $${paramIndex}`);
+      values.push(updates.confluencePageUrl);
       paramIndex++;
     }
 
-    if (updates.start_date !== undefined) {
-      updateFields.push(`start_date = $${paramIndex}`);
-      values.push(updates.start_date);
+    if (updates.direction !== undefined) {
+      updateFields.push(`direction = $${paramIndex}`);
+      values.push(updates.direction);
       paramIndex++;
     }
 
-    if (updates.end_date !== undefined) {
-      updateFields.push(`end_date = $${paramIndex}`);
-      values.push(updates.end_date);
+    if (updates.frequency !== undefined) {
+      updateFields.push(`frequency = $${paramIndex}`);
+      values.push(updates.frequency);
       paramIndex++;
     }
 
-    if (updates.description !== undefined) {
-      updateFields.push(`description = $${paramIndex}`);
-      values.push(updates.description);
+    if (updates.lastSyncTime !== undefined) {
+      updateFields.push(`last_sync_time = $${paramIndex}`);
+      values.push(updates.lastSyncTime);
       paramIndex++;
     }
 
-    if (updates.status !== undefined) {
-      updateFields.push(`status = $${paramIndex}`);
-      values.push(updates.status);
+    if (updates.enabled !== undefined) {
+      updateFields.push(`enabled = $${paramIndex}`);
+      values.push(updates.enabled);
       paramIndex++;
     }
 
     // Always update the updated_at timestamp
     updateFields.push('updated_at = NOW()');
 
-    // If no fields to update, return the current program increment
+    // If no fields to update, return the current config
     if (updateFields.length === 1) { // Only updated_at
-      return getProgramIncrement(incrementId);
+      return getSyncConfig(configId);
     }
 
-    // Add the increment ID to the values array
-    values.push(incrementId);
+    // Add the config ID to the values array
+    values.push(configId);
 
     const result = await query(
       `
-        UPDATE program_increments
+        UPDATE sync_configs
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -1422,59 +1182,47 @@ export const updateProgramIncrement = async (
     );
 
     if (result.rows.length === 0) {
-      logger.warn('No program increment found to update', { incrementId });
+      logger.warn('No sync configuration found to update', { configId });
       return null;
     }
 
-    logger.info('Program increment updated', { incrementId });
-    return result.rows[0] as ProgramIncrementDB;
+    logger.info('Sync configuration updated', { configId });
+    return result.rows[0] as SyncConfig;
   } catch (error) {
-    logger.error('Error updating program increment', { error, incrementId });
+    logger.error('Error updating sync configuration', { error, configId });
     throw error;
   }
 };
 
 /**
- * Deletes a program increment
+ * Deletes a sync configuration
  */
-export const deleteProgramIncrement = async (incrementId: number): Promise<boolean> => {
+export const deleteSyncConfig = async (configId: number): Promise<boolean> => {
   try {
-    // Start a transaction to delete the increment and all related records
+    // Start a transaction to delete the config and all related records
     const client = await getClient();
     try {
       await client.query('BEGIN');
 
-      // Delete related PI features
+      // Delete related sync_history records (which will cascade to sync_conflicts)
       await client.query(
-        'DELETE FROM pi_features WHERE program_increment_id = $1',
-        [incrementId]
+        'DELETE FROM sync_history WHERE sync_config_id = $1',
+        [configId]
       );
 
-      // Delete related PI objectives
-      await client.query(
-        'DELETE FROM pi_objectives WHERE program_increment_id = $1',
-        [incrementId]
-      );
-
-      // Delete related PI risks
-      await client.query(
-        'DELETE FROM pi_risks WHERE program_increment_id = $1',
-        [incrementId]
-      );
-
-      // Delete the program increment
+      // Delete the sync configuration
       const result = await client.query(
-        'DELETE FROM program_increments WHERE id = $1',
-        [incrementId]
+        'DELETE FROM sync_configs WHERE id = $1',
+        [configId]
       );
 
       await client.query('COMMIT');
 
       const deleted = (result.rowCount ?? 0) > 0;
       if (deleted) {
-        logger.info('Program increment deleted', { incrementId });
+        logger.info('Sync configuration deleted', { configId });
       } else {
-        logger.warn('No program increment found to delete', { incrementId });
+        logger.warn('No sync configuration found to delete', { configId });
       }
 
       return deleted;
@@ -1485,133 +1233,120 @@ export const deleteProgramIncrement = async (incrementId: number): Promise<boole
       client.release();
     }
   } catch (error) {
-    logger.error('Error deleting program increment', { error, incrementId });
+    logger.error('Error deleting sync configuration', { error, configId });
     throw error;
   }
 };
 
-// PI Feature CRUD Operations
+// Sync History CRUD Operations
 
 /**
- * Creates a new PI feature
+ * Creates a new sync history record
  */
-export const createPIFeature = async (
-  programIncrementId: number,
-  featureId: string,
-  teamId: string,
-  status: string = 'planned',
-  confidence: number = 3
-): Promise<PIFeatureDB> => {
+export const createSyncHistory = async (
+  syncConfigId: number,
+  direction: string
+): Promise<SyncHistory> => {
   try {
     const result = await query(
       `
-        INSERT INTO pi_features (
-          program_increment_id, feature_id, team_id, status, confidence
-        ) VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO sync_history (
+          sync_config_id, status, direction
+        ) VALUES ($1, $2, $3)
         RETURNING *
       `,
-      [programIncrementId, featureId, teamId, status, confidence]
+      [syncConfigId, 'running', direction]
     );
 
-    logger.info('PI feature created', {
-      programIncrementId,
-      featureId,
-      teamId
+    logger.info('Sync history created', {
+      syncConfigId,
+      historyId: result.rows[0].id
     });
 
-    return result.rows[0] as PIFeatureDB;
+    return result.rows[0] as SyncHistory;
   } catch (error) {
-    logger.error('Error creating PI feature', {
+    logger.error('Error creating sync history', {
       error,
-      programIncrementId,
-      featureId,
-      teamId
+      syncConfigId
     });
     throw error;
   }
 };
 
 /**
- * Gets a PI feature by ID
+ * Updates a sync history record
  */
-export const getPIFeature = async (featureId: number): Promise<PIFeatureDB | null> => {
-  try {
-    const result = await query(
-      'SELECT * FROM pi_features WHERE id = $1',
-      [featureId]
-    );
-
-    if (result.rows.length === 0) {
-      logger.warn('No PI feature found with ID', { featureId });
-      return null;
-    }
-
-    return result.rows[0] as PIFeatureDB;
-  } catch (error) {
-    logger.error('Error retrieving PI feature', { error, featureId });
-    throw error;
-  }
-};
-
-/**
- * Gets all PI features for a program increment
- */
-export const getPIFeaturesByProgramIncrement = async (
-  programIncrementId: number
-): Promise<PIFeatureDB[]> => {
-  try {
-    const result = await query(
-      'SELECT * FROM pi_features WHERE program_increment_id = $1',
-      [programIncrementId]
-    );
-
-    return result.rows as PIFeatureDB[];
-  } catch (error) {
-    logger.error('Error retrieving PI features', { error, programIncrementId });
-    throw error;
-  }
-};
-
-/**
- * Updates a PI feature
- */
-export const updatePIFeature = async (
-  featureId: number,
-  updates: Partial<PIFeatureDB>
-): Promise<PIFeatureDB | null> => {
+export const updateSyncHistory = async (
+  historyId: number,
+  updates: Partial<{
+    status: string;
+    changesCreated: number;
+    changesUpdated: number;
+    changesDeleted: number;
+    conflicts: number;
+    error: string;
+    completedAt: Date;
+  }>
+): Promise<SyncHistory | null> => {
   try {
     // Build the SET clause dynamically based on the provided updates
     const updateFields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
-    // Add each field to the update query if it exists in the updates object
     if (updates.status !== undefined) {
       updateFields.push(`status = $${paramIndex}`);
       values.push(updates.status);
       paramIndex++;
     }
 
-    if (updates.confidence !== undefined) {
-      updateFields.push(`confidence = $${paramIndex}`);
-      values.push(updates.confidence);
+    if (updates.changesCreated !== undefined) {
+      updateFields.push(`changes_created = $${paramIndex}`);
+      values.push(updates.changesCreated);
       paramIndex++;
     }
 
-    // Always update the updated_at timestamp
-    updateFields.push('updated_at = NOW()');
-
-    // If no fields to update, return the current PI feature
-    if (updateFields.length === 1) { // Only updated_at
-      return getPIFeature(featureId);
+    if (updates.changesUpdated !== undefined) {
+      updateFields.push(`changes_updated = $${paramIndex}`);
+      values.push(updates.changesUpdated);
+      paramIndex++;
     }
 
-    // Add the feature ID to the values array
-    values.push(featureId);
+    if (updates.changesDeleted !== undefined) {
+      updateFields.push(`changes_deleted = $${paramIndex}`);
+      values.push(updates.changesDeleted);
+      paramIndex++;
+    }
+
+    if (updates.conflicts !== undefined) {
+      updateFields.push(`conflicts = $${paramIndex}`);
+      values.push(updates.conflicts);
+      paramIndex++;
+    }
+
+    if (updates.error !== undefined) {
+      updateFields.push(`error = $${paramIndex}`);
+      values.push(updates.error);
+      paramIndex++;
+    }
+
+    if (updates.completedAt !== undefined) {
+      updateFields.push(`completed_at = $${paramIndex}`);
+      values.push(updates.completedAt);
+      paramIndex++;
+    }
+
+    // If no fields to update, return null
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    // Add the history ID to the values array
+    values.push(historyId);
 
     const result = await query(
       `
-        UPDATE pi_features
+        UPDATE sync_history
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -1620,38 +1355,123 @@ export const updatePIFeature = async (
     );
 
     if (result.rows.length === 0) {
-      logger.warn('No PI feature found to update', { featureId });
+      logger.warn('No sync history found to update', { historyId });
       return null;
     }
 
-    logger.info('PI feature updated', { featureId });
-    return result.rows[0] as PIFeatureDB;
+    logger.info('Sync history updated', { historyId });
+    return result.rows[0] as SyncHistory;
   } catch (error) {
-    logger.error('Error updating PI feature', { error, featureId });
+    logger.error('Error updating sync history', { error, historyId });
     throw error;
   }
 };
 
 /**
- * Deletes a PI feature
+ * Gets sync history records for a sync configuration
  */
-export const deletePIFeature = async (featureId: number): Promise<boolean> => {
+export const getSyncHistoryByConfig = async (
+  syncConfigId: number,
+  limit: number = 10
+): Promise<SyncHistory[]> => {
   try {
     const result = await query(
-      'DELETE FROM pi_features WHERE id = $1',
-      [featureId]
+      'SELECT * FROM sync_history WHERE sync_config_id = $1 ORDER BY started_at DESC LIMIT $2',
+      [syncConfigId, limit]
     );
 
-    const deleted = (result.rowCount ?? 0) > 0;
-    if (deleted) {
-      logger.info('PI feature deleted', { featureId });
-    } else {
-      logger.warn('No PI feature found to delete', { featureId });
+    return result.rows as SyncHistory[];
+  } catch (error) {
+    logger.error('Error retrieving sync history', { error, syncConfigId });
+    throw error;
+  }
+};
+
+// Sync Conflict CRUD Operations
+
+/**
+ * Creates a new sync conflict record
+ */
+export const createSyncConflict = async (
+  syncHistoryId: number,
+  type: string,
+  confluenceData: any,
+  linearData: any
+): Promise<SyncConflict> => {
+  try {
+    const result = await query(
+      `
+        INSERT INTO sync_conflicts (
+          sync_history_id, type, confluence_data, linear_data
+        ) VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `,
+      [syncHistoryId, type, confluenceData, linearData]
+    );
+
+    logger.info('Sync conflict created', {
+      syncHistoryId,
+      conflictId: result.rows[0].id,
+      type
+    });
+
+    return result.rows[0] as SyncConflict;
+  } catch (error) {
+    logger.error('Error creating sync conflict', {
+      error,
+      syncHistoryId,
+      type
+    });
+    throw error;
+  }
+};
+
+/**
+ * Resolves a sync conflict
+ */
+export const resolveSyncConflict = async (
+  conflictId: number,
+  resolution: string
+): Promise<SyncConflict | null> => {
+  try {
+    const result = await query(
+      `
+        UPDATE sync_conflicts
+        SET resolution = $1, resolved_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `,
+      [resolution, conflictId]
+    );
+
+    if (result.rows.length === 0) {
+      logger.warn('No sync conflict found to resolve', { conflictId });
+      return null;
     }
 
-    return deleted;
+    logger.info('Sync conflict resolved', { conflictId, resolution });
+    return result.rows[0] as SyncConflict;
   } catch (error) {
-    logger.error('Error deleting PI feature', { error, featureId });
+    logger.error('Error resolving sync conflict', { error, conflictId });
+    throw error;
+  }
+};
+
+/**
+ * Gets unresolved sync conflicts for a sync history
+ */
+export const getUnresolvedConflictsByHistory = async (
+  syncHistoryId: number
+): Promise<SyncConflict[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM sync_conflicts WHERE sync_history_id = $1 AND resolution IS NULL ORDER BY created_at',
+      [syncHistoryId]
+    );
+
+    return result.rows as SyncConflict[];
+  } catch (error) {
+    logger.error('Error retrieving unresolved conflicts', { error, syncHistoryId });
     throw error;
   }
 };

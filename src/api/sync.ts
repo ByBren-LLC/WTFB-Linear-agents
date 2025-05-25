@@ -1,316 +1,225 @@
 /**
- * Synchronization API
+ * Synchronization API for Linear Planning Agent
  *
- * This module provides API endpoints for synchronizing Linear issues with Confluence documents.
+ * This module provides API endpoints for managing synchronization between Linear and Confluence.
  */
-import express from 'express';
-import { SyncManager, SyncOptions, SyncResult } from '../sync/sync-manager';
-import { getAccessToken } from '../db/models';
-import { getConfluenceAccessToken } from '../db/models';
+
+import { Router } from 'express';
 import * as logger from '../utils/logger';
+import { SynchronizationManager } from '../sync/manager';
+import { SyncConfig, SyncDirection, SyncFrequency } from '../sync/models';
+import {
+  createSyncConfig,
+  getSyncConfig,
+  getSyncConfigsByOrganization,
+  getSyncConfigsByTeam,
+  updateSyncConfig,
+  deleteSyncConfig,
+  getSyncHistoryByConfig
+} from '../db/models';
 
-const router = express.Router();
+const router = Router();
 
 /**
- * Start synchronization
- *
- * POST /api/sync/start
+ * Create a new sync configuration
  */
-router.post('/start', async (req, res) => {
+router.post('/configs', async (req, res) => {
   try {
-    const { organizationId, linearTeamId, confluencePageIdOrUrl, syncIntervalMs, autoResolveConflicts } = req.body;
-
-    if (!organizationId || !linearTeamId || !confluencePageIdOrUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: organizationId, linearTeamId, confluencePageIdOrUrl'
-      });
+    const { organizationId, teamId, confluencePageUrl, direction, frequency, enabled } = req.body;
+    
+    if (!organizationId || !teamId || !confluencePageUrl || !direction || !frequency) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    // Get access tokens
-    const linearAccessToken = await getAccessToken(organizationId);
-    const confluenceAccessToken = await getConfluenceAccessToken(organizationId);
-
-    if (!linearAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Linear access token not found for organization'
-      });
+    
+    // Validate direction
+    if (!Object.values(SyncDirection).includes(direction)) {
+      return res.status(400).json({ error: 'Invalid direction' });
     }
-
-    if (!confluenceAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence access token not found for organization'
-      });
+    
+    // Validate frequency
+    if (!Object.values(SyncFrequency).includes(frequency)) {
+      return res.status(400).json({ error: 'Invalid frequency' });
     }
-
-    // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
-    const confluenceBaseUrl = confluenceToken?.site_url || '';
-
-    if (!confluenceBaseUrl) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence base URL not found for organization'
-      });
-    }
-
-    // Create synchronization options
-    const options: SyncOptions = {
-      linearAccessToken,
-      linearTeamId,
-      linearOrganizationId: organizationId,
-      confluenceAccessToken,
-      confluenceBaseUrl,
-      confluencePageIdOrUrl,
-      syncIntervalMs: syncIntervalMs || 5 * 60 * 1000, // Default: 5 minutes
-      autoResolveConflicts: autoResolveConflicts || false
-    };
-
-    // Create synchronization manager
-    const syncManager = new SyncManager(options);
-
-    // Start synchronization
-    await syncManager.start();
-
-    // Get synchronization status
-    const status = await syncManager.getStatus();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Synchronization started successfully',
-      status
+    
+    const config = await createSyncConfig({
+      organizationId,
+      teamId,
+      confluencePageUrl,
+      direction,
+      frequency,
+      enabled: enabled !== false
     });
+    
+    return res.status(201).json(config);
   } catch (error) {
-    logger.error('Error starting synchronization', { error });
-    return res.status(500).json({
-      success: false,
-      error: (error as Error).message
-    });
+    logger.error('Error creating sync configuration', { error });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * Stop synchronization
- *
- * POST /api/sync/stop
+ * Get a sync configuration by ID
  */
-router.post('/stop', async (req, res) => {
+router.get('/configs/:id', async (req, res) => {
   try {
-    const { organizationId, linearTeamId, confluencePageIdOrUrl } = req.body;
-
-    if (!organizationId || !linearTeamId || !confluencePageIdOrUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: organizationId, linearTeamId, confluencePageIdOrUrl'
-      });
+    const { id } = req.params;
+    
+    const config = await getSyncConfig(parseInt(id, 10));
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Sync configuration not found' });
     }
-
-    // Get access tokens
-    const linearAccessToken = await getAccessToken(organizationId);
-    const confluenceAccessToken = await getConfluenceAccessToken(organizationId);
-
-    if (!linearAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Linear access token not found for organization'
-      });
-    }
-
-    if (!confluenceAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence access token not found for organization'
-      });
-    }
-
-    // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
-    const confluenceBaseUrl = confluenceToken?.site_url || '';
-
-    if (!confluenceBaseUrl) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence base URL not found for organization'
-      });
-    }
-
-    // Create synchronization options
-    const options: SyncOptions = {
-      linearAccessToken,
-      linearTeamId,
-      linearOrganizationId: organizationId,
-      confluenceAccessToken,
-      confluenceBaseUrl,
-      confluencePageIdOrUrl
-    };
-
-    // Create synchronization manager
-    const syncManager = new SyncManager(options);
-
-    // Stop synchronization
-    syncManager.stop();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Synchronization stopped successfully'
-    });
+    
+    return res.json(config);
   } catch (error) {
-    logger.error('Error stopping synchronization', { error });
-    return res.status(500).json({
-      success: false,
-      error: (error as Error).message
-    });
+    logger.error('Error getting sync configuration', { error, id: req.params.id });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * Get synchronization status
- *
- * GET /api/sync/status
+ * Get sync configurations by organization or team
  */
-router.get('/status', async (req, res) => {
+router.get('/configs', async (req, res) => {
   try {
-    const { organizationId, linearTeamId, confluencePageIdOrUrl } = req.query;
-
-    if (!organizationId || !linearTeamId || !confluencePageIdOrUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: organizationId, linearTeamId, confluencePageIdOrUrl'
-      });
+    const { organizationId, teamId } = req.query;
+    
+    if (!organizationId && !teamId) {
+      return res.status(400).json({ error: 'Missing organizationId or teamId parameter' });
     }
-
-    // Get access tokens
-    const linearAccessToken = await getAccessToken(organizationId as string);
-    const confluenceAccessToken = await getConfluenceAccessToken(organizationId as string);
-
-    if (!linearAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Linear access token not found for organization'
-      });
+    
+    let configs;
+    if (organizationId) {
+      configs = await getSyncConfigsByOrganization(organizationId as string);
+    } else {
+      configs = await getSyncConfigsByTeam(teamId as string);
     }
-
-    if (!confluenceAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence access token not found for organization'
-      });
-    }
-
-    // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId as string);
-    const confluenceBaseUrl = confluenceToken?.site_url || '';
-
-    if (!confluenceBaseUrl) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence base URL not found for organization'
-      });
-    }
-
-    // Create synchronization options
-    const options: SyncOptions = {
-      linearAccessToken,
-      linearTeamId: linearTeamId as string,
-      linearOrganizationId: organizationId as string,
-      confluenceAccessToken,
-      confluenceBaseUrl,
-      confluencePageIdOrUrl: confluencePageIdOrUrl as string
-    };
-
-    // Create synchronization manager
-    const syncManager = new SyncManager(options);
-
-    // Get synchronization status
-    const status = await syncManager.getStatus();
-
-    return res.status(200).json({
-      success: true,
-      status
-    });
+    
+    return res.json(configs);
   } catch (error) {
-    logger.error('Error getting synchronization status', { error });
-    return res.status(500).json({
-      success: false,
-      error: (error as Error).message
-    });
+    logger.error('Error getting sync configurations', { error, query: req.query });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * Manually trigger synchronization
- *
- * POST /api/sync/trigger
+ * Update a sync configuration
  */
-router.post('/trigger', async (req, res) => {
+router.put('/configs/:id', async (req, res) => {
   try {
-    const { organizationId, linearTeamId, confluencePageIdOrUrl } = req.body;
-
-    if (!organizationId || !linearTeamId || !confluencePageIdOrUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: organizationId, linearTeamId, confluencePageIdOrUrl'
-      });
+    const { id } = req.params;
+    const { confluencePageUrl, direction, frequency, enabled } = req.body;
+    
+    const config = await getSyncConfig(parseInt(id, 10));
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Sync configuration not found' });
     }
-
-    // Get access tokens
-    const linearAccessToken = await getAccessToken(organizationId);
-    const confluenceAccessToken = await getConfluenceAccessToken(organizationId);
-
-    if (!linearAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Linear access token not found for organization'
-      });
+    
+    // Validate direction if provided
+    if (direction && !Object.values(SyncDirection).includes(direction)) {
+      return res.status(400).json({ error: 'Invalid direction' });
     }
-
-    if (!confluenceAccessToken) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence access token not found for organization'
-      });
+    
+    // Validate frequency if provided
+    if (frequency && !Object.values(SyncFrequency).includes(frequency)) {
+      return res.status(400).json({ error: 'Invalid frequency' });
     }
-
-    // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
-    const confluenceBaseUrl = confluenceToken?.site_url || '';
-
-    if (!confluenceBaseUrl) {
-      return res.status(401).json({
-        success: false,
-        error: 'Confluence base URL not found for organization'
-      });
-    }
-
-    // Create synchronization options
-    const options: SyncOptions = {
-      linearAccessToken,
-      linearTeamId,
-      linearOrganizationId: organizationId,
-      confluenceAccessToken,
-      confluenceBaseUrl,
-      confluencePageIdOrUrl
-    };
-
-    // Create synchronization manager
-    const syncManager = new SyncManager(options);
-
-    // Trigger synchronization
-    const result: SyncResult = await syncManager.sync();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Synchronization triggered successfully',
-      result
+    
+    const updatedConfig = await updateSyncConfig(parseInt(id, 10), {
+      confluencePageUrl,
+      direction,
+      frequency,
+      enabled
     });
+    
+    return res.json(updatedConfig);
   } catch (error) {
-    logger.error('Error triggering synchronization', { error });
-    return res.status(500).json({
-      success: false,
-      error: (error as Error).message
+    logger.error('Error updating sync configuration', { error, id: req.params.id });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Delete a sync configuration
+ */
+router.delete('/configs/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deleted = await deleteSyncConfig(parseInt(id, 10));
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Sync configuration not found' });
+    }
+    
+    return res.json({ status: 'deleted' });
+  } catch (error) {
+    logger.error('Error deleting sync configuration', { error, id: req.params.id });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Synchronize now
+ */
+router.post('/sync/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const config = await getSyncConfig(parseInt(id, 10));
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Sync configuration not found' });
+    }
+    
+    const syncManager = new SynchronizationManager(config.organization_id, config.team_id);
+    const result = await syncManager.synchronize({
+      id: config.id,
+      organizationId: config.organization_id,
+      teamId: config.team_id,
+      confluencePageUrl: config.confluence_page_url,
+      direction: config.direction as SyncDirection,
+      frequency: config.frequency as SyncFrequency,
+      lastSyncTime: config.last_sync_time,
+      enabled: config.enabled
     });
+    
+    // Update last sync time
+    await updateSyncConfig(parseInt(id, 10), {
+      lastSyncTime: new Date()
+    });
+    
+    return res.json(result);
+  } catch (error) {
+    logger.error('Error synchronizing', { error, id: req.params.id });
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Get sync history for a configuration
+ */
+router.get('/history/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit } = req.query;
+    
+    const config = await getSyncConfig(parseInt(id, 10));
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Sync configuration not found' });
+    }
+    
+    const history = await getSyncHistoryByConfig(
+      config.id,
+      limit ? parseInt(limit as string, 10) : undefined
+    );
+    
+    return res.json(history);
+  } catch (error) {
+    logger.error('Error getting sync history', { error, id: req.params.id });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
