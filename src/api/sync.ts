@@ -5,7 +5,7 @@
  */
 import express from 'express';
 import { SyncManager, SyncOptions, SyncResult } from '../sync/sync-manager';
-import { getAccessToken } from '../db/models';
+import { getAccessToken, getConfluenceToken } from '../db/models';
 import { getConfluenceAccessToken } from '../db/models';
 import * as logger from '../utils/logger';
 
@@ -46,7 +46,7 @@ router.post('/start', async (req, res) => {
     }
 
     // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
+    const confluenceToken = await getConfluenceToken(organizationId);
     const confluenceBaseUrl = confluenceToken?.site_url || '';
 
     if (!confluenceBaseUrl) {
@@ -126,7 +126,7 @@ router.post('/stop', async (req, res) => {
     }
 
     // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
+    const confluenceToken = await getConfluenceToken(organizationId);
     const confluenceBaseUrl = confluenceToken?.site_url || '';
 
     if (!confluenceBaseUrl) {
@@ -200,7 +200,7 @@ router.get('/status', async (req, res) => {
     }
 
     // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId as string);
+    const confluenceToken = await getConfluenceToken(organizationId as string);
     const confluenceBaseUrl = confluenceToken?.site_url || '';
 
     if (!confluenceBaseUrl) {
@@ -274,7 +274,7 @@ router.post('/trigger', async (req, res) => {
     }
 
     // Get Confluence base URL from the token
-    const confluenceToken = await getConfluenceAccessToken(organizationId);
+    const confluenceToken = await getConfluenceToken(organizationId);
     const confluenceBaseUrl = confluenceToken?.site_url || '';
 
     if (!confluenceBaseUrl) {

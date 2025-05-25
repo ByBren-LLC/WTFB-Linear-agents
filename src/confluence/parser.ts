@@ -78,7 +78,7 @@ export class ConfluenceParser {
     this.$ = cheerio.load(storageFormat, {
       xmlMode: true,
       decodeEntities: true
-    });
+    }) as cheerio.CheerioAPI;
 
     this.document = {
       title,
