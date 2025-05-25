@@ -1,5 +1,11 @@
 # Technical Enabler Implementation: [Enabler Title]
 
+## Agent Assignment Information
+- **Agent ID**: [PROJECT]-[ROLE]-[NN]-S[N] (e.g., LIN-ARCH-01-S01)
+- **Project Code**: [PROJECT] (e.g., LIN, WOR, AUG, API, WEB, MOB)
+- **Role**: [ROLE] (e.g., ARCH, DEBT, TYPE, INFRA, SDK, SYNC, AUTH, PLAN, TEST, DOC, SEC, PERF, UI, DATA)
+- **Sprint**: S[N] (e.g., S01, S02, S03)
+
 ## Enabler Information
 - **Enabler ID**: [ID if available]
 - **Type**: [Architecture/Infrastructure/Technical Debt/Research]
@@ -89,6 +95,7 @@
 
 ## Definition of Done
 - [ ] All acceptance criteria are met
+- [ ] **Agent ID included in all commits and PR descriptions** using format: `[Agent-ID: PROJECT-ROLE-NN-SN]`
 - [ ] Code follows project coding standards
 - [ ] Tests are written and passing
 - [ ] Code is reviewed and approved
@@ -98,6 +105,22 @@
 - [ ] Security requirements are met
 
 ## Notes for Implementation
+- **CRITICAL**: Include your assigned Agent ID in ALL commits and PR descriptions
+- **Commit Format**: `[Agent-ID: PROJECT-ROLE-NN-SN] commit message`
+- **PR Format**: Include Agent ID in PR title or description
 - [Any additional notes or guidance for the implementer]
 - [Include any tips, tricks, or gotchas]
 - [Reference any relevant documentation or examples]
+
+## Agent ID Requirements
+All remote agents must identify themselves in their work:
+- **Commits**: `[Agent-ID: PROJECT-ROLE-NN-SN] commit message`
+- **PR Descriptions**: Include Agent ID in title or description
+- **Linear Issues**: Reference Agent ID in comments and updates
+- **GitHub Comments**: Sign with Agent ID when communicating
+
+### Agent ID Format: `PROJECT-ROLE-NN-SN`
+- **PROJECT**: 3-4 letter project code (LIN, WOR, AUG, API, WEB, MOB)
+- **ROLE**: Specialization (ARCH, DEBT, TYPE, INFRA, SDK, SYNC, AUTH, PLAN, TEST, DOC, SEC, PERF, UI, DATA)
+- **NN**: Sequential number (01, 02, 03, etc.)
+- **SN**: Sprint number (S01, S02, S03, etc.)

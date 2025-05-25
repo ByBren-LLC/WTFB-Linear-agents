@@ -23,6 +23,28 @@ Our remote agent workflow follows a structured approach based on SAFe methodolog
 
 This three-tiered documentation approach ensures agents have both high-level context and detailed technical guidance, while the ARCHitect-in-the-IDE maintains architectural oversight.
 
+## Universal Agent Naming Convention
+
+All remote agents must use the universal naming format: **`PROJECT-ROLE-NN-SN`**
+
+### Format Components:
+- **PROJECT**: 3-4 letter project code (LIN, WOR, AUG, API, WEB, MOB)
+- **ROLE**: Agent specialization (ARCH, DEBT, TYPE, INFRA, SDK, SYNC, AUTH, PLAN, TEST, DOC, SEC, PERF, UI, DATA)
+- **NN**: Sequential number (01, 02, 03, etc.)
+- **SN**: Sprint number (S01, S02, S03, etc.)
+
+### Examples:
+- **LIN-SDK-01-S01**: Linear project SDK agent #1, Sprint 1
+- **WOR-AUTH-02-S02**: Words to Film By authentication agent #2, Sprint 2
+- **AUG-INFRA-01-S01**: Augment infrastructure agent #1, Sprint 1
+
+### Agent ID Requirements:
+All agents must include their assigned Agent ID in:
+- **Commits**: `[Agent-ID: PROJECT-ROLE-NN-SN] commit message`
+- **PR Descriptions**: Include Agent ID in title or description
+- **Linear Issues**: Reference Agent ID in comments and updates
+- **GitHub Comments**: Sign with Agent ID when communicating
+
 ## Workflow Process
 
 1. **Preparation Phase**
@@ -55,16 +77,22 @@ This three-tiered documentation approach ensures agents have both high-level con
 ```markdown
 # Remote Agent Assignment: [Task Name]
 
-I'm assigning you to implement the [Task Name] [User Story/Technical Enabler/Spike] for our Linear Planning Agent project. This is a [priority level] component that will [brief description of purpose].
+**Agent ID**: [PROJECT]-[ROLE]-[NN]-S[N] (e.g., LIN-SDK-01-S01)
+
+I'm assigning you to implement the [Task Name] [User Story/Technical Enabler/Spike] for our [PROJECT] project. This is a [priority level] component that will [brief description of purpose].
+
+**CRITICAL**: You must include your Agent ID in ALL commits and PR descriptions using format: `[Agent-ID: PROJECT-ROLE-NN-SN]`
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/[task_name]_kickoff.md
+1. Pull the latest code from the main branch of our repository: [Repository URL]
+2. Read your kickoff note: [Kickoff Note URL]
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
 6. Create a branch named `feature/[branch-name]`
-7. Submit a PR when complete
+7. **Include your Agent ID in ALL commits**: `[Agent-ID: PROJECT-ROLE-NN-SN] commit message`
+8. **Include your Agent ID in PR title or description**
+9. Submit a PR when complete
 
 This is a [priority level] task [mention any dependencies if applicable]. Please let me know if you have any questions or need clarification on any aspect of the implementation.
 ```
@@ -75,6 +103,14 @@ Our kickoff notes follow a consistent structure to ensure agents have all necess
 
 ```markdown
 # Kick-off: [Task Name]
+
+## Agent Assignment Information
+- **Agent ID**: [PROJECT]-[ROLE]-[NN]-S[N] (e.g., LIN-SDK-01-S01)
+- **Project Code**: [PROJECT] (e.g., LIN, WOR, AUG, API, WEB, MOB)
+- **Role**: [ROLE] (e.g., ARCH, DEBT, TYPE, INFRA, SDK, SYNC, AUTH, PLAN, TEST, DOC, SEC, PERF, UI, DATA)
+- **Sprint**: S[N] (e.g., S01, S02, S03)
+
+**CRITICAL**: You must include your Agent ID in ALL commits and PR descriptions using format: `[Agent-ID: PROJECT-ROLE-NN-SN]`
 
 ## Assignment Overview
 [Brief description of the task and its purpose in the overall system]
@@ -123,6 +159,7 @@ The following files are relevant to your task:
 ## Definition of Done
 Your task will be considered complete when:
 - All acceptance criteria in the implementation document are met
+- **Agent ID included in all commits and PR descriptions** using format: `[Agent-ID: PROJECT-ROLE-NN-SN]`
 - [Specific criterion 1]
 - [Specific criterion 2]
 - [Specific criterion 3]
@@ -133,7 +170,9 @@ Your task will be considered complete when:
 ## Branching and PR Guidelines
 - Create a branch named `feature/[branch-name]`
 - Make your changes in this branch
+- **Include your Agent ID in ALL commits**: `[Agent-ID: PROJECT-ROLE-NN-SN] commit message`
 - Submit a PR to the `dev` branch when complete
+- **Include your Agent ID in PR title or description**
 - Include a detailed description of your changes in the PR
 
 ## Timeline
