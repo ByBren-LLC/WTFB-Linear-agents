@@ -66,7 +66,7 @@ export class PlanningAgent {
       }
 
       // Create the Epic
-      const epic = await this.linearClient.issueCreate({
+      const epic = await this.linearClient.createIssue({
         title: planningTitle,
         description: `Epic created from Confluence page: ${confluencePageUrl}`,
         teamId: team.id,

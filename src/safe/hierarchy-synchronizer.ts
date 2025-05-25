@@ -1,6 +1,6 @@
 /**
  * Hierarchy Synchronizer
- * 
+ *
  * This module provides utilities for synchronizing the SAFe hierarchy between Confluence and Linear.
  */
 import { PlanningDocument, Epic, Feature, Story, Enabler } from '../planning/models';
@@ -26,7 +26,7 @@ export class HierarchySynchronizer {
 
   /**
    * Creates a new HierarchySynchronizer
-   * 
+   *
    * @param accessToken - Linear API access token
    * @param teamId - Linear team ID
    */
@@ -42,7 +42,7 @@ export class HierarchySynchronizer {
 
   /**
    * Synchronizes the SAFe hierarchy between Confluence and Linear
-   * 
+   *
    * @param planningDocument - Planning document containing the SAFe hierarchy
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    * @returns Updated mapping of planning item IDs to Linear issue IDs
@@ -62,15 +62,15 @@ export class HierarchySynchronizer {
     enablers: Record<string, string>;
   }> {
     try {
-      logger.info('Synchronizing SAFe hierarchy', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('Synchronizing SAFe hierarchy', {
+        planningDocumentId: planningDocument.id
       });
 
       // Validate the hierarchy
       const validationResult = this.hierarchyValidator.validateHierarchy(planningDocument);
-      
+
       if (!validationResult.valid) {
-        logger.warn('SAFe hierarchy validation failed', { 
+        logger.warn('SAFe hierarchy validation failed', {
           errors: validationResult.errors,
           warnings: validationResult.warnings
         });
@@ -101,15 +101,15 @@ export class HierarchySynchronizer {
       // Update the hierarchy
       await this.hierarchyManager.updateHierarchy(planningDocument, updatedIssueIds);
 
-      logger.info('SAFe hierarchy synchronized successfully', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('SAFe hierarchy synchronized successfully', {
+        planningDocumentId: planningDocument.id
       });
 
       return updatedIssueIds;
     } catch (error) {
-      logger.error('Error synchronizing SAFe hierarchy', { 
-        error, 
-        planningDocumentId: planningDocument.id 
+      logger.error('Error synchronizing SAFe hierarchy', {
+        error,
+        planningDocumentId: planningDocument.id
       });
       throw error;
     }
@@ -117,7 +117,7 @@ export class HierarchySynchronizer {
 
   /**
    * Finds items that have been added to the planning document
-   * 
+   *
    * @param planningDocument - Planning document containing the SAFe hierarchy
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    * @returns Added items
@@ -137,8 +137,8 @@ export class HierarchySynchronizer {
     enablers: Enabler[];
   }> {
     try {
-      logger.info('Finding added items', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('Finding added items', {
+        planningDocumentId: planningDocument.id
       });
 
       // Find Epics that don't have a Linear issue ID
@@ -161,7 +161,7 @@ export class HierarchySynchronizer {
         enabler => !existingIssues.enablers[enabler.id]
       );
 
-      logger.info('Found added items', { 
+      logger.info('Found added items', {
         epicCount: addedEpics.length,
         featureCount: addedFeatures.length,
         storyCount: addedStories.length,
@@ -175,9 +175,9 @@ export class HierarchySynchronizer {
         enablers: addedEnablers
       };
     } catch (error) {
-      logger.error('Error finding added items', { 
-        error, 
-        planningDocumentId: planningDocument.id 
+      logger.error('Error finding added items', {
+        error,
+        planningDocumentId: planningDocument.id
       });
       throw error;
     }
@@ -185,7 +185,7 @@ export class HierarchySynchronizer {
 
   /**
    * Finds items that have been removed from the planning document
-   * 
+   *
    * @param planningDocument - Planning document containing the SAFe hierarchy
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    * @returns Removed item IDs
@@ -205,8 +205,8 @@ export class HierarchySynchronizer {
     enablers: string[];
   }> {
     try {
-      logger.info('Finding removed items', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('Finding removed items', {
+        planningDocumentId: planningDocument.id
       });
 
       // Find Epic IDs that are in existingIssues but not in the planning document
@@ -233,7 +233,7 @@ export class HierarchySynchronizer {
         id => !enablerIds.has(id)
       );
 
-      logger.info('Found removed items', { 
+      logger.info('Found removed items', {
         epicCount: removedEpics.length,
         featureCount: removedFeatures.length,
         storyCount: removedStories.length,
@@ -247,9 +247,9 @@ export class HierarchySynchronizer {
         enablers: removedEnablers
       };
     } catch (error) {
-      logger.error('Error finding removed items', { 
-        error, 
-        planningDocumentId: planningDocument.id 
+      logger.error('Error finding removed items', {
+        error,
+        planningDocumentId: planningDocument.id
       });
       throw error;
     }
@@ -257,7 +257,7 @@ export class HierarchySynchronizer {
 
   /**
    * Finds items that have been modified in the planning document
-   * 
+   *
    * @param planningDocument - Planning document containing the SAFe hierarchy
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    * @returns Modified items
@@ -277,8 +277,8 @@ export class HierarchySynchronizer {
     enablers: { id: string; enabler: Enabler }[];
   }> {
     try {
-      logger.info('Finding modified items', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('Finding modified items', {
+        planningDocumentId: planningDocument.id
       });
 
       // Find Epics that have a Linear issue ID
@@ -313,7 +313,7 @@ export class HierarchySynchronizer {
           enabler
         }));
 
-      logger.info('Found modified items', { 
+      logger.info('Found modified items', {
         epicCount: modifiedEpics.length,
         featureCount: modifiedFeatures.length,
         storyCount: modifiedStories.length,
@@ -327,9 +327,9 @@ export class HierarchySynchronizer {
         enablers: modifiedEnablers
       };
     } catch (error) {
-      logger.error('Error finding modified items', { 
-        error, 
-        planningDocumentId: planningDocument.id 
+      logger.error('Error finding modified items', {
+        error,
+        planningDocumentId: planningDocument.id
       });
       throw error;
     }
@@ -337,7 +337,7 @@ export class HierarchySynchronizer {
 
   /**
    * Creates new items in Linear
-   * 
+   *
    * @param addedItems - Items to create
    * @returns Mapping of planning item IDs to Linear issue IDs
    */
@@ -355,7 +355,7 @@ export class HierarchySynchronizer {
     enablers: Record<string, string>;
   }> {
     try {
-      logger.info('Creating new items', { 
+      logger.info('Creating new items', {
         epicCount: addedItems.epics.length,
         featureCount: addedItems.features.length,
         storyCount: addedItems.stories.length,
@@ -454,7 +454,7 @@ export class HierarchySynchronizer {
         }
       }
 
-      logger.info('Created new items', { 
+      logger.info('Created new items', {
         epicCount: Object.keys(epicIds).length,
         featureCount: Object.keys(featureIds).length,
         storyCount: Object.keys(storyIds).length,
@@ -475,7 +475,7 @@ export class HierarchySynchronizer {
 
   /**
    * Updates modified items in Linear
-   * 
+   *
    * @param modifiedItems - Items to update
    */
   private async updateModifiedItems(
@@ -487,7 +487,7 @@ export class HierarchySynchronizer {
     }
   ): Promise<void> {
     try {
-      logger.info('Updating modified items', { 
+      logger.info('Updating modified items', {
         epicCount: modifiedItems.epics.length,
         featureCount: modifiedItems.features.length,
         storyCount: modifiedItems.stories.length,
@@ -498,7 +498,7 @@ export class HierarchySynchronizer {
       for (const { id, epic } of modifiedItems.epics) {
         // Get the existing Epic
         const existingEpic = await this.issueFinder.findIssueById(id);
-        
+
         if (!existingEpic) {
           logger.warn('Epic not found', { id, epicId: epic.id });
           continue;
@@ -506,10 +506,10 @@ export class HierarchySynchronizer {
 
         // Resolve conflicts
         const resolution = this.conflictResolver.resolveEpicConflict(existingEpic, epic);
-        
+
         if (resolution.action === 'update' && resolution.data) {
           await this.issueUpdater.updateIssue(id, resolution.data);
-          
+
           // Update labels if needed
           if (epic.labels) {
             const labelIds = await this.getLabelIds(epic.labels);
@@ -522,7 +522,7 @@ export class HierarchySynchronizer {
       for (const { id, feature } of modifiedItems.features) {
         // Get the existing Feature
         const existingFeature = await this.issueFinder.findIssueById(id);
-        
+
         if (!existingFeature) {
           logger.warn('Feature not found', { id, featureId: feature.id });
           continue;
@@ -530,10 +530,10 @@ export class HierarchySynchronizer {
 
         // Resolve conflicts
         const resolution = this.conflictResolver.resolveFeatureConflict(existingFeature, feature);
-        
+
         if (resolution.action === 'update' && resolution.data) {
           await this.issueUpdater.updateIssue(id, resolution.data);
-          
+
           // Update labels if needed
           if (feature.labels) {
             const labelIds = await this.getLabelIds(feature.labels);
@@ -546,7 +546,7 @@ export class HierarchySynchronizer {
       for (const { id, story } of modifiedItems.stories) {
         // Get the existing Story
         const existingStory = await this.issueFinder.findIssueById(id);
-        
+
         if (!existingStory) {
           logger.warn('Story not found', { id, storyId: story.id });
           continue;
@@ -554,10 +554,10 @@ export class HierarchySynchronizer {
 
         // Resolve conflicts
         const resolution = this.conflictResolver.resolveStoryConflict(existingStory, story);
-        
+
         if (resolution.action === 'update' && resolution.data) {
           await this.issueUpdater.updateIssue(id, resolution.data);
-          
+
           // Update labels if needed
           if (story.labels) {
             const labelIds = await this.getLabelIds(story.labels);
@@ -570,7 +570,7 @@ export class HierarchySynchronizer {
       for (const { id, enabler } of modifiedItems.enablers) {
         // Get the existing Enabler
         const existingEnabler = await this.issueFinder.findIssueById(id);
-        
+
         if (!existingEnabler) {
           logger.warn('Enabler not found', { id, enablerId: enabler.id });
           continue;
@@ -578,10 +578,10 @@ export class HierarchySynchronizer {
 
         // Resolve conflicts
         const resolution = this.conflictResolver.resolveEnablerConflict(existingEnabler, enabler);
-        
+
         if (resolution.action === 'update' && resolution.data) {
           await this.issueUpdater.updateIssue(id, resolution.data);
-          
+
           // Update labels if needed
           if (enabler.labels) {
             const labelIds = await this.getLabelIds(enabler.labels);
@@ -599,7 +599,7 @@ export class HierarchySynchronizer {
 
   /**
    * Handles removed items in Linear
-   * 
+   *
    * @param removedItems - Item IDs that have been removed
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    */
@@ -618,7 +618,7 @@ export class HierarchySynchronizer {
     }
   ): Promise<void> {
     try {
-      logger.info('Handling removed items', { 
+      logger.info('Handling removed items', {
         epicCount: removedItems.epics.length,
         featureCount: removedItems.features.length,
         storyCount: removedItems.stories.length,
@@ -627,7 +627,7 @@ export class HierarchySynchronizer {
 
       // Get the "Removed" label ID
       const removedLabelId = await this.getLabelId('Removed');
-      
+
       if (!removedLabelId) {
         logger.warn('Removed label not found');
         return;
@@ -636,7 +636,7 @@ export class HierarchySynchronizer {
       // Add the "Removed" label to removed Epics
       for (const epicId of removedItems.epics) {
         const linearEpicId = existingIssues.epics[epicId];
-        
+
         if (linearEpicId) {
           await this.issueUpdater.addLabels(linearEpicId, [removedLabelId]);
         }
@@ -645,7 +645,7 @@ export class HierarchySynchronizer {
       // Add the "Removed" label to removed Features
       for (const featureId of removedItems.features) {
         const linearFeatureId = existingIssues.features[featureId];
-        
+
         if (linearFeatureId) {
           await this.issueUpdater.addLabels(linearFeatureId, [removedLabelId]);
         }
@@ -654,7 +654,7 @@ export class HierarchySynchronizer {
       // Add the "Removed" label to removed Stories
       for (const storyId of removedItems.stories) {
         const linearStoryId = existingIssues.stories[storyId];
-        
+
         if (linearStoryId) {
           await this.issueUpdater.addLabels(linearStoryId, [removedLabelId]);
         }
@@ -663,7 +663,7 @@ export class HierarchySynchronizer {
       // Add the "Removed" label to removed Enablers
       for (const enablerId of removedItems.enablers) {
         const linearEnablerId = existingIssues.enablers[enablerId];
-        
+
         if (linearEnablerId) {
           await this.issueUpdater.addLabels(linearEnablerId, [removedLabelId]);
         }
@@ -678,22 +678,22 @@ export class HierarchySynchronizer {
 
   /**
    * Gets the IDs of labels by name
-   * 
+   *
    * @param labelNames - Label names
    * @returns Label IDs
    */
   private async getLabelIds(labelNames: string[]): Promise<string[]> {
     try {
       const labelIds: string[] = [];
-      
+
       for (const labelName of labelNames) {
         const labelId = await this.getLabelId(labelName);
-        
+
         if (labelId) {
           labelIds.push(labelId);
         }
       }
-      
+
       return labelIds;
     } catch (error) {
       logger.error('Error getting label IDs', { error, labelNames });
@@ -703,20 +703,20 @@ export class HierarchySynchronizer {
 
   /**
    * Gets the ID of a label by name
-   * 
+   *
    * @param labelName - Label name
    * @returns Label ID if found, null otherwise
    */
   private async getLabelId(labelName: string): Promise<string | null> {
     try {
       const labels = await this.linearClient.issueLabels();
-      
+
       const label = labels.nodes.find(label => label.name === labelName);
-      
+
       if (label) {
         return label.id;
       }
-      
+
       // Create the label if it doesn't exist
       const colorMap: Record<string, string> = {
         'Epic': '#F2994A',
@@ -729,18 +729,18 @@ export class HierarchySynchronizer {
         'Research': '#F2C94C',
         'Removed': '#EB5757'
       };
-      
+
       const color = colorMap[labelName] || '#4EA7FC';
-      
-      const response = await this.linearClient.issueLabelCreate({
+
+      const response = await this.linearClient.createIssueLabel({
         name: labelName,
         color
       });
-      
+
       if (!response.success || !response.issueLabel) {
         throw new Error(`Failed to create ${labelName} label`);
       }
-      
+
       return response.issueLabel.id;
     } catch (error) {
       logger.error(`Error getting ${labelName} label ID`, { error });

@@ -48,7 +48,7 @@ export class PIManager {
   ): Promise<ProgramIncrement> {
     try {
       // Create a cycle in Linear to represent the PI
-      const cycle = await this.linearClient.cycleCreate({
+      const cycle = await this.linearClient.createCycle({
         teamId,
         name: `PI-${name}`,
         description,
@@ -107,7 +107,7 @@ export class PIManager {
         }
 
         // Assign the feature to the PI in Linear
-        const response = await this.linearClient.issueUpdate(featureId, {
+        const response = await this.linearClient.updateIssue(featureId, {
           cycleId: piId
         });
 
@@ -297,7 +297,7 @@ export class PIManager {
         const iterationEndDate = new Date(piStartDate.getTime() + (i + 1) * iterationDurationMs);
 
         // Create a cycle in Linear to represent the iteration
-        const cycle = await this.linearClient.cycleCreate({
+        const cycle = await this.linearClient.createCycle({
           teamId,
           name: `${pi.name}-I${i + 1}${isIP ? '-IP' : ''}`,
           description: isIP ? 'Innovation and Planning Iteration' : `Iteration ${i + 1}`,
@@ -362,7 +362,7 @@ export class PIManager {
 
       if (!objectiveLabel) {
         // Create the label if it doesn't exist
-        const newLabel = await this.linearClient.issueLabelCreate({
+        const newLabel = await this.linearClient.createIssueLabel({
           name: 'PI Objective',
           color: '#F2C94C'
         });
@@ -384,7 +384,7 @@ export class PIManager {
       }
 
       // Create the objective as an issue
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[OBJECTIVE] ${description}`,
         description: `PI Objective for ${pi.name}\n\nBusiness Value: ${businessValue}/10`,
@@ -410,7 +410,7 @@ export class PIManager {
       // Assign features to the objective
       if (featureIds.length > 0) {
         for (const featureId of featureIds) {
-          await this.linearClient.issueRelationCreate({
+          await this.linearClient.createIssueRelation({
             issueId: response.issue.id,
             relatedIssueId: featureId,
             type: 'relates'
@@ -459,7 +459,7 @@ export class PIManager {
 
       if (!riskLabel) {
         // Create the label if it doesn't exist
-        const newLabel = await this.linearClient.issueLabelCreate({
+        const newLabel = await this.linearClient.createIssueLabel({
           name: 'PI Risk',
           color: '#EB5757'
         });
@@ -496,7 +496,7 @@ export class PIManager {
       }
 
       // Create the risk as an issue
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[RISK] ${description}`,
         description: `PI Risk for ${pi.name}\n\nImpact: ${impact}/5\nLikelihood: ${likelihood}/5\nRisk Score: ${riskScore}/25\n\n${mitigationPlan ? `Mitigation Plan:\n${mitigationPlan}` : ''}`,
@@ -599,7 +599,7 @@ export class PIPlanningService {
   ) {
     try {
       // In Linear, we'll represent a Program Increment as a milestone
-      const response = await this.linearClient.milestoneCreate({
+      const response = await this.linearClient.createMilestone({
         name,
         description,
         targetDate: endDate.toISOString(),
@@ -634,7 +634,7 @@ export class PIPlanningService {
       const results = [];
 
       for (const featureId of featureIds) {
-        const response = await this.linearClient.issueUpdate(featureId, {
+        const response = await this.linearClient.updateIssue(featureId, {
           milestoneId: piId
         });
 
