@@ -74,11 +74,11 @@ export class PlanningAgent {
         labelIds: []
       });
 
-      logger.info('Created Epic', { epicId: epic.issue?.id, title: planningTitle });
+      logger.info('Created Epic', { epicId: epic.id, title: planningTitle });
 
       return {
         success: true,
-        epicId: epic.issue?.id,
+        epicId: epic.id,
         message: `Created Epic: ${planningTitle}`
       };
     } catch (error) {

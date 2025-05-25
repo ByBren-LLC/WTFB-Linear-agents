@@ -85,7 +85,7 @@ program
   .description('Parse a Confluence document')
   .requiredOption('--confluence-url <url>', 'Confluence page URL')
   .option('--output <format>', 'Output format (json, yaml)', 'json')
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Get Confluence credentials from environment variables
       const username = process.env.CONFLUENCE_USERNAME;
@@ -133,7 +133,7 @@ program
   .requiredOption('--org-id <id>', 'Linear organization ID')
   .requiredOption('--team-id <id>', 'Linear team ID')
   .option('--dry-run', 'Dry run (do not create issues)', false)
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Get access tokens
       const linearAccessToken = await getAccessToken(options.orgId);
@@ -188,7 +188,7 @@ addConfluenceOptions(
       .option('--auto-resolve <boolean>', 'Whether to automatically resolve conflicts', 'false')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -222,7 +222,7 @@ addConfluenceOptions(
       .description('Stop synchronization')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -251,7 +251,7 @@ addConfluenceOptions(
       .description('Get synchronization status')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -280,7 +280,7 @@ addConfluenceOptions(
       .description('Manually trigger synchronization')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
