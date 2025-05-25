@@ -1,93 +1,93 @@
-# Remote Agent Assignments: OAuth Routes Integration
+# Remote Agent Assignments: Integration Issue Resolution
 
-Copy-paste these assignment messages to remote agents for the OAuth Routes Integration Technical Enabler implementation.
+Copy-paste these assignment messages to remote agents for resolving the integration issues after our core functionality merge.
 
 ---
 
 ## Agent #1 Assignment
 
-# Remote Agent Assignment: OAuth Routes Integration Technical Enabler
+# Remote Agent Assignment: Linear SDK Compatibility Layer
 
-I'm assigning you to implement the OAuth Routes Integration Technical Enabler for our Linear Planning Agent project. This is a high priority architectural component that will complete the OAuth authentication system by integrating missing Confluence OAuth routes into the Express server.
+I'm assigning you to implement the Linear SDK Compatibility Layer Technical Enabler for our Linear Planning Agent project. This is a high priority architectural component that will resolve 180+ TypeScript errors caused by Linear SDK API pattern changes after our core functionality integration.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_routes_integration_enabler_kickoff.md
+1. Pull the latest code from the dev branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/linear_sdk_compatibility_layer_kickoff.md
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
-6. Create a branch named `feature/oauth-routes-integration-enabler`
+6. Create a branch named `feature/linear-sdk-compatibility-layer`
 7. Submit a PR when complete
 
-This is a high priority task with no dependencies. This enabler blocks all Confluence-dependent features and is critical for the project's success. Please let me know if you have any questions or need clarification on any aspect of the implementation.
+This is a critical path task that blocks all other integration work. The integrated code uses old Linear SDK patterns that need compatibility layer. Please let me know if you have any questions or need clarification on any aspect of the implementation.
 
 ---
 
 ## Agent #2 Assignment
 
-# Remote Agent Assignment: Register Confluence OAuth Routes
+# Remote Agent Assignment: Module Export Resolution
 
-I'm assigning you to implement the Register Confluence OAuth Routes User Story for our Linear Planning Agent project. This is a high priority component that will register the missing Confluence OAuth routes in the Express server to enable Confluence authentication.
+I'm assigning you to implement the Module Export Resolution Technical Enabler for our Linear Planning Agent project. This is a high priority technical debt component that will resolve missing module exports preventing TypeScript compilation.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/confluence_oauth_routes_story_kickoff.md
+1. Pull the latest code from the dev branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/module_export_resolution_kickoff.md
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
-6. Create a branch named `feature/confluence-oauth-routes`
+6. Create a branch named `feature/module-export-resolution`
 7. Submit a PR when complete
 
-This is a high priority task that is part of the OAuth Routes Integration Technical Enabler. Please let me know if you have any questions or need clarification on any aspect of the implementation.
+This is a high priority task that should be started after Agent #1 begins work. This resolves 45+ compilation errors from missing exports. Please let me know if you have any questions or need clarification on any aspect of the implementation.
 
 ---
 
 ## Agent #3 Assignment
 
-# Remote Agent Assignment: Complete OAuth Environment Configuration
+# Remote Agent Assignment: Type Definition Fixes
 
-I'm assigning you to implement the Complete OAuth Environment Configuration User Story for our Linear Planning Agent project. This is a high priority component that will complete the environment variable templates and Docker configuration for OAuth functionality.
+I'm assigning you to implement the Type Definition Fixes Technical Enabler for our Linear Planning Agent project. This is a medium priority technical debt component that will resolve TypeScript type issues, particularly with Cheerio imports and interface mismatches.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_environment_config_story_kickoff.md
+1. Pull the latest code from the dev branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/type_definition_fixes_kickoff.md
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
-6. Create a branch named `feature/oauth-environment-config`
+6. Create a branch named `feature/type-definition-fixes`
 7. Submit a PR when complete
 
-This is a high priority task that is part of the OAuth Routes Integration Technical Enabler. Please let me know if you have any questions or need clarification on any aspect of the implementation.
+This is a medium priority task that can work in parallel with Agent #4 after Agent #2 is in progress. This resolves Cheerio and type definition issues. Please let me know if you have any questions or need clarification on any aspect of the implementation.
 
 ---
 
 ## Agent #4 Assignment
 
-# Remote Agent Assignment: Create OAuth Applications and Validate Testing
+# Remote Agent Assignment: Database Schema Integration
 
-I'm assigning you to implement the Create OAuth Applications and Validate Testing User Story for our Linear Planning Agent project. This is a high priority component that will create OAuth applications in Linear and Atlassian Developer Console and validate the complete OAuth flow in local Docker environment.
+I'm assigning you to implement the Database Schema Integration Technical Enabler for our Linear Planning Agent project. This is a medium priority infrastructure component that will resolve database schema conflicts between existing OAuth and new planning/sync schemas.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_applications_setup_story_kickoff.md
+1. Pull the latest code from the dev branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/database_schema_integration_kickoff.md
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
-6. Create a branch named `feature/oauth-applications-setup`
+6. Create a branch named `feature/database-schema-integration`
 7. Submit a PR when complete
 
-This is a high priority task that depends on the completion of the OAuth Routes and Environment Configuration stories. This story completes the OAuth authentication system and enables full planning agent functionality. Please let me know if you have any questions or need clarification on any aspect of the implementation.
+This is a medium priority task that can work in parallel with Agent #3 after Agent #2 is in progress. This resolves database schema conflicts and integration issues. Please let me know if you have any questions or need clarification on any aspect of the implementation.
 
 ---
 
 ## Assignment Summary
 
-- **Agent #1**: OAuth Routes Integration Technical Enabler (5 story points, 1 week)
-- **Agent #2**: Register Confluence OAuth Routes (3 story points, 3-4 days)
-- **Agent #3**: Complete OAuth Environment Configuration (2 story points, 2-3 days)
-- **Agent #4**: Create OAuth Applications and Validate Testing (5 story points, 1 week, depends on #2 and #3)
+- **Agent #1**: Linear SDK Compatibility Layer (8 story points, 2-3 days) - CRITICAL PATH
+- **Agent #2**: Module Export Resolution (5 story points, 1-2 days) - HIGH PRIORITY
+- **Agent #3**: Type Definition Fixes (3 story points, 1 day) - MEDIUM PRIORITY
+- **Agent #4**: Database Schema Integration (5 story points, 2 days) - MEDIUM PRIORITY
 
-**Total Effort**: 15 story points across 4 agents
-**Priority**: High - Critical for Linear Planning Agent functionality
+**Total Effort**: 21 story points across 4 agents
+**Priority**: Critical - Resolves 282 TypeScript errors blocking integration
 **Project**: WTFB Linear Planning Agent
 **Methodology**: SAFe Essentials
