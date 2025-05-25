@@ -1,104 +1,90 @@
 /**
- * Planning information models for the Linear Planning Agent.
- * These models represent the planning information extracted from Confluence documents.
+ * Planning information models
+ * 
+ * This module defines the data models for planning information extracted from Confluence documents.
+ * These models represent the SAFe hierarchy and are used to create Linear issues.
  */
 
 /**
- * Base interface for all planning items.
+ * Base interface for all planning items
  */
 export interface PlanningItem {
-  /** Unique identifier for the planning item */
+  /** Unique identifier for the item */
   id: string;
-  /** Type of planning item */
-  type: 'epic' | 'feature' | 'story' | 'enabler';
-  /** Title of the planning item */
+  /** Title of the item */
   title: string;
-  /** Description of the planning item */
+  /** Description of the item */
   description: string;
-  /** ID of the parent planning item (if any) */
-  parentId?: string;
-  /** Additional attributes for the planning item */
-  attributes: Record<string, any>;
-  /** Labels associated with the item */
-  labels?: string[];
+  /** Additional attributes for the item */
+  attributes?: Record<string, any>;
 }
 
 /**
- * Epic planning item.
- * An epic is a large body of work that can be broken down into features.
+ * Epic in SAFe hierarchy
  */
 export interface Epic extends PlanningItem {
-  /** Type of planning item (always 'epic' for Epic) */
-  type: 'epic';
-  /** Features contained within this epic */
-  features: Feature[];
+  /** Features contained in this epic */
+  features?: Feature[];
 }
 
 /**
- * Feature planning item.
- * A feature is a service that fulfills a stakeholder need.
+ * Feature in SAFe hierarchy
  */
 export interface Feature extends PlanningItem {
-  /** Type of planning item (always 'feature' for Feature) */
-  type: 'feature';
-  /** ID of the epic that contains this feature (if any) */
+  /** Epic ID this feature belongs to */
   epicId?: string;
-  /** Stories contained within this feature */
-  stories: Story[];
-  /** Enablers contained within this feature */
-  enablers: Enabler[];
   /** Whether this is a business feature (true) or enabler feature (false) */
   isBusinessFeature?: boolean;
+  /** Story points estimate */
+  storyPoints?: number;
+  /** Stories contained in this feature */
+  stories?: Story[];
+  /** Enablers contained in this feature */
+  enablers?: Enabler[];
 }
 
 /**
- * Story planning item.
- * A story is a short description of a small piece of desired functionality.
+ * Story in SAFe hierarchy
  */
 export interface Story extends PlanningItem {
-  /** Type of planning item (always 'story' for Story) */
-  type: 'story';
-  /** ID of the feature that contains this story (if any) */
+  /** Feature ID this story belongs to */
   featureId?: string;
-  /** Acceptance criteria for the story */
-  acceptanceCriteria: string[];
-  /** Story points (effort estimate) for the story */
+  /** Story points estimate */
+  storyPoints?: number;
+  /** Acceptance criteria */
+  acceptanceCriteria?: string[];
+}
+
+/**
+ * Enabler in SAFe hierarchy
+ */
+export interface Enabler extends PlanningItem {
+  /** Feature ID this enabler belongs to */
+  featureId?: string;
+  /** Type of enabler */
+  enablerType: string;
+  /** Story points estimate */
   storyPoints?: number;
 }
 
 /**
- * Enabler planning item.
- * An enabler supports the activities needed to extend the Architectural Runway.
- */
-export interface Enabler extends PlanningItem {
-  /** Type of planning item (always 'enabler' for Enabler) */
-  type: 'enabler';
-  /** ID of the feature that contains this enabler (if any) */
-  featureId?: string;
-  /** Type of enabler */
-  enablerType: 'architecture' | 'infrastructure' | 'technical_debt' | 'research';
-}
-
-/**
- * Planning document containing all planning items.
+ * Planning document containing all planning items
  */
 export interface PlanningDocument {
-  /** Unique identifier for the planning document */
-  id?: string;
-  /** Title of the planning document */
+  /** Document ID */
+  id: string;
+  /** Document title */
   title: string;
-  /** Epics contained in the document */
+  /** Document description */
+  description: string;
+  /** Epics in the document */
   epics: Epic[];
-  /** Features in the planning document */
+  /** Features not associated with epics */
   features?: Feature[];
-  /** Stories in the planning document */
+  /** Stories not associated with features */
   stories?: Story[];
-  /** Enablers in the planning document */
+  /** Enablers not associated with features */
   enablers?: Enabler[];
-  /** Features not associated with any epic */
-  orphanedFeatures?: Feature[];
-  /** Stories not associated with any feature */
-  orphanedStories?: Story[];
-  /** Enablers not associated with any feature */
-  orphanedEnablers?: Enabler[];
+  /** Additional metadata */
+  metadata?: Record<string, any>;
 }

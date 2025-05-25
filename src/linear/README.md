@@ -1,146 +1,155 @@
-# Linear API Error Handling
+# Linear Issue Creator
 
-This module provides robust error handling for the Linear API integration. It includes:
+This module provides functionality to create Linear issues from planning information. It uses the Linear API to create properly structured issues with the appropriate hierarchy and relationships.
 
-- Error types for different Linear API errors
-- Error handler for detecting and handling errors
-- Rate limiter for respecting API limits
-- Retry logic for failed requests
-- Linear client wrapper with error handling
+## Components
 
-## Usage
+### Issue Creator
 
-### Creating a Linear Client Wrapper
+The `LinearIssueCreator` class is responsible for creating issues in Linear from planning information. It handles creation of epics, features, stories, and enablers.
 
 ```typescript
-import { LinearClientWrapper } from './linear/client';
-
-// Create a new Linear client wrapper
-const linearClient = new LinearClientWrapper(accessToken, organizationId);
-
-// Use the client to interact with the Linear API
-const issue = await linearClient.getIssue('issue-id');
+const issueCreator = new LinearIssueCreator(accessToken, teamId);
+const result = await issueCreator.createIssuesFromPlanningDocument(planningDocument);
 ```
 
-### Error Handling
+### Issue Mapper
 
-The Linear client wrapper automatically handles errors and retries failed requests. It will:
+The `issue-mapper.ts` module provides functions to map planning information to Linear issues. It handles conversion of attributes, labels, and other metadata.
 
-- Detect and handle common Linear API errors
-- Handle rate limiting and implement appropriate backoff strategies
-- Retry failed requests with appropriate backoff
-- Refresh tokens automatically if they expire
-- Provide meaningful error messages
+```typescript
+const issueInput = await mapEpicToIssueInput(epic, teamId, labelIds);
+```
 
-### Custom Error Types
+### Issue Finder
 
-The following error types are available:
+The `LinearIssueFinder` class is responsible for finding existing issues in Linear. It uses titles, identifiers, or other attributes to match issues.
 
-- `LinearApiError`: Base error class for Linear API errors
-- `LinearRateLimitError`: Error class for Linear API rate limit errors
-- `LinearAuthenticationError`: Error class for Linear API authentication errors
-- `LinearNotFoundError`: Error class for Linear API not found errors
-- `LinearValidationError`: Error class for Linear API validation errors
-- `LinearNetworkError`: Error class for Linear API network errors
+```typescript
+const issueFinder = new LinearIssueFinder(accessToken, teamId);
+const existingEpic = await issueFinder.findEpic(epic);
+```
 
-You can catch these errors to handle specific error cases:
+### Issue Updater
+
+The `LinearIssueUpdater` class is responsible for updating existing issues in Linear. It handles merging of changes and conflict resolution.
+
+```typescript
+const issueUpdater = new LinearIssueUpdater(accessToken);
+await issueUpdater.updateEpic(epicId, epic);
+```
+
+### Rate Limiter
+
+The `RateLimiter` class is responsible for respecting Linear API rate limits. It ensures that requests are made within the allowed limits.
+
+```typescript
+const rateLimiter = new RateLimiter();
+await rateLimiter.waitForRequest();
+```
+
+### Error Handler
+
+The `error-handler.ts` module provides error handling utilities for Linear API errors. It includes functions to handle errors, determine if they are retryable, and retry with exponential backoff.
 
 ```typescript
 try {
-  const issue = await linearClient.getIssue('issue-id');
+  // Make API call
 } catch (error) {
-  if (error instanceof LinearNotFoundError) {
-    console.log('Issue not found');
-  } else if (error instanceof LinearAuthenticationError) {
-    console.log('Authentication error');
-  } else {
-    console.log('Other error:', error.message);
-  }
+  throw handleLinearError(error);
 }
 ```
 
-### Rate Limiting
+## Planning Session Manager
 
-The Linear client wrapper automatically respects rate limits by throttling requests. You can customize the rate limits for different endpoints:
+The `PlanningSessionManager` class is responsible for managing the planning session. It tracks progress and handles errors during issue creation.
 
 ```typescript
-import { RateLimiter } from './linear/rate-limiter';
-
-// Create a new rate limiter with custom limits
-const rateLimiter = new RateLimiter({
-  'getIssue': 100, // 100 requests per minute
-  'createIssue': 30 // 30 requests per minute
-});
+const sessionManager = new PlanningSessionManager(
+  planningDocument,
+  accessToken,
+  teamId,
+  sessionId
+);
+const result = await sessionManager.createIssues();
 ```
 
-### Retry Logic
-
-The Linear client wrapper automatically retries failed requests with exponential backoff. You can customize the retry options:
+## Usage
 
 ```typescript
-import { retry, defaultRetryOptions } from './linear/retry';
+import { PlanningDocument } from '../planning/models';
+import { PlanningSessionManager } from '../planning/session-manager';
 
-// Customize retry options
-const customRetryOptions = {
-  ...defaultRetryOptions,
-  maxRetries: 5,
-  initialDelay: 2000
+// Create a planning document
+const planningDocument: PlanningDocument = {
+  id: 'doc-123',
+  title: 'Q3 Planning',
+  description: 'Planning for Q3',
+  epics: [
+    {
+      id: 'epic-1',
+      title: 'Improve User Experience',
+      description: 'Enhance the user experience across the platform',
+      features: [
+        {
+          id: 'feature-1',
+          title: 'Redesign Dashboard',
+          description: 'Redesign the dashboard for better usability',
+          stories: [
+            {
+              id: 'story-1',
+              title: 'Create wireframes',
+              description: 'Create wireframes for the new dashboard',
+              storyPoints: 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
 };
 
-// Use custom retry options
-const result = await linearClient.executeQuery(
-  () => linearClient.getIssue('issue-id'),
-  'getIssue',
-  customRetryOptions
+// Create a session manager
+const sessionManager = new PlanningSessionManager(
+  planningDocument,
+  'linear-access-token',
+  'linear-team-id',
+  'session-123'
 );
+
+// Create issues
+const result = await sessionManager.createIssues();
+console.log(result);
 ```
 
-## Error Types
+## Error Handling
 
-### LinearApiError
-
-Base error class for Linear API errors.
+The module includes comprehensive error handling for Linear API errors. It handles rate limits, authentication errors, permission errors, and network errors.
 
 ```typescript
-new LinearApiError(message: string, statusCode: number, response: any)
+try {
+  const result = await sessionManager.createIssues();
+  console.log(result);
+} catch (error) {
+  console.error('Error creating issues:', error);
+}
 ```
 
-### LinearRateLimitError
+## Rate Limiting
 
-Error class for Linear API rate limit errors.
+The module respects Linear API rate limits. It uses a rate limiter to ensure that requests are made within the allowed limits.
 
 ```typescript
-new LinearRateLimitError(message: string, statusCode: number, response: any, retryAfter?: number)
+const rateLimiter = new RateLimiter();
+await rateLimiter.waitForRequest();
+// Make API call
+rateLimiter.recordRequest();
 ```
 
-### LinearAuthenticationError
+## Conflict Resolution
 
-Error class for Linear API authentication errors.
-
-```typescript
-new LinearAuthenticationError(message: string, statusCode: number, response: any)
-```
-
-### LinearNotFoundError
-
-Error class for Linear API not found errors.
+The module handles conflicts when updating existing issues. It merges changes intelligently to avoid overwriting existing data.
 
 ```typescript
-new LinearNotFoundError(message: string, statusCode: number, response: any)
-```
-
-### LinearValidationError
-
-Error class for Linear API validation errors.
-
-```typescript
-new LinearValidationError(message: string, statusCode: number, response: any, validationErrors?: any[])
-```
-
-### LinearNetworkError
-
-Error class for Linear API network errors.
-
-```typescript
-new LinearNetworkError(message: string, originalError: Error)
+const resolvedData = await issueUpdater.resolveConflicts(existingIssue, newData);
 ```

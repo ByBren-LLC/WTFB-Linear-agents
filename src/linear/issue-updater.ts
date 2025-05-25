@@ -1,168 +1,255 @@
 /**
- * Linear Issue Updater
+ * Issue updater for Linear issues
  * 
- * This module provides utilities for updating issues in Linear.
+ * This module provides functions to update existing issues in Linear.
+ * It handles merging of changes and conflict resolution.
  */
+
 import { LinearClient, Issue, IssueUpdateInput } from '@linear/sdk';
+import { Epic, Feature, Story, Enabler } from '../planning/models';
 import * as logger from '../utils/logger';
+import { RateLimiter } from './rate-limiter';
+import { handleLinearError, retryWithBackoff } from './error-handler';
+import { mapPriorityToLinear, mapStoryPointsToEstimate } from './issue-mapper';
 
 /**
- * Utility for updating issues in Linear
+ * Linear issue updater
  */
 export class LinearIssueUpdater {
   private linearClient: LinearClient;
+  private rateLimiter: RateLimiter;
 
   /**
-   * Creates a new LinearIssueUpdater
+   * Creates a new Linear issue updater
    * 
-   * @param accessToken - Linear API access token
+   * @param accessToken Linear API access token
    */
   constructor(accessToken: string) {
     this.linearClient = new LinearClient({ accessToken });
+    this.rateLimiter = new RateLimiter();
+  }
+
+  /**
+   * Updates an epic in Linear
+   * 
+   * @param epicId The Linear epic ID
+   * @param epic The epic data
+   */
+  async updateEpic(epicId: string, epic: Epic): Promise<void> {
+    try {
+      // Get the current issue
+      const existingIssue = await this.linearClient.issue(epicId);
+      
+      if (!existingIssue) {
+        throw new Error(`Epic ${epicId} not found`);
+      }
+      
+      // Prepare update data
+      const updateData: IssueUpdateInput = {
+        title: `[EPIC] ${epic.title}`,
+        description: epic.description,
+        priority: epic.attributes?.priority ? mapPriorityToLinear(epic.attributes.priority) : undefined
+      };
+      
+      // Resolve any conflicts
+      const resolvedData = await this.resolveConflicts(existingIssue, updateData);
+      
+      // Update the issue
+      await this.updateIssue(epicId, resolvedData);
+      
+      logger.info('Updated epic', { epicId, title: epic.title });
+    } catch (error) {
+      logger.error('Error updating epic', { error, epicId, epicTitle: epic.title });
+      throw handleLinearError(error);
+    }
+  }
+
+  /**
+   * Updates a feature in Linear
+   * 
+   * @param featureId The Linear feature ID
+   * @param feature The feature data
+   */
+  async updateFeature(featureId: string, feature: Feature): Promise<void> {
+    try {
+      // Get the current issue
+      const existingIssue = await this.linearClient.issue(featureId);
+      
+      if (!existingIssue) {
+        throw new Error(`Feature ${featureId} not found`);
+      }
+      
+      // Prepare update data
+      const updateData: IssueUpdateInput = {
+        title: `[FEATURE] ${feature.title}`,
+        description: feature.description,
+        priority: feature.attributes?.priority ? mapPriorityToLinear(feature.attributes.priority) : undefined,
+        estimate: mapStoryPointsToEstimate(feature.storyPoints),
+        ...(feature.epicId ? { parentId: feature.epicId } : {})
+      };
+      
+      // Resolve any conflicts
+      const resolvedData = await this.resolveConflicts(existingIssue, updateData);
+      
+      // Update the issue
+      await this.updateIssue(featureId, resolvedData);
+      
+      logger.info('Updated feature', { featureId, title: feature.title });
+    } catch (error) {
+      logger.error('Error updating feature', { error, featureId, featureTitle: feature.title });
+      throw handleLinearError(error);
+    }
+  }
+
+  /**
+   * Updates a story in Linear
+   * 
+   * @param storyId The Linear story ID
+   * @param story The story data
+   */
+  async updateStory(storyId: string, story: Story): Promise<void> {
+    try {
+      // Get the current issue
+      const existingIssue = await this.linearClient.issue(storyId);
+      
+      if (!existingIssue) {
+        throw new Error(`Story ${storyId} not found`);
+      }
+      
+      // Format acceptance criteria if present
+      let description = story.description;
+      if (story.acceptanceCriteria && story.acceptanceCriteria.length > 0) {
+        description += '\n\n## Acceptance Criteria\n';
+        story.acceptanceCriteria.forEach(criteria => {
+          description += `- [ ] ${criteria}\n`;
+        });
+      }
+      
+      // Prepare update data
+      const updateData: IssueUpdateInput = {
+        title: story.title,
+        description,
+        priority: story.attributes?.priority ? mapPriorityToLinear(story.attributes.priority) : undefined,
+        estimate: mapStoryPointsToEstimate(story.storyPoints),
+        ...(story.featureId ? { parentId: story.featureId } : {})
+      };
+      
+      // Resolve any conflicts
+      const resolvedData = await this.resolveConflicts(existingIssue, updateData);
+      
+      // Update the issue
+      await this.updateIssue(storyId, resolvedData);
+      
+      logger.info('Updated story', { storyId, title: story.title });
+    } catch (error) {
+      logger.error('Error updating story', { error, storyId, storyTitle: story.title });
+      throw handleLinearError(error);
+    }
+  }
+
+  /**
+   * Updates an enabler in Linear
+   * 
+   * @param enablerId The Linear enabler ID
+   * @param enabler The enabler data
+   */
+  async updateEnabler(enablerId: string, enabler: Enabler): Promise<void> {
+    try {
+      // Get the current issue
+      const existingIssue = await this.linearClient.issue(enablerId);
+      
+      if (!existingIssue) {
+        throw new Error(`Enabler ${enablerId} not found`);
+      }
+      
+      // Prepare update data
+      const updateData: IssueUpdateInput = {
+        title: `[ENABLER] ${enabler.title}`,
+        description: enabler.description,
+        priority: enabler.attributes?.priority ? mapPriorityToLinear(enabler.attributes.priority) : undefined,
+        estimate: mapStoryPointsToEstimate(enabler.storyPoints),
+        ...(enabler.featureId ? { parentId: enabler.featureId } : {})
+      };
+      
+      // Resolve any conflicts
+      const resolvedData = await this.resolveConflicts(existingIssue, updateData);
+      
+      // Update the issue
+      await this.updateIssue(enablerId, resolvedData);
+      
+      logger.info('Updated enabler', { enablerId, title: enabler.title });
+    } catch (error) {
+      logger.error('Error updating enabler', { error, enablerId, enablerTitle: enabler.title });
+      throw handleLinearError(error);
+    }
+  }
+
+  /**
+   * Resolves conflicts between existing issue and new data
+   * 
+   * @param existingIssue The existing issue
+   * @param newData The new data
+   * @returns The resolved data
+   */
+  async resolveConflicts(existingIssue: Issue, newData: IssueUpdateInput): Promise<IssueUpdateInput> {
+    // This is a simple implementation that prioritizes new data
+    // A more sophisticated implementation would merge changes intelligently
+    
+    const resolvedData: IssueUpdateInput = { ...newData };
+    
+    // Don't update fields that haven't changed
+    if (resolvedData.title && resolvedData.title === existingIssue.title) {
+      delete resolvedData.title;
+    }
+    
+    if (resolvedData.description && resolvedData.description === existingIssue.description) {
+      delete resolvedData.description;
+    }
+    
+    if (resolvedData.priority && resolvedData.priority === existingIssue.priority) {
+      delete resolvedData.priority;
+    }
+    
+    if (resolvedData.estimate && resolvedData.estimate === existingIssue.estimate) {
+      delete resolvedData.estimate;
+    }
+    
+    if (resolvedData.parentId && resolvedData.parentId === existingIssue.parent?.id) {
+      delete resolvedData.parentId;
+    }
+    
+    return resolvedData;
   }
 
   /**
    * Updates an issue in Linear
    * 
-   * @param issueId - Linear issue ID
-   * @param updateData - Data to update
-   * @returns The updated issue if successful, null otherwise
+   * @param issueId The issue ID
+   * @param data The update data
    */
-  async updateIssue(issueId: string, updateData: IssueUpdateInput): Promise<Issue | null> {
-    try {
-      const response = await this.linearClient.issueUpdate(issueId, updateData);
-      
-      if (!response.success || !response.issue) {
-        throw new Error(`Failed to update issue: ${response.error}`);
-      }
-      
-      logger.info('Updated issue', { issueId, updateData });
-      
-      return response.issue;
-    } catch (error) {
-      logger.error('Error updating issue', { error, issueId, updateData });
-      throw error;
+  private async updateIssue(issueId: string, data: IssueUpdateInput): Promise<void> {
+    // Skip update if there's nothing to update
+    if (Object.keys(data).length === 0) {
+      logger.info('No changes to update for issue', { issueId });
+      return;
     }
-  }
-
-  /**
-   * Updates the parent of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param parentId - New parent issue ID, or null to remove parent
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateParent(issueId: string, parentId: string | null): Promise<Issue | null> {
-    return this.updateIssue(issueId, { parentId });
-  }
-
-  /**
-   * Updates the title of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param title - New title
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateTitle(issueId: string, title: string): Promise<Issue | null> {
-    return this.updateIssue(issueId, { title });
-  }
-
-  /**
-   * Updates the description of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param description - New description
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateDescription(issueId: string, description: string): Promise<Issue | null> {
-    return this.updateIssue(issueId, { description });
-  }
-
-  /**
-   * Updates the labels of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param labelIds - New label IDs
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateLabels(issueId: string, labelIds: string[]): Promise<Issue | null> {
-    return this.updateIssue(issueId, { labelIds });
-  }
-
-  /**
-   * Adds labels to an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param labelIds - Label IDs to add
-   * @returns The updated issue if successful, null otherwise
-   */
-  async addLabels(issueId: string, labelIds: string[]): Promise<Issue | null> {
+    
     try {
-      const issue = await this.linearClient.issue(issueId);
-      const existingLabelIds = issue.labels?.nodes.map(label => label.id) || [];
+      await this.rateLimiter.waitForRequest();
       
-      // Combine existing and new label IDs, removing duplicates
-      const updatedLabelIds = [...new Set([...existingLabelIds, ...labelIds])];
-      
-      return this.updateLabels(issueId, updatedLabelIds);
+      await retryWithBackoff(async () => {
+        const response = await this.linearClient.issueUpdate(issueId, data);
+        this.rateLimiter.recordRequest();
+        
+        if (!response.success) {
+          throw new Error(`Failed to update issue ${issueId}: ${response.error}`);
+        }
+        
+        return response;
+      });
     } catch (error) {
-      logger.error('Error adding labels to issue', { error, issueId, labelIds });
-      throw error;
+      logger.error('Error updating issue', { error, issueId, data });
+      throw handleLinearError(error);
     }
-  }
-
-  /**
-   * Removes labels from an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param labelIds - Label IDs to remove
-   * @returns The updated issue if successful, null otherwise
-   */
-  async removeLabels(issueId: string, labelIds: string[]): Promise<Issue | null> {
-    try {
-      const issue = await this.linearClient.issue(issueId);
-      const existingLabelIds = issue.labels?.nodes.map(label => label.id) || [];
-      
-      // Filter out the label IDs to remove
-      const updatedLabelIds = existingLabelIds.filter(id => !labelIds.includes(id));
-      
-      return this.updateLabels(issueId, updatedLabelIds);
-    } catch (error) {
-      logger.error('Error removing labels from issue', { error, issueId, labelIds });
-      throw error;
-    }
-  }
-
-  /**
-   * Updates the state of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param stateId - New state ID
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateState(issueId: string, stateId: string): Promise<Issue | null> {
-    return this.updateIssue(issueId, { stateId });
-  }
-
-  /**
-   * Updates the assignee of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param assigneeId - New assignee ID, or null to unassign
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updateAssignee(issueId: string, assigneeId: string | null): Promise<Issue | null> {
-    return this.updateIssue(issueId, { assigneeId });
-  }
-
-  /**
-   * Updates the priority of an issue
-   * 
-   * @param issueId - Linear issue ID
-   * @param priority - New priority (0-4)
-   * @returns The updated issue if successful, null otherwise
-   */
-  async updatePriority(issueId: string, priority: number): Promise<Issue | null> {
-    return this.updateIssue(issueId, { priority });
   }
 }

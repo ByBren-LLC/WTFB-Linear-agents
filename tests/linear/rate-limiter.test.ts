@@ -1,135 +1,65 @@
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { RateLimiter } from '../../src/linear/rate-limiter';
 
-// Mock the logger
-jest.mock('../../src/utils/logger', () => ({
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
-}));
-
-// Mock setTimeout
-jest.useFakeTimers();
-
-describe('Rate Limiter', () => {
+describe('RateLimiter', () => {
   let rateLimiter: RateLimiter;
-
+  
   beforeEach(() => {
-    rateLimiter = new RateLimiter();
-    jest.clearAllTimers();
-  });
-
-  it('should allow requests within the rate limit', async () => {
-    // Make 10 requests (well below the default limit of 50)
-    for (let i = 0; i < 10; i++) {
-      await rateLimiter.throttle('testEndpoint');
-    }
-
-    // No throttling should have occurred
-    expect(setTimeout).not.toHaveBeenCalled();
-  });
-
-  it('should throttle requests that exceed the rate limit', async () => {
-    // Create a rate limiter with a low limit
-    rateLimiter = new RateLimiter({ 'testEndpoint': 5 });
-
-    // Make 5 requests (at the limit)
-    for (let i = 0; i < 5; i++) {
-      await rateLimiter.throttle('testEndpoint');
-    }
-
-    // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
-
-    // Make one more request (exceeding the limit)
-    const throttlePromise = rateLimiter.throttle('testEndpoint');
+    // Create a rate limiter with a small window for testing
+    rateLimiter = new RateLimiter(3, 1000);
     
-    // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
-    
-    // Fast-forward time to complete the throttling
-    jest.runAllTimers();
-    
-    // The promise should resolve
-    await throttlePromise;
+    // Mock Date.now to control time
+    jest.spyOn(Date, 'now').mockImplementation(() => 1000);
   });
-
-  it('should use custom limits for different endpoints', async () => {
-    // Create a rate limiter with different limits for different endpoints
-    rateLimiter = new RateLimiter({
-      'endpoint1': 3,
-      'endpoint2': 5
+  
+  it('should allow requests within the limit', async () => {
+    // Should allow 3 requests immediately
+    await rateLimiter.waitForRequest();
+    await rateLimiter.waitForRequest();
+    await rateLimiter.waitForRequest();
+    
+    expect(rateLimiter.getRequestCount()).toBe(3);
+    expect(rateLimiter.getRemainingRequests()).toBe(0);
+  });
+  
+  it('should wait for requests over the limit', async () => {
+    // Record 3 requests
+    rateLimiter.recordRequest();
+    rateLimiter.recordRequest();
+    rateLimiter.recordRequest();
+    
+    // Mock setTimeout to resolve immediately
+    jest.spyOn(global, 'setTimeout').mockImplementation((callback: any) => {
+      // Advance time by 1050ms (window + buffer)
+      jest.spyOn(Date, 'now').mockImplementation(() => 2050);
+      callback();
+      return {} as any;
     });
-
-    // Make 3 requests to endpoint1 (at the limit)
-    for (let i = 0; i < 3; i++) {
-      await rateLimiter.throttle('endpoint1');
-    }
-
-    // Make 5 requests to endpoint2 (at the limit)
-    for (let i = 0; i < 5; i++) {
-      await rateLimiter.throttle('endpoint2');
-    }
-
-    // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
-
-    // Make one more request to endpoint1 (exceeding the limit)
-    const throttlePromise1 = rateLimiter.throttle('endpoint1');
     
-    // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
+    // Should wait for the 4th request
+    await rateLimiter.waitForRequest();
     
-    // Reset the mock
-    jest.clearAllTimers();
-    
-    // Make one more request to endpoint2 (exceeding the limit)
-    const throttlePromise2 = rateLimiter.throttle('endpoint2');
-    
-    // Throttling should occur again
-    expect(setTimeout).toHaveBeenCalled();
-    
-    // Fast-forward time to complete the throttling
-    jest.runAllTimers();
-    
-    // The promises should resolve
-    await throttlePromise1;
-    await throttlePromise2;
+    // The oldest request should have expired from the window
+    expect(rateLimiter.getRequestCount()).toBe(3);
+    expect(rateLimiter.getRemainingRequests()).toBe(0);
   });
-
-  it('should reset counters after the reset interval', async () => {
-    // Create a rate limiter with a low limit
-    rateLimiter = new RateLimiter({ 'testEndpoint': 2 });
-
-    // Make 2 requests (at the limit)
-    for (let i = 0; i < 2; i++) {
-      await rateLimiter.throttle('testEndpoint');
-    }
-
-    // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
-
-    // Advance time past the reset interval (60 seconds)
-    jest.advanceTimersByTime(61 * 1000);
-
-    // Make 2 more requests (should be allowed after reset)
-    for (let i = 0; i < 2; i++) {
-      await rateLimiter.throttle('testEndpoint');
-    }
-
-    // Still no throttling
-    expect(setTimeout).not.toHaveBeenCalled();
-
-    // Make one more request (exceeding the limit again)
-    const throttlePromise = rateLimiter.throttle('testEndpoint');
+  
+  it('should remove old requests from the window', () => {
+    // Record 3 requests at different times
+    jest.spyOn(Date, 'now').mockImplementation(() => 1000);
+    rateLimiter.recordRequest();
     
-    // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
+    jest.spyOn(Date, 'now').mockImplementation(() => 1500);
+    rateLimiter.recordRequest();
     
-    // Fast-forward time to complete the throttling
-    jest.runAllTimers();
+    jest.spyOn(Date, 'now').mockImplementation(() => 2000);
+    rateLimiter.recordRequest();
     
-    // The promise should resolve
-    await throttlePromise;
+    // Advance time to 2100ms
+    jest.spyOn(Date, 'now').mockImplementation(() => 2100);
+    
+    // The first request should have expired from the window
+    expect(rateLimiter.getRequestCount()).toBe(2);
+    expect(rateLimiter.getRemainingRequests()).toBe(1);
   });
 });

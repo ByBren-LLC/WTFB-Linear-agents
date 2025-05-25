@@ -1,20 +1,12 @@
 /**
- * Linear API Error Handling
+ * Linear integration module
  * 
- * This module exports all the Linear API error handling components.
+ * This module exports all the components for Linear integration.
  */
 
-// Export error types
-export * from './errors';
-
-// Export error handler
-export * from './error-handler';
-
-// Export rate limiter
+export * from './issue-creator';
+export * from './issue-finder';
+export * from './issue-updater';
+export * from './issue-mapper';
 export * from './rate-limiter';
-
-// Export retry logic
-export * from './retry';
-
-// Export Linear client wrapper
-export * from './client';
+export * from './error-handler';
