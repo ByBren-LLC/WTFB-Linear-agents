@@ -184,6 +184,38 @@ Your notifications should be formatted like:
 📋 Top consumers: Sync operations, webhook processing
 ```
 
+### System Health Dashboard Vision
+
+Your implementation should work toward this aggregate health dashboard view:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 System Health Dashboard                     │
+├─────────────────────────────────────────────────────────────┤
+│ OAuth Tokens:  Linear ✅ (45d) │ Confluence ⚠️ (3d)        │
+│ API Usage:     Linear 70% ████▒▒ │ Confluence 40% ██▒▒▒▒   │
+│ Resources:     Memory 85% ████▒ ⚠️ │ DB Conn 50% ██▒▒▒    │
+│ Operations:    Sync ✅ (2m ago)  │ Planning ✅ (5m ago)    │
+│ Disk Space:    Data 60% ███▒▒▒   │ Logs 30% █▒▒▒▒▒       │
+├─────────────────────────────────────────────────────────────┤
+│ Overall Status: ⚠️  DEGRADED - Memory usage high           │
+│ Last Check: 2025-01-27 14:30:15 UTC                        │
+│ Next Check: 2025-01-27 14:35:15 UTC                        │
+└─────────────────────────────────────────────────────────────┘
+
+Health Endpoint: GET /api/health
+- 🟢 Healthy (< 80% all metrics)
+- 🟡 Degraded (80-90% any metric)
+- 🔴 Critical (> 90% any metric)
+```
+
+This dashboard helps agents understand:
+- **At-a-glance status** of all system components
+- **Visual indicators** for quick problem identification
+- **Trend information** (time since last events)
+- **Actionable status** (what needs attention)
+- **Predictive warnings** (before issues become critical)
+
 ## Definition of Done
 Your task will be considered complete when:
 - All acceptance criteria in the implementation document are met

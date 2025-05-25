@@ -89,6 +89,45 @@ Create `EnhancedSlackNotifier` that extends the base class with operational inte
    private shouldThrottleNotification(type: NotificationType, key: string): boolean
    ```
 
+### Concrete NotificationConfig Interface
+
+```typescript
+interface NotificationConfig {
+  // Channel routing for different notification types
+  channels: {
+    planning: string;           // "#planning-ops"
+    health: string;             // "#system-alerts"
+    sync: string;               // "#sync-status"
+    workflow: string;           // "#dev-workflow"
+    errors: string;             // "#critical-alerts"
+  };
+
+  // Alert thresholds and timing
+  thresholds: {
+    tokenExpirationWarningDays: number;     // 7 days
+    apiUsageWarningPercentage: number;      // 80%
+    memoryUsageWarningPercentage: number;   // 85%
+    diskUsageWarningPercentage: number;     // 90%
+  };
+
+  // Notification enablement flags
+  enabled: {
+    planningNotifications: boolean;         // true
+    syncNotifications: boolean;             // true
+    healthNotifications: boolean;           // true
+    budgetNotifications: boolean;           // true
+    workflowNotifications: boolean;         // true
+  };
+
+  // Throttling configuration
+  throttling: {
+    intervalMs: number;                     // 60000 (1 minute)
+    maxNotificationsPerInterval: number;    // 5
+    criticalBypassThrottle: boolean;        // true
+  };
+}
+```
+
 ### Technical Design
 ```typescript
 // Enhanced SlackNotifier extends base functionality
@@ -113,11 +152,11 @@ export class EnhancedSlackNotifier extends SlackNotifier {
   // Operational intelligence methods
   async sendPlanningStatistics(stats: PlanningStatistics): Promise<boolean> {
     if (!this.isNotificationEnabled('planning')) return false;
-    
+
     const message = this.formatPlanningStatistics(stats);
     return this.sendNotification(message, this.getChannelForNotification('planning'));
   }
-  
+
   // Additional methods...
 }
 ```

@@ -90,12 +90,12 @@ Based on the Linear Planning Agent architecture, key health indicators include:
    export class HealthMonitor {
      private slackNotifier: EnhancedSlackNotifier;
      private config: HealthMonitorConfig;
-     
+
      async checkOAuthTokenHealth(): Promise<TokenHealthStatus>
      async checkAPIRateLimits(): Promise<APIHealthStatus>
      async checkSystemResources(): Promise<ResourceHealthStatus>
      async checkOperationalHealth(): Promise<OperationalHealthStatus>
-     
+
      private async sendHealthAlert(alert: HealthAlert): Promise<void>
      private shouldAlert(metric: HealthMetric, threshold: AlertThreshold): boolean
    }
@@ -186,10 +186,10 @@ export class HealthMonitor {
 
   async startMonitoring(): Promise<void> {
     logger.info('Starting health monitoring');
-    
+
     // Initial health check
     await this.performHealthCheck();
-    
+
     // Schedule periodic health checks
     this.monitoringInterval = setInterval(async () => {
       try {
@@ -208,7 +208,7 @@ export class HealthMonitor {
 
     const overallHealth: SystemHealthStatus = {
       timestamp: Date.now(),
-      isHealthy: tokenHealth.isHealthy && apiHealth.isHealthy && 
+      isHealthy: tokenHealth.isHealthy && apiHealth.isHealthy &&
                 resourceHealth.isHealthy && operationalHealth.isHealthy,
       components: {
         tokens: tokenHealth,
@@ -262,6 +262,86 @@ export class HealthMonitor {
    💾 Resources: Healthy (< 80% usage)
    🔄 Operations: Healthy (last sync: 2 min ago)
    ```
+
+### Recovery Runbook
+
+When health alerts fire, agents and operators can take immediate action using these commands:
+
+#### OAuth Token Issues
+```bash
+# Refresh Linear OAuth token
+npm run auth:refresh linear
+
+# Refresh Confluence OAuth token
+npm run auth:refresh confluence
+
+# Check token status
+npm run auth:status
+
+# Re-authenticate if refresh fails
+npm run auth:login linear
+npm run auth:login confluence
+```
+
+#### API Rate Limit Issues
+```bash
+# Check current API usage
+npm run api:status
+
+# Reduce sync frequency temporarily
+npm run sync:interval 600000  # 10 minutes instead of 5
+
+# Pause sync operations temporarily
+npm run sync:pause
+
+# Resume sync operations
+npm run sync:resume
+```
+
+#### High Memory Usage
+```bash
+# Restart with increased memory
+NODE_OPTIONS="--max-old-space-size=4096" npm start
+
+# Force garbage collection (development)
+NODE_OPTIONS="--expose-gc" node -e "global.gc()"
+
+# Check memory usage details
+npm run health:memory
+
+# Restart service (production)
+pm2 restart linear-planning-agent
+```
+
+#### Database Connection Issues
+```bash
+# Check database connectivity
+npm run db:ping
+
+# Reset connection pool
+npm run db:reset-pool
+
+# Run database health check
+npm run db:health
+
+# Restart database service (if self-hosted)
+sudo systemctl restart postgresql
+```
+
+#### Disk Space Issues
+```bash
+# Clean up log files
+npm run logs:cleanup
+
+# Clean up temporary files
+npm run temp:cleanup
+
+# Check disk usage by component
+npm run disk:usage
+
+# Archive old sync data
+npm run sync:archive --older-than=30d
+```
 
 ## Testing Approach
 ### Unit Tests

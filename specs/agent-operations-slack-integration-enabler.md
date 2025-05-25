@@ -13,11 +13,26 @@ Complete the Agent Operations Slack Integration by wiring the existing SlackNoti
 The Linear Planning Agent currently has a well-implemented SlackNotifier class but it's not integrated into the application workflows. While Linear already notifies Slack about issue creation/updates, there's a significant gap in operational intelligence notifications for:
 
 - **Planning Operations**: Bulk planning completion, PI planning results, SAFe hierarchy creation
-- **System Health**: OAuth token expiration, API rate limits, sync status updates  
+- **System Health**: OAuth token expiration, API rate limits, sync status updates
 - **Error Handling**: Critical system errors, integration failures, data validation issues
 - **Workflow Intelligence**: Remote agent assignments, PR status, deployment notifications
 
 These operational notifications provide value beyond Linear's issue-focused notifications and enable proactive monitoring and management of the planning agent system.
+
+### Value Proposition: Linear vs Operational Intelligence Notifications
+
+| Notification Type | Linear Provides | We Provide | Value Add |
+|------------------|-----------------|------------|-----------|
+| Planning Completion | ❌ | ✅ "Created 23 stories in 2.3 min" | Operational metrics & timing |
+| Planning Failures | ❌ | ✅ "Parse error: Missing Epic section" | Actionable error guidance |
+| OAuth Token Status | ❌ | ✅ "Token expires in 3 days" | Proactive maintenance alerts |
+| API Rate Limits | ❌ | ✅ "85% usage, resets in 2 hours" | Resource management insights |
+| System Resources | ❌ | ✅ "Memory 85%, DB connections 90%" | Infrastructure monitoring |
+| Sync Operations | ❌ | ✅ "3 conflicts auto-resolved" | Sync health & conflict tracking |
+| Remote Agent Status | ❌ | ✅ "Agent #3 completed OAuth config" | Workflow coordination |
+| Bulk Operations | ❌ | ✅ "PI Planning: 8 features, 3 objectives" | Planning session summaries |
+
+**Key Insight**: Linear notifies about individual issue changes, we provide operational intelligence about the planning agent system itself.
 
 ## Acceptance Criteria
 - [ ] SlackNotifier is integrated into PlanningAgent for planning operation notifications
@@ -44,7 +59,7 @@ The foundation is solid with a complete SlackNotifier implementation:
 
 **❌ Missing Integration Points:**
 - PlanningAgent doesn't use SlackNotifier for planning completion/failure notifications
-- SyncManager doesn't use SlackNotifier for sync status/conflict notifications  
+- SyncManager doesn't use SlackNotifier for sync status/conflict notifications
 - Webhook handlers don't use SlackNotifier for operational event notifications
 - No OAuth token monitoring or API rate limit notifications
 - No budget/resource tracking notifications
