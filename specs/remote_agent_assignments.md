@@ -4,9 +4,11 @@ Copy-paste these assignment messages to remote agents for resolving the integrat
 
 ---
 
-## Agent #1 Assignment
+## Agent #1 Assignment (ID: TBD)
 
 # Remote Agent Assignment: Linear SDK Compatibility Layer
+
+**Agent ID**: Please include your agent ID in all commits and PR descriptions using format: `[Agent-ID: your-id-here]`
 
 I'm assigning you to implement the Linear SDK Compatibility Layer Technical Enabler for our Linear Planning Agent project. This is a high priority architectural component that will resolve 180+ TypeScript errors caused by Linear SDK API pattern changes after our core functionality integration.
 
@@ -23,9 +25,13 @@ This is a critical path task that blocks all other integration work. The integra
 
 ---
 
-## Agent #2 Assignment
+## Agent #2 Assignment (ID: 14537ca2-df46-5bcd-9882-7dbd553b4f88)
 
-# Remote Agent Assignment: Module Export Resolution
+# Remote Agent Assignment: Module Export Resolution - CRITICAL UPDATE REQUIRED
+
+**Agent ID**: 14537ca2-df46-5bcd-9882-7dbd553b4f88 - Please include this in all commits and PR descriptions using format: `[Agent-ID: 14537ca2-df46-5bcd-9882-7dbd553b4f88]`
+
+🚨 **CRITICAL**: Your PR #60 introduced SQLite conflicts that violate our PostgreSQL-only architecture. Please see the architectural correction comment on your PR.
 
 I'm assigning you to implement the Module Export Resolution Technical Enabler for our Linear Planning Agent project. This is a high priority technical debt component that will resolve missing module exports preventing TypeScript compilation.
 
@@ -61,9 +67,13 @@ This is a medium priority task that can work in parallel with Agent #4 after Age
 
 ---
 
-## Agent #4 Assignment
+## Agent #4 Assignment (ID: e1fda62c-8150-5e5a-89d5-c32e089394a1)
 
-# Remote Agent Assignment: Database Schema Integration
+# Remote Agent Assignment: Database Schema Integration - EXCELLENT WORK!
+
+**Agent ID**: e1fda62c-8150-5e5a-89d5-c32e089394a1 - Please include this in all commits and PR descriptions using format: `[Agent-ID: e1fda62c-8150-5e5a-89d5-c32e089394a1]`
+
+✅ **EXCELLENT**: Your PR #61 correctly implemented pure PostgreSQL architecture and resolved the database conflicts perfectly!
 
 I'm assigning you to implement the Database Schema Integration Technical Enabler for our Linear Planning Agent project. This is a medium priority infrastructure component that will resolve database schema conflicts between existing OAuth and new planning/sync schemas.
 
