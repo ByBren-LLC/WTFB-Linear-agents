@@ -66,7 +66,7 @@ export class PlanningAgent {
       }
 
       // Create the Epic
-      const epic = await this.linearClient.issueCreate({
+      const epic = await this.linearClient.createIssue({
         title: planningTitle,
         description: `Epic created from Confluence page: ${confluencePageUrl}`,
         teamId: team.id,
@@ -74,11 +74,16 @@ export class PlanningAgent {
         labelIds: []
       });
 
-      logger.info('Created Epic', { epicId: epic.issue?.id, title: planningTitle });
+      if (!epic.success || !epic.issue) {
+        throw new Error('Failed to create Epic');
+      }
+
+      const issue = await epic.issue;
+      logger.info('Created Epic', { epicId: issue.id, title: planningTitle });
 
       return {
         success: true,
-        epicId: epic.issue?.id,
+        epicId: issue.id,
         message: `Created Epic: ${planningTitle}`
       };
     } catch (error) {

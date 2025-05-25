@@ -85,7 +85,7 @@ program
   .description('Parse a Confluence document')
   .requiredOption('--confluence-url <url>', 'Confluence page URL')
   .option('--output <format>', 'Output format (json, yaml)', 'json')
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Get Confluence credentials from environment variables
       const username = process.env.CONFLUENCE_USERNAME;
@@ -98,13 +98,16 @@ program
       }
 
       // Create Confluence client
-      const confluenceClient = new ConfluenceClient(baseUrl, apiToken, username);
+      const confluenceClient = new ConfluenceClient(baseUrl, apiToken);
 
       // Parse the Confluence page
       const document = await confluenceClient.parsePageByUrl(options.confluenceUrl);
 
       // Extract planning information
-      const extractor = new PlanningExtractor(document);
+      // TODO: Implement proper section extraction
+      const sections: any[] = []; // Placeholder for sections
+      const elements: any[] = document.elements || []; // Type conversion
+      const extractor = new PlanningExtractor(elements, sections);
       const planningDocument = extractor.getPlanningDocument();
 
       // Output the planning document
@@ -133,7 +136,7 @@ program
   .requiredOption('--org-id <id>', 'Linear organization ID')
   .requiredOption('--team-id <id>', 'Linear team ID')
   .option('--dry-run', 'Dry run (do not create issues)', false)
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       // Get access tokens
       const linearAccessToken = await getAccessToken(options.orgId);
@@ -159,8 +162,8 @@ program
       // Create issues
       if (options.dryRun) {
         console.log('Dry run - no issues will be created');
-        const planningDocument = await issueCreator.extractPlanningDocument();
-        console.log(JSON.stringify(planningDocument, null, 2));
+        // TODO: Add extractPlanningDocument method to LinearIssueCreatorFromPlanning
+        console.log('Dry run mode not yet implemented');
       } else {
         const result = await issueCreator.createIssuesFromConfluence();
         console.log(JSON.stringify(result, null, 2));
@@ -188,7 +191,7 @@ addConfluenceOptions(
       .option('--auto-resolve <boolean>', 'Whether to automatically resolve conflicts', 'false')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -222,7 +225,7 @@ addConfluenceOptions(
       .description('Stop synchronization')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -251,7 +254,7 @@ addConfluenceOptions(
       .description('Get synchronization status')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -280,7 +283,7 @@ addConfluenceOptions(
       .description('Manually trigger synchronization')
   )
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
