@@ -171,7 +171,8 @@ export class LinearIssueCreatorFromPlanning {
   private async extractPlanningInformation(document: any): Promise<PlanningDocument> {
     try {
       // Create a planning extractor
-      const extractor = new PlanningExtractor(document);
+      const sections: any[] = []; // TODO: Extract sections from document
+      const extractor = new PlanningExtractor(document.elements || [], sections);
 
       // Extract planning information
       const planningDocument = extractor.getPlanningDocument();

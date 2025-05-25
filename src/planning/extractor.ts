@@ -50,7 +50,7 @@ export class PlanningExtractor {
     logger.info('Extracting planning information from document');
 
     // Identify planning structure
-    const { epicSections, featureSections, storySections, enablerSections } = 
+    const { epicSections, featureSections, storySections, enablerSections } =
       identifyPlanningStructure(this.sections);
 
     // Extract planning items
@@ -60,18 +60,18 @@ export class PlanningExtractor {
     const enablers = extractEnablersFromSections(enablerSections);
 
     // Build relationships
-    const { epics: epicsWithFeatures, orphanedFeatures } = 
+    const { epics: epicsWithFeatures, orphanedFeatures } =
       buildEpicFeatureRelationships(epics, features);
-    
-    const { features: featuresWithStories, orphanedStories } = 
+
+    const { features: featuresWithStories, orphanedStories } =
       buildFeatureStoryRelationships([...epicsWithFeatures.flatMap(epic => epic.features), ...orphanedFeatures], stories);
-    
-    const { features: featuresWithEnablers, orphanedEnablers } = 
+
+    const { features: featuresWithEnablers, orphanedEnablers } =
       buildFeatureEnablerRelationships([...epicsWithFeatures.flatMap(epic => epic.features), ...orphanedFeatures], enablers);
 
     // Merge features with stories and enablers
     const mergedFeatures = this.mergeFeatures(featuresWithStories, featuresWithEnablers);
-    
+
     // Update epics with merged features
     const finalEpics = this.updateEpicsWithFeatures(epicsWithFeatures, mergedFeatures);
 
@@ -96,12 +96,12 @@ export class PlanningExtractor {
    */
   private mergeFeatures(featuresWithStories: Feature[], featuresWithEnablers: Feature[]): Feature[] {
     const featureMap = new Map<string, Feature>();
-    
+
     // Add features with stories
     featuresWithStories.forEach(feature => {
       featureMap.set(feature.id, { ...feature, enablers: [] });
     });
-    
+
     // Merge features with enablers
     featuresWithEnablers.forEach(feature => {
       if (featureMap.has(feature.id)) {
@@ -114,7 +114,7 @@ export class PlanningExtractor {
         featureMap.set(feature.id, { ...feature, stories: [] });
       }
     });
-    
+
     return Array.from(featureMap.values());
   }
 
@@ -126,12 +126,12 @@ export class PlanningExtractor {
    */
   private updateEpicsWithFeatures(epics: Epic[], mergedFeatures: Feature[]): Epic[] {
     const featureMap = new Map<string, Feature>();
-    
+
     // Create feature map
     mergedFeatures.forEach(feature => {
       featureMap.set(feature.id, feature);
     });
-    
+
     // Update epics with merged features
     return epics.map(epic => ({
       ...epic,
@@ -145,15 +145,15 @@ export class PlanningExtractor {
    */
   private extractDocumentTitle(): string {
     // Find the first heading element
-    const headingElement = this.document.find(element => 
-      element.type === 'heading' && 
+    const headingElement = this.document.find(element =>
+      element.type === 'heading' &&
       element.attributes?.level === '1'
     );
-    
+
     if (headingElement && typeof headingElement.content === 'string') {
       return headingElement.content;
     }
-    
+
     // If no heading is found, return a default title
     return 'Untitled Planning Document';
   }
@@ -180,15 +180,15 @@ export class PlanningExtractor {
    */
   public getFeatures(): Feature[] {
     const features: Feature[] = [];
-    
+
     // Collect features from epics
     this.planningDocument.epics.forEach(epic => {
       features.push(...epic.features);
     });
-    
+
     // Add orphaned features
-    features.push(...this.planningDocument.orphanedFeatures);
-    
+    features.push(...(this.planningDocument.orphanedFeatures || []));
+
     return features;
   }
 
@@ -198,15 +198,15 @@ export class PlanningExtractor {
    */
   public getStories(): Story[] {
     const stories: Story[] = [];
-    
+
     // Collect stories from features
     this.getFeatures().forEach(feature => {
       stories.push(...feature.stories);
     });
-    
+
     // Add orphaned stories
-    stories.push(...this.planningDocument.orphanedStories);
-    
+    stories.push(...(this.planningDocument.orphanedStories || []));
+
     return stories;
   }
 
@@ -216,15 +216,15 @@ export class PlanningExtractor {
    */
   public getEnablers(): Enabler[] {
     const enablers: Enabler[] = [];
-    
+
     // Collect enablers from features
     this.getFeatures().forEach(feature => {
       enablers.push(...feature.enablers);
     });
-    
+
     // Add orphaned enablers
-    enablers.push(...this.planningDocument.orphanedEnablers);
-    
+    enablers.push(...(this.planningDocument.orphanedEnablers || []));
+
     return enablers;
   }
 }

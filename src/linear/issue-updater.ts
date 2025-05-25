@@ -1,9 +1,9 @@
 /**
  * Linear Issue Updater
- * 
+ *
  * This module provides utilities for updating issues in Linear.
  */
-import { LinearClient, Issue, IssueUpdateInput } from '@linear/sdk';
+import { LinearClient, Issue } from '@linear/sdk';
 import * as logger from '../utils/logger';
 
 /**
@@ -14,7 +14,7 @@ export class LinearIssueUpdater {
 
   /**
    * Creates a new LinearIssueUpdater
-   * 
+   *
    * @param accessToken - Linear API access token
    */
   constructor(accessToken: string) {
@@ -23,22 +23,24 @@ export class LinearIssueUpdater {
 
   /**
    * Updates an issue in Linear
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param updateData - Data to update
    * @returns The updated issue if successful, null otherwise
    */
-  async updateIssue(issueId: string, updateData: IssueUpdateInput): Promise<Issue | null> {
+  async updateIssue(issueId: string, updateData: any): Promise<Issue | null> {
     try {
-      const response = await this.linearClient.issueUpdate(issueId, updateData);
-      
+      const response = await this.linearClient.updateIssue(issueId, updateData);
+
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to update issue: ${response.error}`);
+        throw new Error('Failed to update issue');
       }
-      
+
+      const issue = await response.issue;
+
       logger.info('Updated issue', { issueId, updateData });
-      
-      return response.issue;
+
+      return issue;
     } catch (error) {
       logger.error('Error updating issue', { error, issueId, updateData });
       throw error;
@@ -47,7 +49,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the parent of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param parentId - New parent issue ID, or null to remove parent
    * @returns The updated issue if successful, null otherwise
@@ -58,7 +60,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the title of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param title - New title
    * @returns The updated issue if successful, null otherwise
@@ -69,7 +71,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the description of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param description - New description
    * @returns The updated issue if successful, null otherwise
@@ -80,7 +82,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the labels of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param labelIds - New label IDs
    * @returns The updated issue if successful, null otherwise
@@ -91,7 +93,7 @@ export class LinearIssueUpdater {
 
   /**
    * Adds labels to an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param labelIds - Label IDs to add
    * @returns The updated issue if successful, null otherwise
@@ -99,11 +101,12 @@ export class LinearIssueUpdater {
   async addLabels(issueId: string, labelIds: string[]): Promise<Issue | null> {
     try {
       const issue = await this.linearClient.issue(issueId);
-      const existingLabelIds = issue.labels?.nodes.map(label => label.id) || [];
-      
+      const labelsResponse = await issue.labels();
+      const existingLabelIds = labelsResponse.nodes.map((label: any) => label.id) || [];
+
       // Combine existing and new label IDs, removing duplicates
       const updatedLabelIds = [...new Set([...existingLabelIds, ...labelIds])];
-      
+
       return this.updateLabels(issueId, updatedLabelIds);
     } catch (error) {
       logger.error('Error adding labels to issue', { error, issueId, labelIds });
@@ -113,7 +116,7 @@ export class LinearIssueUpdater {
 
   /**
    * Removes labels from an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param labelIds - Label IDs to remove
    * @returns The updated issue if successful, null otherwise
@@ -121,11 +124,12 @@ export class LinearIssueUpdater {
   async removeLabels(issueId: string, labelIds: string[]): Promise<Issue | null> {
     try {
       const issue = await this.linearClient.issue(issueId);
-      const existingLabelIds = issue.labels?.nodes.map(label => label.id) || [];
-      
+      const labelsResponse = await issue.labels();
+      const existingLabelIds = labelsResponse.nodes.map((label: any) => label.id) || [];
+
       // Filter out the label IDs to remove
-      const updatedLabelIds = existingLabelIds.filter(id => !labelIds.includes(id));
-      
+      const updatedLabelIds = existingLabelIds.filter((id: any) => !labelIds.includes(id));
+
       return this.updateLabels(issueId, updatedLabelIds);
     } catch (error) {
       logger.error('Error removing labels from issue', { error, issueId, labelIds });
@@ -135,7 +139,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the state of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param stateId - New state ID
    * @returns The updated issue if successful, null otherwise
@@ -146,7 +150,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the assignee of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param assigneeId - New assignee ID, or null to unassign
    * @returns The updated issue if successful, null otherwise
@@ -157,7 +161,7 @@ export class LinearIssueUpdater {
 
   /**
    * Updates the priority of an issue
-   * 
+   *
    * @param issueId - Linear issue ID
    * @param priority - New priority (0-4)
    * @returns The updated issue if successful, null otherwise

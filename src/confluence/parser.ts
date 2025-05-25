@@ -78,7 +78,7 @@ export class ConfluenceParser {
     this.$ = cheerio.load(storageFormat, {
       xmlMode: true,
       decodeEntities: true
-    });
+    }) as cheerio.CheerioAPI;
 
     this.document = {
       title,
@@ -390,13 +390,10 @@ export class ConfluenceParser {
    */
   private parseDiv(element: cheerio.Cheerio): ConfluenceElement {
     const children = this.parseElements(element.children());
-    if (children.length > 0) {
-      return {
-        type: ConfluenceElementType.SECTION,
-        children
-      };
-    }
-    return null;
+    return {
+      type: ConfluenceElementType.SECTION,
+      children
+    };
   }
 
   /**
@@ -407,13 +404,10 @@ export class ConfluenceParser {
    */
   private parseSpan(element: cheerio.Cheerio): ConfluenceElement {
     const content = element.text().trim();
-    if (content) {
-      return {
-        type: ConfluenceElementType.TEXT,
-        content
-      };
-    }
-    return null;
+    return {
+      type: ConfluenceElementType.TEXT,
+      content: content || ''
+    };
   }
 
   /**

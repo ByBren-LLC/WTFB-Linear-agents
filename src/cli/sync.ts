@@ -78,7 +78,7 @@ addCommonOptions(
     .option('--interval <ms>', 'Synchronization interval in milliseconds', '300000')
     .option('--auto-resolve <boolean>', 'Whether to automatically resolve conflicts', 'false')
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -109,7 +109,7 @@ addCommonOptions(
     .command('stop')
     .description('Stop synchronization')
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -135,7 +135,7 @@ addCommonOptions(
     .command('status')
     .description('Get synchronization status')
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,
@@ -161,7 +161,7 @@ addCommonOptions(
     .command('trigger')
     .description('Manually trigger synchronization')
 )
-  .action(async (options) => {
+  .action(async (options: any) => {
     try {
       const syncManager = await createSyncManager({
         orgId: options.orgId,

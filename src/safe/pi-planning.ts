@@ -48,27 +48,28 @@ export class PIManager {
   ): Promise<ProgramIncrement> {
     try {
       // Create a cycle in Linear to represent the PI
-      const cycle = await this.linearClient.cycleCreate({
+      const cycle = await this.linearClient.createCycle({
         teamId,
         name: `PI-${name}`,
         description,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDate,
+        endsAt: endDate
       });
 
       if (!cycle.success || !cycle.cycle) {
-        throw new Error(`Failed to create Program Increment: ${cycle.error}`);
+        throw new Error('Failed to create Program Increment');
       }
 
+      const cycleData = await cycle.cycle;
       // Create a PI object
       const pi: ProgramIncrement = {
-        id: cycle.cycle.id,
-        name: cycle.cycle.name,
-        startDate: new Date(cycle.cycle.startsAt),
-        endDate: new Date(cycle.cycle.endsAt),
-        description: cycle.cycle.description || undefined,
+        id: cycleData.id,
+        name: cycleData.name || 'Unnamed PI',
+        startDate: new Date(cycleData.startsAt),
+        endDate: new Date(cycleData.endsAt),
+        description: cycleData.description || undefined,
         features: [],
-        status: this.getPIStatus(cycle.cycle)
+        status: this.getPIStatus(cycleData)
       };
 
       logger.info('Created Program Increment', {
@@ -107,22 +108,25 @@ export class PIManager {
         }
 
         // Assign the feature to the PI in Linear
-        const response = await this.linearClient.issueUpdate(featureId, {
+        const response = await this.linearClient.updateIssue(featureId, {
           cycleId: piId
         });
 
         if (!response.success) {
-          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}: ${response.error}`);
+          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}`);
           continue;
         }
 
         // Create a PIFeature object
+        const team = feature.team ? await feature.team : null;
+        const state = feature.state ? await feature.state : null;
+
         const piFeature: PIFeature = {
           id: `${piId}-${featureId}`,
           piId,
           featureId,
-          teamId: feature.team.id,
-          status: this.getFeatureStatus(feature.state.name),
+          teamId: team?.id || 'unknown',
+          status: this.getFeatureStatus(state?.name || 'unknown'),
           confidence: 3, // Default confidence
           dependencies: []
         };
@@ -162,9 +166,9 @@ export class PIManager {
 
           return {
             id: cycle.id,
-            name: cycle.name,
-            startDate: new Date(cycle.startsAt),
-            endDate: new Date(cycle.endsAt),
+            name: cycle.name || 'Unnamed PI',
+            startDate: cycle.startsAt ? new Date(cycle.startsAt) : new Date(),
+            endDate: cycle.endsAt ? new Date(cycle.endsAt) : new Date(),
             description: cycle.description || undefined,
             features: features.map(f => f.featureId),
             status: this.getPIStatus(cycle)
@@ -211,7 +215,7 @@ export class PIManager {
       // Convert cycle to PI
       const pi: ProgramIncrement = {
         id: cycle.id,
-        name: cycle.name,
+        name: cycle.name || 'Unnamed PI',
         startDate: new Date(cycle.startsAt),
         endDate: new Date(cycle.endsAt),
         description: cycle.description || undefined,
@@ -243,15 +247,22 @@ export class PIManager {
       });
 
       // Convert issues to PIFeatures
-      const piFeatures: PIFeature[] = issues.nodes.map(issue => ({
-        id: `${piId}-${issue.id}`,
-        piId,
-        featureId: issue.id,
-        teamId: issue.team.id,
-        status: this.getFeatureStatus(issue.state.name),
-        confidence: 3, // Default confidence
-        dependencies: [] // Dependencies would need to be extracted from issue relationships
-      }));
+      const piFeatures: PIFeature[] = await Promise.all(
+        issues.nodes.map(async issue => {
+          const team = issue.team ? await issue.team : null;
+          const state = issue.state ? await issue.state : null;
+
+          return {
+            id: `${piId}-${issue.id}`,
+            piId,
+            featureId: issue.id,
+            teamId: team?.id || 'unknown',
+            status: this.getFeatureStatus(state?.name || 'unknown'),
+            confidence: 3, // Default confidence
+            dependencies: [] // Dependencies would need to be extracted from issue relationships
+          };
+        })
+      );
 
       return piFeatures;
     } catch (error) {
@@ -297,7 +308,7 @@ export class PIManager {
         const iterationEndDate = new Date(piStartDate.getTime() + (i + 1) * iterationDurationMs);
 
         // Create a cycle in Linear to represent the iteration
-        const cycle = await this.linearClient.cycleCreate({
+        const cycle = await this.linearClient.createCycle({
           teamId,
           name: `${pi.name}-I${i + 1}${isIP ? '-IP' : ''}`,
           description: isIP ? 'Innovation and Planning Iteration' : `Iteration ${i + 1}`,
@@ -306,13 +317,14 @@ export class PIManager {
         });
 
         if (!cycle.success || !cycle.cycle) {
-          logger.warn(`Failed to create iteration ${i + 1} for PI ${piId}: ${cycle.error}`);
+          logger.warn(`Failed to create iteration ${i + 1} for PI ${piId}`);
           continue;
         }
 
+        const cycleData = await cycle.cycle;
         // Create a PIIteration object
         const iteration: PIIteration = {
-          id: cycle.cycle.id,
+          id: cycleData.id,
           piId,
           number: i + 1,
           startDate: iterationStartDate,
@@ -362,16 +374,17 @@ export class PIManager {
 
       if (!objectiveLabel) {
         // Create the label if it doesn't exist
-        const newLabel = await this.linearClient.issueLabelCreate({
+        const newLabel = await this.linearClient.createIssueLabel({
           name: 'PI Objective',
           color: '#F2C94C'
         });
 
         if (!newLabel.success || !newLabel.issueLabel) {
-          throw new Error(`Failed to create PI Objective label: ${newLabel.error}`);
+          throw new Error('Failed to create PI Objective label');
         }
 
-        objectiveLabelId = newLabel.issueLabel.id;
+        const issueLabel = await newLabel.issueLabel;
+        objectiveLabelId = issueLabel.id;
       } else {
         objectiveLabelId = objectiveLabel.id;
       }
@@ -384,7 +397,7 @@ export class PIManager {
       }
 
       // Create the objective as an issue
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[OBJECTIVE] ${description}`,
         description: `PI Objective for ${pi.name}\n\nBusiness Value: ${businessValue}/10`,
@@ -393,12 +406,13 @@ export class PIManager {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create PI Objective: ${response.error}`);
+        throw new Error('Failed to create PI Objective');
       }
 
+      const issue = await response.issue;
       // Create a PIObjective object
       const objective: PIObjective = {
-        id: response.issue.id,
+        id: issue.id,
         piId,
         teamId,
         description,
@@ -410,8 +424,8 @@ export class PIManager {
       // Assign features to the objective
       if (featureIds.length > 0) {
         for (const featureId of featureIds) {
-          await this.linearClient.issueRelationCreate({
-            issueId: response.issue.id,
+          await this.linearClient.createIssueRelation({
+            issueId: issue.id,
             relatedIssueId: featureId,
             type: 'relates'
           });
@@ -459,16 +473,17 @@ export class PIManager {
 
       if (!riskLabel) {
         // Create the label if it doesn't exist
-        const newLabel = await this.linearClient.issueLabelCreate({
+        const newLabel = await this.linearClient.createIssueLabel({
           name: 'PI Risk',
           color: '#EB5757'
         });
 
         if (!newLabel.success || !newLabel.issueLabel) {
-          throw new Error(`Failed to create PI Risk label: ${newLabel.error}`);
+          throw new Error('Failed to create PI Risk label');
         }
 
-        riskLabelId = newLabel.issueLabel.id;
+        const issueLabel = await newLabel.issueLabel;
+        riskLabelId = issueLabel.id;
       } else {
         riskLabelId = riskLabel.id;
       }
@@ -496,7 +511,7 @@ export class PIManager {
       }
 
       // Create the risk as an issue
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[RISK] ${description}`,
         description: `PI Risk for ${pi.name}\n\nImpact: ${impact}/5\nLikelihood: ${likelihood}/5\nRisk Score: ${riskScore}/25\n\n${mitigationPlan ? `Mitigation Plan:\n${mitigationPlan}` : ''}`,
@@ -506,12 +521,13 @@ export class PIManager {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create PI Risk: ${response.error}`);
+        throw new Error('Failed to create PI Risk');
       }
 
+      const issue = await response.issue;
       // Create a PIRisk object
       const risk: PIRisk = {
-        id: response.issue.id,
+        id: issue.id,
         piId,
         description,
         impact,
@@ -599,7 +615,7 @@ export class PIPlanningService {
   ) {
     try {
       // In Linear, we'll represent a Program Increment as a milestone
-      const response = await this.linearClient.milestoneCreate({
+      const response = await this.linearClient.createMilestone({
         name,
         description,
         targetDate: endDate.toISOString(),
@@ -634,7 +650,7 @@ export class PIPlanningService {
       const results = [];
 
       for (const featureId of featureIds) {
-        const response = await this.linearClient.issueUpdate(featureId, {
+        const response = await this.linearClient.updateIssue(featureId, {
           milestoneId: piId
         });
 

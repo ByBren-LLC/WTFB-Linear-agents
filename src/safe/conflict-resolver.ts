@@ -1,6 +1,6 @@
 /**
  * Conflict Resolver
- * 
+ *
  * This module provides utilities for resolving conflicts in the SAFe hierarchy.
  */
 import { Issue } from '@linear/sdk';
@@ -25,16 +25,16 @@ export interface ConflictResolution {
 export class ConflictResolver {
   /**
    * Resolves a conflict between an existing Epic and a new Epic
-   * 
+   *
    * @param existingEpic - Existing Epic in Linear
    * @param newEpic - New Epic from planning document
    * @returns Resolution for the conflict
    */
   resolveEpicConflict(existingEpic: Issue, newEpic: Epic): ConflictResolution {
     try {
-      logger.info('Resolving Epic conflict', { 
-        existingEpicId: existingEpic.id, 
-        newEpicId: newEpic.id 
+      logger.info('Resolving Epic conflict', {
+        existingEpicId: existingEpic.id,
+        newEpicId: newEpic.id
       });
 
       // Check if the title has changed
@@ -62,32 +62,33 @@ export class ConflictResolver {
         }
       };
     } catch (error) {
-      logger.error('Error resolving Epic conflict', { 
-        error, 
-        existingEpicId: existingEpic.id, 
-        newEpicId: newEpic.id 
+      logger.error('Error resolving Epic conflict', {
+        error,
+        existingEpicId: existingEpic.id,
+        newEpicId: newEpic.id
       });
-      
+
       // In case of error, ignore the conflict
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         action: 'ignore',
-        reason: `Error: ${error.message}`
+        reason: `Error: ${errorMessage}`
       };
     }
   }
 
   /**
    * Resolves a conflict between an existing Feature and a new Feature
-   * 
+   *
    * @param existingFeature - Existing Feature in Linear
    * @param newFeature - New Feature from planning document
    * @returns Resolution for the conflict
    */
   resolveFeatureConflict(existingFeature: Issue, newFeature: Feature): ConflictResolution {
     try {
-      logger.info('Resolving Feature conflict', { 
-        existingFeatureId: existingFeature.id, 
-        newFeatureId: newFeature.id 
+      logger.info('Resolving Feature conflict', {
+        existingFeatureId: existingFeature.id,
+        newFeatureId: newFeature.id
       });
 
       // Check if the title has changed
@@ -115,32 +116,33 @@ export class ConflictResolver {
         }
       };
     } catch (error) {
-      logger.error('Error resolving Feature conflict', { 
-        error, 
-        existingFeatureId: existingFeature.id, 
-        newFeatureId: newFeature.id 
+      logger.error('Error resolving Feature conflict', {
+        error,
+        existingFeatureId: existingFeature.id,
+        newFeatureId: newFeature.id
       });
-      
+
       // In case of error, ignore the conflict
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         action: 'ignore',
-        reason: `Error: ${error.message}`
+        reason: `Error: ${errorMessage}`
       };
     }
   }
 
   /**
    * Resolves a conflict between an existing Story and a new Story
-   * 
+   *
    * @param existingStory - Existing Story in Linear
    * @param newStory - New Story from planning document
    * @returns Resolution for the conflict
    */
   resolveStoryConflict(existingStory: Issue, newStory: Story): ConflictResolution {
     try {
-      logger.info('Resolving Story conflict', { 
-        existingStoryId: existingStory.id, 
-        newStoryId: newStory.id 
+      logger.info('Resolving Story conflict', {
+        existingStoryId: existingStory.id,
+        newStoryId: newStory.id
       });
 
       // Check if the title has changed
@@ -167,32 +169,33 @@ export class ConflictResolver {
         }
       };
     } catch (error) {
-      logger.error('Error resolving Story conflict', { 
-        error, 
-        existingStoryId: existingStory.id, 
-        newStoryId: newStory.id 
+      logger.error('Error resolving Story conflict', {
+        error,
+        existingStoryId: existingStory.id,
+        newStoryId: newStory.id
       });
-      
+
       // In case of error, ignore the conflict
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         action: 'ignore',
-        reason: `Error: ${error.message}`
+        reason: `Error: ${errorMessage}`
       };
     }
   }
 
   /**
    * Resolves a conflict between an existing Enabler and a new Enabler
-   * 
+   *
    * @param existingEnabler - Existing Enabler in Linear
    * @param newEnabler - New Enabler from planning document
    * @returns Resolution for the conflict
    */
   resolveEnablerConflict(existingEnabler: Issue, newEnabler: Enabler): ConflictResolution {
     try {
-      logger.info('Resolving Enabler conflict', { 
-        existingEnablerId: existingEnabler.id, 
-        newEnablerId: newEnabler.id 
+      logger.info('Resolving Enabler conflict', {
+        existingEnablerId: existingEnabler.id,
+        newEnablerId: newEnabler.id
       });
 
       // Check if the title has changed
@@ -220,23 +223,24 @@ export class ConflictResolver {
         }
       };
     } catch (error) {
-      logger.error('Error resolving Enabler conflict', { 
-        error, 
-        existingEnablerId: existingEnabler.id, 
-        newEnablerId: newEnabler.id 
+      logger.error('Error resolving Enabler conflict', {
+        error,
+        existingEnablerId: existingEnabler.id,
+        newEnablerId: newEnabler.id
       });
-      
+
       // In case of error, ignore the conflict
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         action: 'ignore',
-        reason: `Error: ${error.message}`
+        reason: `Error: ${errorMessage}`
       };
     }
   }
 
   /**
    * Resolves a conflict between parent-child relationships
-   * 
+   *
    * @param existingParentId - Existing parent ID in Linear
    * @param newParentId - New parent ID from planning document
    * @returns Resolution for the conflict
@@ -246,9 +250,9 @@ export class ConflictResolver {
     newParentId: string | null
   ): ConflictResolution {
     try {
-      logger.info('Resolving parent-child conflict', { 
-        existingParentId, 
-        newParentId 
+      logger.info('Resolving parent-child conflict', {
+        existingParentId,
+        newParentId
       });
 
       // If the parent hasn't changed, ignore the conflict
@@ -268,16 +272,17 @@ export class ConflictResolver {
         }
       };
     } catch (error) {
-      logger.error('Error resolving parent-child conflict', { 
-        error, 
-        existingParentId, 
-        newParentId 
+      logger.error('Error resolving parent-child conflict', {
+        error,
+        existingParentId,
+        newParentId
       });
-      
+
       // In case of error, ignore the conflict
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         action: 'ignore',
-        reason: `Error: ${error.message}`
+        reason: `Error: ${errorMessage}`
       };
     }
   }
