@@ -42,6 +42,8 @@ This agent is designed for automation and agent-to-agent workflows, making it pe
    # Edit .env with your credentials
    ```
 
+   **⚠️ IMPORTANT**: OAuth setup is required! See [OAuth Setup Guide](docs/oauth-setup.md) for detailed instructions on creating OAuth applications in Linear and Atlassian Developer Console.
+
 4. Build the CLI
    ```bash
    npm run cli:build

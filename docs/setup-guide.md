@@ -6,13 +6,14 @@ This comprehensive guide provides step-by-step instructions for setting up the L
 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
-3. [Linear Setup](#linear-setup)
-4. [Confluence Setup](#confluence-setup)
-5. [Database Setup](#database-setup)
-6. [Application Deployment](#application-deployment)
-7. [Environment Variables](#environment-variables)
-8. [Testing the Integration](#testing-the-integration)
-9. [Troubleshooting](#troubleshooting)
+3. [OAuth Applications Setup](#oauth-applications-setup)
+4. [Linear Setup](#linear-setup)
+5. [Confluence Setup](#confluence-setup)
+6. [Database Setup](#database-setup)
+7. [Application Deployment](#application-deployment)
+8. [Environment Variables](#environment-variables)
+9. [Testing the Integration](#testing-the-integration)
+10. [Troubleshooting](#troubleshooting)
 
 ## Overview
 
@@ -27,6 +28,37 @@ Before you begin, make sure you have:
 - Docker and Docker Compose installed (for containerized deployment)
 - Node.js and npm installed (for local development)
 - A domain for your application (for OAuth redirect URIs)
+
+## OAuth Applications Setup
+
+**⚠️ IMPORTANT**: Complete OAuth setup is required for the Linear Planning Agent to function. This includes creating OAuth applications in both Linear and Atlassian Developer Console.
+
+For detailed OAuth setup instructions, see the [OAuth Setup Guide](oauth-setup.md).
+
+### Quick OAuth Setup Summary
+
+1. **Create Linear OAuth Application**:
+   - Go to Linear Settings > API > OAuth Applications
+   - Create app with redirect URI: `http://localhost:3000/auth/callback`
+   - Save Client ID and Client Secret
+
+2. **Create Atlassian OAuth Application**:
+   - Go to [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/)
+   - Create OAuth 2.0 (3LO) app with redirect URI: `http://localhost:3000/auth/confluence/callback`
+   - Add scopes: `read:confluence-content.all`, `read:confluence-space.summary`, `read:confluence-user`
+   - Save Client ID and Client Secret
+
+3. **Configure Environment Variables**:
+   - Add OAuth credentials to your `.env` file
+   - Set `APP_URL=http://localhost:3000`
+   - Generate secure `SESSION_SECRET`
+
+4. **Test OAuth Flows**:
+   - Start the application with `docker-compose up`
+   - Test Linear OAuth: `http://localhost:3000/auth`
+   - Test Confluence OAuth: `http://localhost:3000/auth/confluence`
+
+For complete step-by-step instructions, troubleshooting, and security best practices, refer to the [OAuth Setup Guide](oauth-setup.md).
 
 ## Linear Setup
 
