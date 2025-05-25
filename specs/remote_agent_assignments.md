@@ -6,6 +6,11 @@ Copy-paste these assignment messages to remote agents for resolving the integrat
 
 ## Agent #2 Assignment (ID: LIN-SDK-02-S01) - ACTIVE
 
+---
+
+**COPY-PASTE THIS ENTIRE SECTION TO REMOTE AGENT:**
+---
+
 # Remote Agent Assignment: Complete Linear SDK Compatibility Layer Fix
 
 **Agent ID**: LIN-SDK-02-S01 - Please include this in all commits and PR descriptions using format: `[Agent-ID: LIN-SDK-02-S01]`
@@ -21,14 +26,19 @@ Copy-paste these assignment messages to remote agents for resolving the integrat
 **CURRENT TASK**: Complete the remaining 249 TypeScript errors systematically.
 
 ## Your Mission:
-1. **Checkout existing branch**: `git checkout feature/linear-sdk-compatibility-fix`
-2. **Current status**: 249 TypeScript errors remaining (down from 266)
-3. **Systematically fix** all remaining TypeScript errors
-4. **Target**: Reduce to <50 errors (focusing on Linear SDK issues)
-5. **Test and validate** the compatibility layer works
-6. **Submit PR** when complete
+
+1. **Repository**: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. **Linear Issue**: LIN-20 - Fix Linear SDK Compatibility Layer Integration Issues
+3. **Checkout existing branch**: `git checkout feature/linear-sdk-compatibility-fix`
+4. **Current status**: 249 TypeScript errors remaining (down from 266)
+5. **Systematically fix** all remaining TypeScript errors
+6. **Target**: Reduce to <50 errors (focusing on Linear SDK issues)
+7. **Test and validate** the compatibility layer works
+8. **Update Linear issue** with progress comments
+9. **Submit PR** when complete
 
 ## Key Areas to Focus:
+
 1. **teamId missing errors** - Add teamId parameter to issueLabelCreate calls
 2. **Cheerio Element import issues** - Fix import conflicts
 3. **null vs undefined** type mismatches
@@ -36,6 +46,7 @@ Copy-paste these assignment messages to remote agents for resolving the integrat
 5. **Database integration issues** (separate from SDK but blocking compilation)
 
 ## Success Criteria:
+
 - TypeScript compilation succeeds or <50 errors
 - All Linear SDK compatibility layer issues resolved
 - Existing code patterns continue to work
@@ -43,6 +54,9 @@ Copy-paste these assignment messages to remote agents for resolving the integrat
 
 This is methodical cleanup work - perfect for systematic agent execution!
 
+---
+
+**END COPY-PASTE SECTION**
 ---
 
 ## Agent #2 Assignment (ID: LIN-DEBT-01-S01)
@@ -127,6 +141,7 @@ This is a medium priority task that can work in parallel with Agent #3 after Age
 **Methodology**: SAFe Essentials
 
 ### Agent Naming Convention: `LIN-{ROLE}-{NN}-S{N}`
+
 - **LIN**: Linear Agents Project
 - **ROLE**: SDK, DEBT, TYPE, INFRA, ARCH, SYNC, AUTH, PLAN, TEST, DOC
 - **NN**: Sequential number (01, 02, etc.)
