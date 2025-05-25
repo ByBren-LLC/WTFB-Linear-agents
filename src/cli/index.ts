@@ -98,7 +98,7 @@ program
       }
 
       // Create Confluence client
-      const confluenceClient = new ConfluenceClient(baseUrl, apiToken, username);
+      const confluenceClient = new ConfluenceClient(baseUrl, apiToken);
 
       // Parse the Confluence page
       const document = await confluenceClient.parsePageByUrl(options.confluenceUrl);
@@ -159,8 +159,8 @@ program
       // Create issues
       if (options.dryRun) {
         console.log('Dry run - no issues will be created');
-        const planningDocument = await issueCreator.extractPlanningDocument();
-        console.log(JSON.stringify(planningDocument, null, 2));
+        // TODO: Add extractPlanningDocument method to LinearIssueCreatorFromPlanning
+        console.log('Dry run mode not yet implemented');
       } else {
         const result = await issueCreator.createIssuesFromConfluence();
         console.log(JSON.stringify(result, null, 2));

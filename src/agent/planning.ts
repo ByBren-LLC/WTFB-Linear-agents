@@ -78,11 +78,12 @@ export class PlanningAgent {
         throw new Error('Failed to create Epic');
       }
 
-      logger.info('Created Epic', { epicId: epic.issue.id, title: planningTitle });
+      const issue = await epic.issue;
+      logger.info('Created Epic', { epicId: issue.id, title: planningTitle });
 
       return {
         success: true,
-        epicId: epic.issue.id,
+        epicId: issue.id,
         message: `Created Epic: ${planningTitle}`
       };
     } catch (error) {
