@@ -42,6 +42,7 @@
     "@linear/sdk": "^2.6.0",
     "@types/express-session": "^1.18.1",
     "axios": "^1.9.0",
+    "cheerio": "^1.0.0",
     "commander": "^11.1.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.5.0",
@@ -54,6 +55,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/crypto-js": "^4.2.2",
     "@types/express": "^4.17.22",
     "@types/jest": "^29.5.14",

@@ -1,222 +1,137 @@
-# Confluence API Integration
+# Confluence Parser
 
-This module provides integration with the Confluence API for the Linear Planning Agent. It enables the agent to read planning documents from Confluence and extract information for creating Linear issues.
+This module provides functionality to parse Confluence documents from their storage format (XHTML-based) into a structured format that can be easily processed by the Linear Planning Agent.
 
-## Features
+## Overview
 
-- OAuth 2.0 authentication with Confluence
-- Retrieving Confluence pages and attachments
-- Searching for Confluence content using CQL
-- Parsing Confluence documents into structured representations
-- Analyzing document structure and extracting content
-- Handling Confluence macros and formatting
-- Converting Confluence content to Markdown
-- Rate limiting to respect Confluence API limits
-- Error handling and retry logic
+The Confluence Parser is designed to:
+
+1. Parse Confluence HTML content into a structured format
+2. Identify headings, paragraphs, lists, tables, and other common elements
+3. Extract text content from these elements
+4. Identify and extract links, images, and other embedded content
+5. Handle Confluence macros and custom content
+6. Handle Confluence's storage format (XHTML-based)
+7. Provide a clean API for accessing parsed content
 
 ## Usage
 
-### Authentication
-
-Before using the Confluence API, you need to authenticate with Confluence using OAuth 2.0. The authentication flow is handled by the `initiateConfluenceOAuth` and `handleConfluenceCallback` functions in `src/auth/confluence-oauth.ts`.
+### Basic Usage
 
 ```typescript
-import { initiateConfluenceOAuth, handleConfluenceCallback } from '../auth/confluence-oauth';
+import { ConfluenceParser } from './confluence/parser';
 
-// In your Express app
-app.get('/auth/confluence', initiateConfluenceOAuth);
-app.get('/auth/confluence/callback', handleConfluenceCallback);
-```
+// Create a new parser instance with Confluence storage format
+const parser = new ConfluenceParser(confluenceStorageFormat);
 
-### Getting a Confluence Client
+// Get the full content of the document
+const content = parser.getFullContent();
 
-Once authenticated, you can get a Confluence client for an organization using the `getConfluenceClient` function:
+// Get all headings in the document
+const headings = parser.getHeadings();
 
-```typescript
-import { getConfluenceClient } from '../auth/confluence-oauth';
+// Get all paragraphs in the document
+const paragraphs = parser.getParagraphs();
 
-const client = await getConfluenceClient(organizationId);
-if (!client) {
-  // Handle authentication error
-  return;
-}
-```
+// Get all tables in the document
+const tables = parser.getTables();
 
-### Retrieving a Confluence Page
+// Get all lists in the document
+const lists = parser.getLists();
 
-You can retrieve a Confluence page by ID or URL:
+// Get all links in the document
+const links = parser.getLinks();
 
-```typescript
-// By ID
-const page = await client.getPage('123456789');
+// Get all images in the document
+const images = parser.getImages();
 
-// By URL
-const page = await client.getPageByUrl('https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789');
-```
-
-### Searching for Confluence Content
-
-You can search for Confluence content using CQL (Confluence Query Language):
-
-```typescript
-const results = await client.search('type=page AND space=SPACE AND title ~ "Planning"');
-```
-
-### Extracting Content from Confluence Pages
-
-You can extract content from Confluence pages using the utility functions in `src/confluence/utils.ts`:
-
-```typescript
-import { extractPageContent, extractStructuredData, convertToMarkdown } from '../confluence/utils';
-
-// Extract text content
-const textContent = extractPageContent(page);
-
-// Extract structured data (tables, lists, headings)
-const structuredData = extractStructuredData(page);
-
-// Convert to Markdown
-const markdown = convertToMarkdown(page.body.storage.value);
-```
-
-### Parsing Confluence Documents
-
-You can parse Confluence documents into structured representations using the `ConfluenceParser` class:
-
-```typescript
-import { ConfluenceParser } from '../confluence/parser';
-
-// Create a parser with the storage format and title
-const parser = new ConfluenceParser(page.body.storage.value, page.title);
-
-// Parse the document
-const document = parser.parse();
-```
-
-The parser is also integrated with the Confluence client:
-
-```typescript
-// Parse a page
-const document = await client.parsePage('123456789');
-
-// Parse a page by URL
-const document = await client.parsePageByUrl('https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456789');
+// Get all macros in the document
+const macros = parser.getMacros();
 ```
 
 ### Analyzing Document Structure
 
-You can analyze the structure of Confluence documents using the `StructureAnalyzer` class:
-
 ```typescript
-import { StructureAnalyzer } from '../confluence/structure-analyzer';
+import { ConfluenceParser } from './confluence/parser';
+import { analyzeDocumentStructure, flattenDocumentStructure } from './confluence/structure-analyzer';
 
-// Create an analyzer with a parsed document
-const analyzer = new StructureAnalyzer(document);
+// Create a new parser instance with Confluence storage format
+const parser = new ConfluenceParser(confluenceStorageFormat);
+
+// Get the full content of the document
+const content = parser.getFullContent();
 
 // Analyze the document structure
-const structure = analyzer.analyze();
+const structure = analyzeDocumentStructure(content);
 
-// Get the table of contents
-const toc = analyzer.getTableOfContents(1, 3); // Levels 1-3
-
-// Find sections by title
-const sections = analyzer.findSectionsByTitle('Section Title');
+// Flatten the document structure
+const flatStructure = flattenDocumentStructure(structure);
 ```
 
-The analyzer is also integrated with the Confluence client:
+### Extracting Content
 
 ```typescript
-// Analyze page structure
-const structure = await client.analyzePageStructure('123456789');
+import { ConfluenceParser } from './confluence/parser';
+import { extractText, extractTextFromElements, findElementsByType, findElementsByContent } from './confluence/content-extractor';
+
+// Create a new parser instance with Confluence storage format
+const parser = new ConfluenceParser(confluenceStorageFormat);
+
+// Get the full content of the document
+const content = parser.getFullContent();
+
+// Extract text from a specific element
+const text = extractText(content[0]);
+
+// Extract text from all elements
+const allText = extractTextFromElements(content);
+
+// Find elements by type
+const paragraphs = findElementsByType(content, 'p');
+
+// Find elements by content
+const elementsWithKeyword = findElementsByContent(content, 'keyword');
 ```
 
-### Extracting Content with ContentExtractor
+## API Reference
 
-You can extract content from parsed Confluence documents using the `ContentExtractor` class:
+### ConfluenceParser
 
-```typescript
-import { ContentExtractor } from '../confluence/content-extractor';
+The main parser class for Confluence documents.
 
-// Create an extractor with a parsed document
-const extractor = new ContentExtractor(document);
+#### Methods
 
-// Extract text content
-const text = extractor.extractText();
+- `getHeadings()`: Gets all headings in the document
+- `getParagraphs()`: Gets all paragraphs in the document
+- `getTables()`: Gets all tables in the document
+- `getLists()`: Gets all lists in the document
+- `getLinks()`: Gets all links in the document
+- `getImages()`: Gets all images in the document
+- `getMacros()`: Gets all macros in the document
+- `getFullContent()`: Gets the full content of the document
 
-// Extract headings
-const headings = extractor.extractHeadings(1, 3); // Levels 1-3
+### Structure Analyzer
 
-// Search for text
-const results = extractor.search('search text', {
-  caseSensitive: false,
-  wholeWord: true,
-  includeHeadings: true,
-  includeParagraphs: true
-});
-```
+Functions for analyzing document structure.
 
-The extractor is also integrated with the Confluence client:
+- `analyzeDocumentStructure(document)`: Analyzes the structure of a document
+- `flattenDocumentStructure(sections)`: Flattens a hierarchical document structure
 
-```typescript
-// Extract page content
-const extractor = await client.extractPageContent('123456789');
-```
+### Content Extractor
 
-## Error Handling
+Functions for extracting content from parsed elements.
 
-The Confluence API client includes built-in error handling and retry logic for transient errors. You can also use the `handleConfluenceError` and `withRetry` functions from `src/confluence/error-handler.ts` for custom error handling:
+- `extractText(element)`: Extracts plain text from a parsed element
+- `extractTextFromElements(elements)`: Extracts plain text from an array of parsed elements
+- `findElementsByType(elements, type)`: Finds elements by type
+- `findElementsByContent(elements, content, options)`: Finds elements by content
+- `findElementsByAttribute(elements, attributeName, attributeValue, options)`: Finds elements by attribute
+- `extractSummary(elements, maxLength)`: Extracts a summary from a document
 
-```typescript
-import { handleConfluenceError, withRetry } from '../confluence/error-handler';
+## Limitations
 
-try {
-  // Make API call
-} catch (error) {
-  const handledError = handleConfluenceError(error);
-  // Handle the error
-}
-
-// With retry
-const result = await withRetry(
-  () => client.getPage('123456789'),
-  3, // Max retries
-  1000 // Initial delay in milliseconds
-);
-```
-
-## Rate Limiting
-
-The Confluence API client includes built-in rate limiting to respect Confluence API limits. The default rate limit is 180 requests per minute, but you can customize it when creating the client:
-
-```typescript
-import { RateLimiter } from '../confluence/rate-limiter';
-
-const rateLimiter = new RateLimiter(100); // 100 requests per minute
-```
-
-## Environment Variables
-
-The Confluence API integration requires the following environment variables:
-
-- `CONFLUENCE_CLIENT_ID`: The Confluence OAuth client ID
-- `CONFLUENCE_CLIENT_SECRET`: The Confluence OAuth client secret
-- `APP_URL`: The URL of your application (for OAuth callback)
-- `ENCRYPTION_KEY`: The encryption key for storing tokens securely
-
-## Database Schema
-
-The Confluence API integration uses the following database table:
-
-```sql
-CREATE TABLE IF NOT EXISTS confluence_tokens (
-  id SERIAL PRIMARY KEY,
-  organization_id TEXT NOT NULL UNIQUE,
-  access_token TEXT NOT NULL,
-  refresh_token TEXT NOT NULL,
-  site_url TEXT NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  FOREIGN KEY (organization_id) REFERENCES linear_tokens(organization_id)
-);
-```
+- The parser may not handle all Confluence macros correctly, especially custom macros
+- The parser may not handle all Confluence storage format features
+- The parser does not handle Confluence attachments
+- The parser does not handle Confluence comments
+- The parser does not handle Confluence page properties

@@ -1,300 +1,148 @@
 /**
- * Confluence Document Structure Analyzer
- *
- * This module provides utilities for analyzing the structure of Confluence documents.
+ * Document structure analyzer for Confluence documents
+ * 
+ * This module provides functionality to analyze the structure of Confluence documents,
+ * identifying sections, subsections, and hierarchical relationships.
  */
 
 import * as logger from '../utils/logger';
-import { ConfluenceDocument, ConfluenceElement, ConfluenceElementType, ConfluenceSection } from './parser';
+import { ParsedElement } from './parser';
 
 /**
- * Interface for a document structure
+ * Represents a section in a document
  */
-export interface DocumentStructure {
+export interface DocumentSection {
+  /** The title of the section */
   title: string;
-  sections: SectionStructure[];
-  metadata: Record<string, any>;
-}
-
-/**
- * Interface for a section structure
- */
-export interface SectionStructure {
-  id: string;
-  title: string;
+  
+  /** The heading level of the section (1-6) */
   level: number;
-  path: string[];
-  content: string;
-  subsections: SectionStructure[];
-  elements: {
-    paragraphs: number;
-    lists: number;
-    tables: number;
-    macros: number;
-    code: number;
-    links: number;
-    images: number;
-  };
+  
+  /** The content elements of the section */
+  content: ParsedElement[];
+  
+  /** Subsections within this section */
+  subsections: DocumentSection[];
 }
 
 /**
- * Confluence document structure analyzer class
+ * Analyzes the structure of a document
+ * 
+ * @param document - The parsed document elements
+ * @returns An array of document sections
  */
-export class StructureAnalyzer {
-  private document: ConfluenceDocument;
-
-  /**
-   * Creates a new structure analyzer
-   *
-   * @param document The parsed Confluence document
-   */
-  constructor(document: ConfluenceDocument) {
-    this.document = document;
-  }
-
-  /**
-   * Analyzes the document structure
-   *
-   * @returns The document structure
-   */
-  analyze(): DocumentStructure {
-    try {
-      return {
-        title: this.document.title,
-        sections: this.analyzeSections(this.document.sections, []),
-        metadata: this.document.metadata
-      };
-    } catch (error) {
-      logger.error('Error analyzing document structure', { error });
-      throw error;
+export const analyzeDocumentStructure = (document: ParsedElement[]): DocumentSection[] => {
+  try {
+    // Find all headings in the document
+    const headings = document.filter(element => 
+      element.type.startsWith('h') && 
+      element.type.length === 2 && 
+      !isNaN(parseInt(element.type.charAt(1), 10))
+    );
+    
+    if (headings.length === 0) {
+      logger.warn('No headings found in document');
+      return [{
+        title: 'Document',
+        level: 0,
+        content: document,
+        subsections: []
+      }];
     }
-  }
-
-  /**
-   * Analyzes sections
-   *
-   * @param sections The sections to analyze
-   * @param parentPath The parent section path
-   * @returns The section structures
-   */
-  private analyzeSections(sections: ConfluenceSection[], parentPath: string[]): SectionStructure[] {
-    return sections.map(section => this.analyzeSection(section, parentPath));
-  }
-
-  /**
-   * Analyzes a section
-   *
-   * @param section The section to analyze
-   * @param parentPath The parent section path
-   * @returns The section structure
-   */
-  private analyzeSection(section: ConfluenceSection, parentPath: string[]): SectionStructure {
-    const path = [...parentPath, section.title];
     
-    // Count elements by type
-    const elementCounts = this.countElementTypes(section.elements);
+    // Create sections based on headings
+    const sections: DocumentSection[] = [];
+    let currentSection: DocumentSection | null = null;
+    let currentLevel = 0;
     
-    // Extract section content
-    const content = this.extractSectionContent(section);
+    // Create a map of elements by their index in the document
+    const elementIndexMap = new Map<ParsedElement, number>();
+    document.forEach((element, index) => {
+      elementIndexMap.set(element, index);
+    });
     
-    // Analyze subsections
-    const subsections = this.analyzeSections(section.subsections, path);
+    // Sort headings by their position in the document
+    headings.sort((a, b) => {
+      const indexA = elementIndexMap.get(a) || 0;
+      const indexB = elementIndexMap.get(b) || 0;
+      return indexA - indexB;
+    });
     
-    return {
-      id: section.id,
-      title: section.title,
-      level: section.level,
-      path,
-      content,
-      subsections,
-      elements: {
-        paragraphs: elementCounts.paragraph || 0,
-        lists: elementCounts.list || 0,
-        tables: elementCounts.table || 0,
-        macros: elementCounts.macro || 0,
-        code: elementCounts.code || 0,
-        links: elementCounts.link || 0,
-        images: elementCounts.image || 0
-      }
-    };
-  }
-
-  /**
-   * Counts element types in a section
-   *
-   * @param elements The elements to count
-   * @returns The element counts by type
-   */
-  private countElementTypes(elements: ConfluenceElement[]): Record<string, number> {
-    const counts: Record<string, number> = {};
-    
-    for (const element of elements) {
-      // Get the element type without the ConfluenceElementType. prefix
-      const type = element.type.toString().toLowerCase();
+    // Process each heading
+    for (let i = 0; i < headings.length; i++) {
+      const heading = headings[i];
+      const headingLevel = parseInt(heading.type.charAt(1), 10);
+      const headingTitle = typeof heading.content === 'string' ? heading.content : '';
       
-      // Increment the count for this type
-      counts[type] = (counts[type] || 0) + 1;
+      // Find the content between this heading and the next heading
+      const headingIndex = elementIndexMap.get(heading) || 0;
+      const nextHeadingIndex = i < headings.length - 1 ? 
+        elementIndexMap.get(headings[i + 1]) || document.length : 
+        document.length;
       
-      // Count child elements
-      if (element.children && element.children.length > 0) {
-        const childCounts = this.countElementTypes(element.children);
-        
-        // Merge child counts
-        for (const [childType, childCount] of Object.entries(childCounts)) {
-          counts[childType] = (counts[childType] || 0) + childCount;
-        }
-      }
-    }
-    
-    return counts;
-  }
-
-  /**
-   * Extracts content from a section
-   *
-   * @param section The section to extract content from
-   * @returns The section content
-   */
-  private extractSectionContent(section: ConfluenceSection): string {
-    return section.elements
-      .map(element => this.extractElementContent(element))
-      .filter(content => content)
-      .join('\n');
-  }
-
-  /**
-   * Extracts content from an element
-   *
-   * @param element The element to extract content from
-   * @returns The element content
-   */
-  private extractElementContent(element: ConfluenceElement): string {
-    if (!element) {
-      return '';
-    }
-
-    // If the element has content, return it
-    if (element.content) {
-      return element.content;
-    }
-
-    // If the element has children, extract content from them
-    if (element.children && element.children.length > 0) {
-      return element.children
-        .map(child => this.extractElementContent(child))
-        .filter(content => content)
-        .join('\n');
-    }
-
-    return '';
-  }
-
-  /**
-   * Gets the table of contents for the document
-   *
-   * @param minLevel The minimum heading level to include (1-6)
-   * @param maxLevel The maximum heading level to include (1-6)
-   * @returns The table of contents
-   */
-  getTableOfContents(minLevel: number = 1, maxLevel: number = 6): SectionStructure[] {
-    try {
-      // Filter sections by level
-      const filterSections = (sections: SectionStructure[]): SectionStructure[] => {
-        return sections
-          .filter(section => section.level >= minLevel && section.level <= maxLevel)
-          .map(section => ({
-            ...section,
-            subsections: filterSections(section.subsections)
-          }));
-      };
-
-      const structure = this.analyze();
-      return filterSections(structure.sections);
-    } catch (error) {
-      logger.error('Error generating table of contents', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Gets the section hierarchy as a flat list
-   *
-   * @returns The flat section list
-   */
-  getFlatSectionList(): SectionStructure[] {
-    try {
-      const flatList: SectionStructure[] = [];
+      const sectionContent = document.slice(headingIndex + 1, nextHeadingIndex);
       
-      // Recursively flatten the section hierarchy
-      const flattenSections = (sections: SectionStructure[]): void => {
-        for (const section of sections) {
-          flatList.push(section);
-          flattenSections(section.subsections);
-        }
+      // Create a new section
+      const newSection: DocumentSection = {
+        title: headingTitle,
+        level: headingLevel,
+        content: sectionContent,
+        subsections: []
       };
       
-      const structure = this.analyze();
-      flattenSections(structure.sections);
-      
-      return flatList;
-    } catch (error) {
-      logger.error('Error generating flat section list', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Finds a section by ID
-   *
-   * @param sectionId The section ID to find
-   * @returns The found section or null if not found
-   */
-  findSectionById(sectionId: string): SectionStructure | null {
-    try {
-      // Get the flat section list
-      const sections = this.getFlatSectionList();
-      
-      // Find the section with the matching ID
-      return sections.find(section => section.id === sectionId) || null;
-    } catch (error) {
-      logger.error('Error finding section by ID', { error, sectionId });
-      return null;
-    }
-  }
-
-  /**
-   * Finds sections by title
-   *
-   * @param title The section title to find
-   * @param exactMatch Whether to require an exact match
-   * @returns The found sections
-   */
-  findSectionsByTitle(title: string, exactMatch: boolean = true): SectionStructure[] {
-    try {
-      // Get the flat section list
-      const sections = this.getFlatSectionList();
-      
-      // Find sections with matching titles
-      if (exactMatch) {
-        return sections.filter(section => section.title === title);
+      // Add the section to the appropriate parent
+      if (currentSection === null || headingLevel <= currentLevel) {
+        // This is a top-level section or a sibling of the current section
+        sections.push(newSection);
+        currentSection = newSection;
+        currentLevel = headingLevel;
       } else {
-        const lowerTitle = title.toLowerCase();
-        return sections.filter(section => section.title.toLowerCase().includes(lowerTitle));
+        // This is a subsection of the current section
+        let parent = currentSection;
+        
+        // Find the appropriate parent section based on heading level
+        while (parent.subsections.length > 0 && parent.subsections[parent.subsections.length - 1].level < headingLevel) {
+          parent = parent.subsections[parent.subsections.length - 1];
+        }
+        
+        parent.subsections.push(newSection);
+        currentSection = newSection;
+        currentLevel = headingLevel;
       }
-    } catch (error) {
-      logger.error('Error finding sections by title', { error, title });
-      return [];
     }
+    
+    return sections;
+  } catch (error) {
+    logger.error('Failed to analyze document structure', { error });
+    return [{
+      title: 'Document',
+      level: 0,
+      content: document,
+      subsections: []
+    }];
   }
+};
 
-  /**
-   * Gets the section path as a string
-   *
-   * @param section The section
-   * @param separator The path separator
-   * @returns The section path
-   */
-  getSectionPath(section: SectionStructure, separator: string = ' > '): string {
-    return section.path.join(separator);
-  }
-}
+/**
+ * Flattens a hierarchical document structure into a flat array of sections
+ * 
+ * @param sections - The hierarchical document sections
+ * @returns A flat array of document sections
+ */
+export const flattenDocumentStructure = (sections: DocumentSection[]): DocumentSection[] => {
+  const result: DocumentSection[] = [];
+  
+  const flatten = (section: DocumentSection) => {
+    result.push(section);
+    
+    section.subsections.forEach(subsection => {
+      flatten(subsection);
+    });
+  };
+  
+  sections.forEach(section => {
+    flatten(section);
+  });
+  
+  return result;
+};

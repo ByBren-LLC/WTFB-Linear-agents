@@ -1,344 +1,196 @@
 /**
- * Confluence Content Extractor
- *
- * This module provides utilities for extracting content from parsed Confluence documents.
+ * Content extractor for Confluence documents
+ * 
+ * This module provides utilities for extracting plain text from parsed elements
+ * and searching within parsed content.
  */
 
 import * as logger from '../utils/logger';
-import { ConfluenceDocument, ConfluenceElement, ConfluenceElementType, ConfluenceSection } from './parser';
+import { ParsedElement } from './parser';
 
 /**
- * Interface for search options
+ * Extracts plain text from a parsed element
+ * 
+ * @param element - The parsed element
+ * @returns The plain text content of the element
  */
-export interface SearchOptions {
-  caseSensitive?: boolean;
-  wholeWord?: boolean;
-  includeHeadings?: boolean;
-  includeParagraphs?: boolean;
-  includeLists?: boolean;
-  includeTables?: boolean;
-  includeMacros?: boolean;
-}
+export const extractText = (element: ParsedElement): string => {
+  if (typeof element.content === 'string') {
+    return element.content;
+  }
+  
+  if (Array.isArray(element.content)) {
+    return element.content.map(extractText).join(' ');
+  }
+  
+  return '';
+};
 
 /**
- * Interface for search result
+ * Extracts plain text from an array of parsed elements
+ * 
+ * @param elements - The parsed elements
+ * @returns The plain text content of the elements
  */
-export interface SearchResult {
-  element: ConfluenceElement;
-  section?: ConfluenceSection;
-  matches: string[];
-}
+export const extractTextFromElements = (elements: ParsedElement[]): string => {
+  return elements.map(extractText).join('\n');
+};
 
 /**
- * Confluence content extractor class
+ * Finds elements by type
+ * 
+ * @param elements - The parsed elements to search
+ * @param type - The type of elements to find
+ * @returns An array of parsed elements of the specified type
  */
-export class ContentExtractor {
-  private document: ConfluenceDocument;
-
-  /**
-   * Creates a new content extractor
-   *
-   * @param document The parsed Confluence document
-   */
-  constructor(document: ConfluenceDocument) {
-    this.document = document;
-  }
-
-  /**
-   * Extracts all text content from the document
-   *
-   * @returns The extracted text content
-   */
-  extractText(): string {
-    try {
-      return this.extractTextFromElements(this.document.elements);
-    } catch (error) {
-      logger.error('Error extracting text from document', { error });
-      return '';
+export const findElementsByType = (elements: ParsedElement[], type: string): ParsedElement[] => {
+  const result: ParsedElement[] = [];
+  
+  const findInElement = (element: ParsedElement) => {
+    if (element.type === type) {
+      result.push(element);
     }
-  }
-
-  /**
-   * Extracts text content from elements
-   *
-   * @param elements The elements to extract text from
-   * @returns The extracted text content
-   */
-  private extractTextFromElements(elements: ConfluenceElement[]): string {
-    return elements
-      .map(element => this.extractTextFromElement(element))
-      .filter(text => text)
-      .join('\n');
-  }
-
-  /**
-   * Extracts text content from an element
-   *
-   * @param element The element to extract text from
-   * @returns The extracted text content
-   */
-  private extractTextFromElement(element: ConfluenceElement): string {
-    if (!element) {
-      return '';
+    
+    if (Array.isArray(element.content)) {
+      element.content.forEach(findInElement);
     }
+  };
+  
+  elements.forEach(findInElement);
+  
+  return result;
+};
 
-    // If the element has content, return it
-    if (element.content) {
-      return element.content;
-    }
-
-    // If the element has children, extract text from them
-    if (element.children && element.children.length > 0) {
-      return this.extractTextFromElements(element.children);
-    }
-
-    return '';
-  }
-
-  /**
-   * Extracts all headings from the document
-   *
-   * @param minLevel The minimum heading level to include (1-6)
-   * @param maxLevel The maximum heading level to include (1-6)
-   * @returns The extracted headings
-   */
-  extractHeadings(minLevel: number = 1, maxLevel: number = 6): ConfluenceElement[] {
-    try {
-      return this.filterElements(this.document.elements, element => {
-        return (
-          element.type === ConfluenceElementType.HEADING &&
-          element.attributes?.level >= minLevel &&
-          element.attributes?.level <= maxLevel
-        );
-      });
-    } catch (error) {
-      logger.error('Error extracting headings from document', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Extracts all paragraphs from the document
-   *
-   * @returns The extracted paragraphs
-   */
-  extractParagraphs(): ConfluenceElement[] {
-    try {
-      return this.filterElements(this.document.elements, element => {
-        return element.type === ConfluenceElementType.PARAGRAPH;
-      });
-    } catch (error) {
-      logger.error('Error extracting paragraphs from document', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Extracts all lists from the document
-   *
-   * @returns The extracted lists
-   */
-  extractLists(): ConfluenceElement[] {
-    try {
-      return this.filterElements(this.document.elements, element => {
-        return element.type === ConfluenceElementType.LIST;
-      });
-    } catch (error) {
-      logger.error('Error extracting lists from document', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Extracts all tables from the document
-   *
-   * @returns The extracted tables
-   */
-  extractTables(): ConfluenceElement[] {
-    try {
-      return this.filterElements(this.document.elements, element => {
-        return element.type === ConfluenceElementType.TABLE;
-      });
-    } catch (error) {
-      logger.error('Error extracting tables from document', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Extracts all macros from the document
-   *
-   * @param macroName Optional macro name to filter by
-   * @returns The extracted macros
-   */
-  extractMacros(macroName?: string): ConfluenceElement[] {
-    try {
-      return this.filterElements(this.document.elements, element => {
-        return (
-          element.type === ConfluenceElementType.MACRO &&
-          (!macroName || element.attributes?.name === macroName)
-        );
-      });
-    } catch (error) {
-      logger.error('Error extracting macros from document', { error });
-      return [];
-    }
-  }
-
-  /**
-   * Searches for text in the document
-   *
-   * @param searchText The text to search for
-   * @param options Search options
-   * @returns The search results
-   */
-  search(searchText: string, options: SearchOptions = {}): SearchResult[] {
-    try {
-      const results: SearchResult[] = [];
-      const defaultOptions: SearchOptions = {
-        caseSensitive: false,
-        wholeWord: false,
-        includeHeadings: true,
-        includeParagraphs: true,
-        includeLists: true,
-        includeTables: true,
-        includeMacros: true
-      };
-
-      const mergedOptions = { ...defaultOptions, ...options };
-      const regex = this.createSearchRegex(searchText, mergedOptions);
-
-      // Search in each section
-      for (const section of this.document.sections) {
-        this.searchInSection(section, regex, mergedOptions, results);
+/**
+ * Finds elements by content
+ * 
+ * @param elements - The parsed elements to search
+ * @param content - The content to search for
+ * @param options - Search options
+ * @returns An array of parsed elements containing the specified content
+ */
+export const findElementsByContent = (
+  elements: ParsedElement[], 
+  content: string, 
+  options: { caseSensitive?: boolean; exactMatch?: boolean } = {}
+): ParsedElement[] => {
+  const result: ParsedElement[] = [];
+  const { caseSensitive = false, exactMatch = false } = options;
+  
+  const searchContent = caseSensitive ? content : content.toLowerCase();
+  
+  const findInElement = (element: ParsedElement) => {
+    if (typeof element.content === 'string') {
+      const elementContent = caseSensitive ? element.content : element.content.toLowerCase();
+      
+      if (exactMatch ? elementContent === searchContent : elementContent.includes(searchContent)) {
+        result.push(element);
       }
-
-      return results;
-    } catch (error) {
-      logger.error('Error searching in document', { error, searchText });
-      return [];
-    }
-  }
-
-  /**
-   * Searches for text in a section
-   *
-   * @param section The section to search in
-   * @param regex The search regex
-   * @param options Search options
-   * @param results The search results array to populate
-   */
-  private searchInSection(
-    section: ConfluenceSection,
-    regex: RegExp,
-    options: SearchOptions,
-    results: SearchResult[]
-  ): void {
-    // Search in section elements
-    for (const element of section.elements) {
-      const elementResults = this.searchInElement(element, regex, options);
-      if (elementResults.length > 0) {
-        results.push({
-          element,
-          section,
-          matches: elementResults
-        });
+    } else if (Array.isArray(element.content)) {
+      // Check if any child element contains the content
+      let containsContent = false;
+      
+      element.content.forEach(child => {
+        if (findInElement(child)) {
+          containsContent = true;
+        }
+      });
+      
+      if (containsContent) {
+        result.push(element);
       }
     }
+    
+    return result.includes(element);
+  };
+  
+  elements.forEach(findInElement);
+  
+  return result;
+};
 
-    // Search in subsections
-    for (const subsection of section.subsections) {
-      this.searchInSection(subsection, regex, options, results);
-    }
-  }
-
-  /**
-   * Searches for text in an element
-   *
-   * @param element The element to search in
-   * @param regex The search regex
-   * @param options Search options
-   * @returns The matches found
-   */
-  private searchInElement(
-    element: ConfluenceElement,
-    regex: RegExp,
-    options: SearchOptions
-  ): string[] {
-    const matches: string[] = [];
-
-    // Check if we should search in this element type
-    if (
-      (element.type === ConfluenceElementType.HEADING && !options.includeHeadings) ||
-      (element.type === ConfluenceElementType.PARAGRAPH && !options.includeParagraphs) ||
-      (element.type === ConfluenceElementType.LIST && !options.includeLists) ||
-      (element.type === ConfluenceElementType.TABLE && !options.includeTables) ||
-      (element.type === ConfluenceElementType.MACRO && !options.includeMacros)
-    ) {
-      return matches;
-    }
-
-    // Search in element content
-    if (element.content) {
-      const contentMatches = element.content.match(regex);
-      if (contentMatches) {
-        matches.push(...contentMatches);
-      }
-    }
-
-    // Search in element children
-    if (element.children && element.children.length > 0) {
-      for (const child of element.children) {
-        const childMatches = this.searchInElement(child, regex, options);
-        if (childMatches.length > 0) {
-          matches.push(...childMatches);
+/**
+ * Finds elements by attribute
+ * 
+ * @param elements - The parsed elements to search
+ * @param attributeName - The name of the attribute to search for
+ * @param attributeValue - The value of the attribute to search for
+ * @param options - Search options
+ * @returns An array of parsed elements with the specified attribute
+ */
+export const findElementsByAttribute = (
+  elements: ParsedElement[], 
+  attributeName: string, 
+  attributeValue?: string, 
+  options: { caseSensitive?: boolean; exactMatch?: boolean } = {}
+): ParsedElement[] => {
+  const result: ParsedElement[] = [];
+  const { caseSensitive = false, exactMatch = false } = options;
+  
+  const findInElement = (element: ParsedElement) => {
+    if (element.attributes) {
+      if (attributeValue === undefined) {
+        // Just check if the attribute exists
+        if (attributeName in element.attributes) {
+          result.push(element);
+        }
+      } else {
+        // Check if the attribute has the specified value
+        const attrValue = element.attributes[attributeName];
+        
+        if (attrValue !== undefined) {
+          const searchValue = caseSensitive ? attributeValue : attributeValue.toLowerCase();
+          const elementValue = caseSensitive ? attrValue : attrValue.toLowerCase();
+          
+          if (exactMatch ? elementValue === searchValue : elementValue.includes(searchValue)) {
+            result.push(element);
+          }
         }
       }
     }
-
-    return matches;
-  }
-
-  /**
-   * Creates a search regex
-   *
-   * @param searchText The text to search for
-   * @param options Search options
-   * @returns The search regex
-   */
-  private createSearchRegex(searchText: string, options: SearchOptions): RegExp {
-    let pattern = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex special characters
-
-    if (options.wholeWord) {
-      pattern = `\\b${pattern}\\b`;
+    
+    if (Array.isArray(element.content)) {
+      element.content.forEach(findInElement);
     }
+  };
+  
+  elements.forEach(findInElement);
+  
+  return result;
+};
 
-    return new RegExp(pattern, options.caseSensitive ? 'g' : 'gi');
-  }
-
-  /**
-   * Filters elements recursively
-   *
-   * @param elements The elements to filter
-   * @param predicate The filter predicate
-   * @returns The filtered elements
-   */
-  private filterElements(
-    elements: ConfluenceElement[],
-    predicate: (element: ConfluenceElement) => boolean
-  ): ConfluenceElement[] {
-    const result: ConfluenceElement[] = [];
-
-    for (const element of elements) {
-      if (predicate(element)) {
-        result.push(element);
+/**
+ * Extracts a summary from a document
+ * 
+ * @param elements - The parsed elements
+ * @param maxLength - The maximum length of the summary
+ * @returns A summary of the document
+ */
+export const extractSummary = (elements: ParsedElement[], maxLength: number = 200): string => {
+  try {
+    // First, try to find the first paragraph
+    const paragraphs = findElementsByType(elements, 'p');
+    
+    if (paragraphs.length > 0) {
+      const firstParagraph = extractText(paragraphs[0]);
+      
+      if (firstParagraph.length <= maxLength) {
+        return firstParagraph;
       }
-
-      if (element.children && element.children.length > 0) {
-        result.push(...this.filterElements(element.children, predicate));
-      }
+      
+      return firstParagraph.substring(0, maxLength) + '...';
     }
-
-    return result;
+    
+    // If no paragraphs, extract text from the first few elements
+    const allText = extractTextFromElements(elements);
+    
+    if (allText.length <= maxLength) {
+      return allText;
+    }
+    
+    return allText.substring(0, maxLength) + '...';
+  } catch (error) {
+    logger.error('Failed to extract summary', { error });
+    return '';
   }
-}
+};

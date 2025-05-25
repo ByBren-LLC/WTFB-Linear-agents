@@ -1,258 +1,186 @@
 /**
- * Confluence Macro Handlers
+ * Handlers for Confluence macros
  *
  * This module provides handlers for common Confluence macros.
  */
 
+import * as cheerio from 'cheerio';
+import { Element as CheerioElement } from 'cheerio';
 import * as logger from '../utils/logger';
-import { ConfluenceElement, ConfluenceElementType } from './parser';
+import { ParsedElement } from './parser';
 
 /**
- * Interface for a macro handler
+ * Handles an info macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export interface MacroHandler {
-  /**
-   * Handles a macro element
-   *
-   * @param element The macro element
-   * @returns The processed element or null if the macro is not supported
-   */
-  handle(element: ConfluenceElement): ConfluenceElement | null;
-}
+export const handleInfoMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const title = $(element).find('ac:parameter[ac:name="title"]').text().trim();
+  const content = $(element).find('ac:rich-text-body').text().trim();
+
+  return {
+    type: 'macro',
+    content,
+    attributes: {
+      name: 'info',
+      title,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the info macro
+ * Handles a note macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class InfoMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'info') {
-      return null;
-    }
+export const handleNoteMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const title = $(element).find('ac:parameter[ac:name="title"]').text().trim();
+  const content = $(element).find('ac:rich-text-body').text().trim();
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'info',
-        title: element.attributes?.parameters?.title || 'Info'
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content,
+    attributes: {
+      name: 'note',
+      title,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the note macro
+ * Handles a warning macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class NoteMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'note') {
-      return null;
-    }
+export const handleWarningMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const title = $(element).find('ac:parameter[ac:name="title"]').text().trim();
+  const content = $(element).find('ac:rich-text-body').text().trim();
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'note',
-        title: element.attributes?.parameters?.title || 'Note'
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content,
+    attributes: {
+      name: 'warning',
+      title,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the warning macro
+ * Handles a code macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class WarningMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'warning') {
-      return null;
-    }
+export const handleCodeMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const language = $(element).find('ac:parameter[ac:name="language"]').text().trim();
+  const content = $(element).find('ac:plain-text-body').text().trim();
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'warning',
-        title: element.attributes?.parameters?.title || 'Warning'
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content,
+    attributes: {
+      name: 'code',
+      language,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the code macro
+ * Handles a table of contents macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class CodeMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'code') {
-      return null;
-    }
+export const handleTableOfContentsMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const minLevel = $(element).find('ac:parameter[ac:name="minLevel"]').text().trim();
+  const maxLevel = $(element).find('ac:parameter[ac:name="maxLevel"]').text().trim();
 
-    return {
-      type: ConfluenceElementType.CODE,
-      content: element.content,
-      attributes: {
-        isBlock: true,
-        language: element.attributes?.parameters?.language || ''
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content: '',
+    attributes: {
+      name: 'toc',
+      minLevel: minLevel || '1',
+      maxLevel: maxLevel || '7',
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the table of contents macro
+ * Handles a status macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class TocMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (
-      element.type !== ConfluenceElementType.MACRO ||
-      (element.attributes?.name !== 'toc' && element.attributes?.name !== 'table-of-contents')
-    ) {
-      return null;
-    }
+export const handleStatusMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const color = $(element).find('ac:parameter[ac:name="color"]').text().trim();
+  const title = $(element).find('ac:parameter[ac:name="title"]').text().trim();
+  const content = $(element).find('ac:rich-text-body').text().trim();
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      attributes: {
-        type: 'toc',
-        minLevel: parseInt(element.attributes?.parameters?.minLevel || '1', 10),
-        maxLevel: parseInt(element.attributes?.parameters?.maxLevel || '7', 10)
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content: content || title,
+    attributes: {
+      name: 'status',
+      color,
+      title,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the status macro
+ * Handles an expand macro
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The macro element
+ * @returns The parsed macro element
  */
-export class StatusMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'status') {
-      return null;
-    }
+export const handleExpandMacro = ($: cheerio.Root, element: CheerioElement): ParsedElement => {
+  const title = $(element).find('ac:parameter[ac:name="title"]').text().trim();
+  const content = $(element).find('ac:rich-text-body').text().trim();
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'status',
-        color: element.attributes?.parameters?.color || '',
-        title: element.attributes?.parameters?.title || 'Status'
-      }
-    };
-  }
-}
+  return {
+    type: 'macro',
+    content,
+    attributes: {
+      name: 'expand',
+      title,
+      ...getElementAttributes($, element)
+    }
+  };
+};
 
 /**
- * Handler for the expand macro
+ * Gets all attributes of an element
+ *
+ * @param $ - The Cheerio instance
+ * @param element - The element to get attributes from
+ * @returns A record of attribute names and values
  */
-export class ExpandMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'expand') {
-      return null;
-    }
+const getElementAttributes = ($: cheerio.Root, element: CheerioElement): Record<string, string> => {
+  const attributes: Record<string, string> = {};
 
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'expand',
-        title: element.attributes?.parameters?.title || 'Click to expand...'
-      }
-    };
-  }
-}
-
-/**
- * Handler for the panel macro
- */
-export class PanelMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'panel') {
-      return null;
-    }
-
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'panel',
-        title: element.attributes?.parameters?.title || '',
-        borderStyle: element.attributes?.parameters?.borderStyle || 'solid',
-        borderColor: element.attributes?.parameters?.borderColor || '#ccc',
-        borderWidth: element.attributes?.parameters?.borderWidth || '1px',
-        backgroundColor: element.attributes?.parameters?.bgColor || 'transparent'
-      }
-    };
-  }
-}
-
-/**
- * Handler for the jira macro
- */
-export class JiraMacroHandler implements MacroHandler {
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO || element.attributes?.name !== 'jira') {
-      return null;
-    }
-
-    return {
-      type: ConfluenceElementType.SECTION,
-      attributes: {
-        type: 'jira',
-        server: element.attributes?.parameters?.server || '',
-        key: element.attributes?.parameters?.key || '',
-        columns: element.attributes?.parameters?.columns || 'key,summary,type,created,updated,due,assignee,reporter,priority,status,resolution',
-        maximumIssues: parseInt(element.attributes?.parameters?.maximumIssues || '20', 10),
-        jqlQuery: element.attributes?.parameters?.jqlQuery || ''
-      }
-    };
-  }
-}
-
-/**
- * Composite macro handler that delegates to specific handlers
- */
-export class CompositeMacroHandler implements MacroHandler {
-  private handlers: MacroHandler[] = [];
-
-  constructor() {
-    // Register all macro handlers
-    this.handlers.push(new InfoMacroHandler());
-    this.handlers.push(new NoteMacroHandler());
-    this.handlers.push(new WarningMacroHandler());
-    this.handlers.push(new CodeMacroHandler());
-    this.handlers.push(new TocMacroHandler());
-    this.handlers.push(new StatusMacroHandler());
-    this.handlers.push(new ExpandMacroHandler());
-    this.handlers.push(new PanelMacroHandler());
-    this.handlers.push(new JiraMacroHandler());
+  if (element.attribs) {
+    Object.entries(element.attribs).forEach(([key, value]) => {
+      attributes[key] = String(value);
+    });
   }
 
-  handle(element: ConfluenceElement): ConfluenceElement | null {
-    if (element.type !== ConfluenceElementType.MACRO) {
-      return null;
-    }
-
-    // Try each handler
-    for (const handler of this.handlers) {
-      const result = handler.handle(element);
-      if (result) {
-        return result;
-      }
-    }
-
-    // If no handler processed the macro, return a generic representation
-    logger.warn('Unhandled Confluence macro', { macroName: element.attributes?.name });
-    return {
-      type: ConfluenceElementType.SECTION,
-      content: element.content,
-      attributes: {
-        type: 'macro',
-        name: element.attributes?.name || 'unknown',
-        parameters: element.attributes?.parameters || {}
-      }
-    };
-  }
-}
+  return attributes;
+};

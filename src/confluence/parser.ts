@@ -1,512 +1,298 @@
 /**
- * Confluence Document Parser
+ * Confluence document parser
  *
- * This module provides a parser for Confluence documents in storage format (XHTML-based).
- * It converts the storage format into a structured representation that can be used for
- * extracting planning information.
+ * This module provides functionality to parse Confluence documents from their storage format (XHTML-based)
+ * into a structured format that can be easily processed by the Linear Planning Agent.
  */
 
 import * as cheerio from 'cheerio';
+import { Element as CheerioElement } from 'cheerio';
 import * as logger from '../utils/logger';
+import {
+  parseHeading,
+  parseParagraph,
+  parseTable,
+  parseList,
+  parseLink,
+  parseImage,
+  parseMacro
+} from './element-parsers';
 
 /**
- * Types of Confluence elements
+ * Represents a parsed element from a Confluence document
  */
-export enum ConfluenceElementType {
-  HEADING = 'heading',
-  PARAGRAPH = 'paragraph',
-  LIST = 'list',
-  LIST_ITEM = 'list-item',
-  TABLE = 'table',
-  TABLE_ROW = 'table-row',
-  TABLE_CELL = 'table-cell',
-  LINK = 'link',
-  IMAGE = 'image',
-  CODE = 'code',
-  MACRO = 'macro',
-  SECTION = 'section',
-  TEXT = 'text',
-  UNKNOWN = 'unknown'
+export interface ParsedElement {
+  /** The type of element (e.g., 'heading', 'paragraph', 'table', etc.) */
+  type: string;
+
+  /** The content of the element, either as a string or as nested elements */
+  content: string | ParsedElement[];
+
+  /** Optional attributes associated with the element */
+  attributes?: Record<string, string>;
 }
 
 /**
- * Interface for a parsed Confluence element
- */
-export interface ConfluenceElement {
-  type: ConfluenceElementType;
-  content?: string;
-  children?: ConfluenceElement[];
-  attributes?: Record<string, any>;
-}
-
-/**
- * Interface for a parsed Confluence document
- */
-export interface ConfluenceDocument {
-  title: string;
-  elements: ConfluenceElement[];
-  sections: ConfluenceSection[];
-  metadata: Record<string, any>;
-}
-
-/**
- * Interface for a Confluence document section
- */
-export interface ConfluenceSection {
-  id: string;
-  title: string;
-  level: number;
-  elements: ConfluenceElement[];
-  subsections: ConfluenceSection[];
-  parent?: ConfluenceSection;
-}
-
-/**
- * Confluence document parser class
+ * Parser for Confluence documents
+ *
+ * This class takes Confluence storage format (XHTML-based) and converts it to a structured format
+ * that can be easily processed by the Linear Planning Agent.
  */
 export class ConfluenceParser {
-  private $: cheerio.CheerioAPI;
-  private document: ConfluenceDocument;
+  /** Cheerio instance for parsing the document */
+  private $: cheerio.Root;
+
+  /** Parsed document structure */
+  private document: ParsedElement[];
 
   /**
-   * Creates a new Confluence parser
+   * Creates a new ConfluenceParser instance
    *
-   * @param storageFormat The Confluence storage format (XHTML)
-   * @param title The title of the document
+   * @param storageFormat - The Confluence storage format (XHTML-based) to parse
    */
-  constructor(storageFormat: string, title: string) {
-    this.$ = cheerio.load(storageFormat, {
-      xmlMode: true,
-      decodeEntities: true
-    });
-
-    this.document = {
-      title,
-      elements: [],
-      sections: [],
-      metadata: {}
-    };
-  }
-
-  /**
-   * Parses the Confluence document
-   *
-   * @returns The parsed document
-   */
-  parse(): ConfluenceDocument {
+  constructor(storageFormat: string) {
     try {
-      // Parse the document elements
-      this.document.elements = this.parseElements(this.$('body').children());
-
-      // Extract sections based on headings
-      this.document.sections = this.extractSections(this.document.elements);
-
-      // Extract metadata
-      this.document.metadata = this.extractMetadata();
-
-      return this.document;
+      this.$ = cheerio.load(storageFormat, { xmlMode: true });
+      this.document = this.parseDocument();
+      logger.info('Confluence document parsed successfully');
     } catch (error) {
-      logger.error('Error parsing Confluence document', { error });
-      throw error;
+      logger.error('Failed to parse Confluence document', { error });
+      throw new Error('Failed to parse Confluence document: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
   /**
-   * Parses Confluence elements
+   * Parses the entire document
    *
-   * @param elements The cheerio elements to parse
-   * @returns The parsed elements
+   * @returns An array of parsed elements representing the document structure
    */
-  private parseElements(elements: cheerio.Cheerio): ConfluenceElement[] {
-    const parsedElements: ConfluenceElement[] = [];
+  private parseDocument(): ParsedElement[] {
+    const result: ParsedElement[] = [];
+    const body = this.$('body').first();
 
-    elements.each((_, element) => {
-      const parsedElement = this.parseElement(this.$(element));
+    if (!body.length) {
+      logger.warn('No body element found in Confluence document');
+      return result;
+    }
+
+    // Process all child elements of the body
+    body.children().each((_, element) => {
+      const parsedElement = this.parseElement(element);
       if (parsedElement) {
-        parsedElements.push(parsedElement);
+        result.push(parsedElement);
       }
     });
 
-    return parsedElements;
+    return result;
   }
 
   /**
-   * Parses a single Confluence element
+   * Parses a single element
    *
-   * @param element The cheerio element to parse
-   * @returns The parsed element or null if the element should be skipped
+   * @param element - The element to parse
+   * @returns The parsed element, or undefined if the element could not be parsed
    */
-  private parseElement(element: cheerio.Cheerio): ConfluenceElement | null {
-    const tagName = element.get(0)?.tagName?.toLowerCase();
+  private parseElement(element: CheerioElement): ParsedElement | undefined {
+    const tagName = element.tagName?.toLowerCase() || '';
 
-    if (!tagName) {
-      return null;
-    }
+    try {
+      // Parse different types of elements
+      switch (tagName) {
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'h4':
+        case 'h5':
+        case 'h6':
+          return parseHeading(this.$, element);
 
-    switch (tagName) {
-      case 'h1':
-      case 'h2':
-      case 'h3':
-      case 'h4':
-      case 'h5':
-      case 'h6':
-        return this.parseHeading(element, parseInt(tagName.substring(1), 10));
-      case 'p':
-        return this.parseParagraph(element);
-      case 'ul':
-      case 'ol':
-        return this.parseList(element, tagName === 'ol');
-      case 'li':
-        return this.parseListItem(element);
-      case 'table':
-        return this.parseTable(element);
-      case 'tr':
-        return this.parseTableRow(element);
-      case 'td':
-      case 'th':
-        return this.parseTableCell(element, tagName === 'th');
-      case 'a':
-        return this.parseLink(element);
-      case 'img':
-        return this.parseImage(element);
-      case 'code':
-      case 'pre':
-        return this.parseCode(element, tagName === 'pre');
-      case 'ac:structured-macro':
-        return this.parseMacro(element);
-      case 'div':
-        return this.parseDiv(element);
-      case 'span':
-        return this.parseSpan(element);
-      default:
-        // For other elements, parse their children
-        const children = this.parseElements(element.children());
-        if (children.length > 0) {
-          return {
-            type: ConfluenceElementType.UNKNOWN,
-            children
-          };
-        }
-        return null;
-    }
-  }
+        case 'p':
+          return parseParagraph(this.$, element);
 
-  /**
-   * Parses a heading element
-   *
-   * @param element The heading element
-   * @param level The heading level (1-6)
-   * @returns The parsed heading element
-   */
-  private parseHeading(element: cheerio.Cheerio, level: number): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.HEADING,
-      content: element.text().trim(),
-      attributes: {
-        level,
-        id: element.attr('id') || `heading-${level}-${Date.now()}`
+        case 'table':
+          return parseTable(this.$, element);
+
+        case 'ul':
+        case 'ol':
+          return parseList(this.$, element);
+
+        case 'a':
+          return parseLink(this.$, element);
+
+        case 'img':
+          return parseImage(this.$, element);
+
+        case 'ac:structured-macro':
+          return parseMacro(this.$, element);
+
+        case 'div':
+        case 'span':
+          // For container elements, parse their children
+          const children: ParsedElement[] = [];
+          this.$(element).children().each((_, child) => {
+            const parsedChild = this.parseElement(child);
+            if (parsedChild) {
+              children.push(parsedChild);
+            }
+          });
+
+          if (children.length > 0) {
+            return {
+              type: tagName,
+              content: children,
+              attributes: this.getElementAttributes(element)
+            };
+          }
+
+          // If no children were parsed, return the text content
+          {
+            const divTextContent = this.$(element).text().trim();
+            if (divTextContent) {
+              return {
+                type: tagName,
+                content: divTextContent,
+                attributes: this.getElementAttributes(element)
+              };
+            }
+          }
+
+          return undefined;
+
+        default:
+          // For unknown elements, just return their text content
+          {
+            const unknownTextContent = this.$(element).text().trim();
+            if (unknownTextContent) {
+              return {
+                type: 'unknown',
+                content: unknownTextContent,
+                attributes: { originalTag: tagName, ...this.getElementAttributes(element) }
+              };
+            }
+          }
+          return undefined;
       }
-    };
-  }
-
-  /**
-   * Parses a paragraph element
-   *
-   * @param element The paragraph element
-   * @returns The parsed paragraph element
-   */
-  private parseParagraph(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.PARAGRAPH,
-      content: element.text().trim(),
-      children: this.parseElements(element.children())
-    };
-  }
-
-  /**
-   * Parses a list element
-   *
-   * @param element The list element
-   * @param ordered Whether the list is ordered
-   * @returns The parsed list element
-   */
-  private parseList(element: cheerio.Cheerio, ordered: boolean): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.LIST,
-      children: this.parseElements(element.children()),
-      attributes: {
-        ordered
-      }
-    };
-  }
-
-  /**
-   * Parses a list item element
-   *
-   * @param element The list item element
-   * @returns The parsed list item element
-   */
-  private parseListItem(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.LIST_ITEM,
-      content: element.text().trim(),
-      children: this.parseElements(element.children())
-    };
-  }
-
-  /**
-   * Parses a table element
-   *
-   * @param element The table element
-   * @returns The parsed table element
-   */
-  private parseTable(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.TABLE,
-      children: this.parseElements(element.children('tr'))
-    };
-  }
-
-  /**
-   * Parses a table row element
-   *
-   * @param element The table row element
-   * @returns The parsed table row element
-   */
-  private parseTableRow(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.TABLE_ROW,
-      children: this.parseElements(element.children('td, th'))
-    };
-  }
-
-  /**
-   * Parses a table cell element
-   *
-   * @param element The table cell element
-   * @param isHeader Whether the cell is a header cell
-   * @returns The parsed table cell element
-   */
-  private parseTableCell(element: cheerio.Cheerio, isHeader: boolean): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.TABLE_CELL,
-      content: element.text().trim(),
-      children: this.parseElements(element.children()),
-      attributes: {
-        isHeader
-      }
-    };
-  }
-
-  /**
-   * Parses a link element
-   *
-   * @param element The link element
-   * @returns The parsed link element
-   */
-  private parseLink(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.LINK,
-      content: element.text().trim(),
-      attributes: {
-        href: element.attr('href') || '',
-        title: element.attr('title') || ''
-      }
-    };
-  }
-
-  /**
-   * Parses an image element
-   *
-   * @param element The image element
-   * @returns The parsed image element
-   */
-  private parseImage(element: cheerio.Cheerio): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.IMAGE,
-      attributes: {
-        src: element.attr('src') || '',
-        alt: element.attr('alt') || '',
-        title: element.attr('title') || ''
-      }
-    };
-  }
-
-  /**
-   * Parses a code element
-   *
-   * @param element The code element
-   * @param isBlock Whether the code is a block (pre) or inline (code)
-   * @returns The parsed code element
-   */
-  private parseCode(element: cheerio.Cheerio, isBlock: boolean): ConfluenceElement {
-    return {
-      type: ConfluenceElementType.CODE,
-      content: element.text().trim(),
-      attributes: {
-        isBlock
-      }
-    };
-  }
-
-  /**
-   * Parses a macro element
-   *
-   * @param element The macro element
-   * @returns The parsed macro element
-   */
-  private parseMacro(element: cheerio.Cheerio): ConfluenceElement {
-    const macroName = element.attr('ac:name') || '';
-    const macroParams: Record<string, string> = {};
-
-    // Extract macro parameters
-    element.find('ac:parameter').each((_, param) => {
-      const $param = this.$(param);
-      const name = $param.attr('ac:name') || '';
-      const value = $param.text().trim();
-      if (name) {
-        macroParams[name] = value;
-      }
-    });
-
-    // Extract macro content
-    const macroContent = element.find('ac:rich-text-body').text().trim();
-
-    return {
-      type: ConfluenceElementType.MACRO,
-      content: macroContent,
-      attributes: {
-        name: macroName,
-        parameters: macroParams
-      }
-    };
-  }
-
-  /**
-   * Parses a div element
-   *
-   * @param element The div element
-   * @returns The parsed div element
-   */
-  private parseDiv(element: cheerio.Cheerio): ConfluenceElement {
-    const children = this.parseElements(element.children());
-    if (children.length > 0) {
+    } catch (error) {
+      logger.error(`Failed to parse element: ${tagName}`, { error });
       return {
-        type: ConfluenceElementType.SECTION,
-        children
+        type: 'error',
+        content: `Failed to parse ${tagName}: ${error instanceof Error ? error.message : String(error)}`,
+        attributes: { originalTag: tagName }
       };
     }
-    return null;
   }
 
   /**
-   * Parses a span element
+   * Gets all attributes of an element
    *
-   * @param element The span element
-   * @returns The parsed span element
+   * @param element - The element to get attributes from
+   * @returns A record of attribute names and values
    */
-  private parseSpan(element: cheerio.Cheerio): ConfluenceElement {
-    const content = element.text().trim();
-    if (content) {
-      return {
-        type: ConfluenceElementType.TEXT,
-        content
-      };
+  private getElementAttributes(element: CheerioElement): Record<string, string> {
+    const attributes: Record<string, string> = {};
+
+    if (element.attribs) {
+      Object.entries(element.attribs).forEach(([key, value]) => {
+        attributes[key] = String(value);
+      });
     }
-    return null;
+
+    return attributes;
   }
 
   /**
-   * Extracts sections from the document elements
+   * Gets all headings in the document
    *
-   * @param elements The document elements
-   * @returns The extracted sections
+   * @returns An array of parsed heading elements
    */
-  private extractSections(elements: ConfluenceElement[]): ConfluenceSection[] {
-    const sections: ConfluenceSection[] = [];
-    let currentSection: ConfluenceSection | null = null;
-    let sectionElements: ConfluenceElement[] = [];
+  getHeadings(): ParsedElement[] {
+    return this.findElementsByType(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+  }
 
-    // Process elements to identify sections
-    for (const element of elements) {
-      if (element.type === ConfluenceElementType.HEADING) {
-        // If we have a current section, finalize it
-        if (currentSection) {
-          currentSection.elements = sectionElements;
-          sections.push(currentSection);
-        }
+  /**
+   * Gets all paragraphs in the document
+   *
+   * @returns An array of parsed paragraph elements
+   */
+  getParagraphs(): ParsedElement[] {
+    return this.findElementsByType(['p']);
+  }
 
-        // Start a new section
-        currentSection = {
-          id: element.attributes?.id || `section-${Date.now()}`,
-          title: element.content || '',
-          level: element.attributes?.level || 1,
-          elements: [],
-          subsections: []
-        };
-        sectionElements = [];
-      } else if (currentSection) {
-        // Add element to current section
-        sectionElements.push(element);
+  /**
+   * Gets all tables in the document
+   *
+   * @returns An array of parsed table elements
+   */
+  getTables(): ParsedElement[] {
+    return this.findElementsByType(['table']);
+  }
+
+  /**
+   * Gets all lists in the document
+   *
+   * @returns An array of parsed list elements
+   */
+  getLists(): ParsedElement[] {
+    return this.findElementsByType(['ul', 'ol']);
+  }
+
+  /**
+   * Gets all links in the document
+   *
+   * @returns An array of parsed link elements
+   */
+  getLinks(): ParsedElement[] {
+    return this.findElementsByType(['a']);
+  }
+
+  /**
+   * Gets all images in the document
+   *
+   * @returns An array of parsed image elements
+   */
+  getImages(): ParsedElement[] {
+    return this.findElementsByType(['img']);
+  }
+
+  /**
+   * Gets all macros in the document
+   *
+   * @returns An array of parsed macro elements
+   */
+  getMacros(): ParsedElement[] {
+    return this.findElementsByType(['ac:structured-macro']);
+  }
+
+  /**
+   * Gets the full content of the document
+   *
+   * @returns An array of parsed elements representing the document structure
+   */
+  getFullContent(): ParsedElement[] {
+    return this.document;
+  }
+
+  /**
+   * Finds elements by type
+   *
+   * @param types - The types of elements to find
+   * @returns An array of parsed elements of the specified types
+   */
+  private findElementsByType(types: string[]): ParsedElement[] {
+    const result: ParsedElement[] = [];
+
+    const findInElement = (element: ParsedElement) => {
+      if (types.includes(element.type)) {
+        result.push(element);
       }
-    }
 
-    // Finalize the last section
-    if (currentSection) {
-      currentSection.elements = sectionElements;
-      sections.push(currentSection);
-    }
-
-    // Build section hierarchy
-    return this.buildSectionHierarchy(sections);
-  }
-
-  /**
-   * Builds a hierarchy of sections based on heading levels
-   *
-   * @param sections The flat list of sections
-   * @returns The hierarchical sections
-   */
-  private buildSectionHierarchy(sections: ConfluenceSection[]): ConfluenceSection[] {
-    const rootSections: ConfluenceSection[] = [];
-    const sectionStack: ConfluenceSection[] = [];
-
-    for (const section of sections) {
-      // Pop sections from the stack until we find a parent section
-      while (
-        sectionStack.length > 0 &&
-        sectionStack[sectionStack.length - 1].level >= section.level
-      ) {
-        sectionStack.pop();
+      if (Array.isArray(element.content)) {
+        element.content.forEach(findInElement);
       }
+    };
 
-      if (sectionStack.length === 0) {
-        // This is a root section
-        rootSections.push(section);
-      } else {
-        // This is a subsection
-        const parentSection = sectionStack[sectionStack.length - 1];
-        section.parent = parentSection;
-        parentSection.subsections.push(section);
-      }
+    this.document.forEach(findInElement);
 
-      sectionStack.push(section);
-    }
-
-    return rootSections;
-  }
-
-  /**
-   * Extracts metadata from the document
-   *
-   * @returns The extracted metadata
-   */
-  private extractMetadata(): Record<string, any> {
-    const metadata: Record<string, any> = {};
-
-    // Extract metadata from specific macros or elements
-    // This is a placeholder for custom metadata extraction
-
-    return metadata;
+    return result;
   }
 }
