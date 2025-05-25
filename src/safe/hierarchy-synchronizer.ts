@@ -147,17 +147,17 @@ export class HierarchySynchronizer {
       );
 
       // Find Features that don't have a Linear issue ID
-      const addedFeatures = planningDocument.features.filter(
+      const addedFeatures = (planningDocument.features || []).filter(
         feature => !existingIssues.features[feature.id]
       );
 
       // Find Stories that don't have a Linear issue ID
-      const addedStories = planningDocument.stories.filter(
+      const addedStories = (planningDocument.stories || []).filter(
         story => !existingIssues.stories[story.id]
       );
 
       // Find Enablers that don't have a Linear issue ID
-      const addedEnablers = planningDocument.enablers.filter(
+      const addedEnablers = (planningDocument.enablers || []).filter(
         enabler => !existingIssues.enablers[enabler.id]
       );
 
@@ -216,19 +216,19 @@ export class HierarchySynchronizer {
       );
 
       // Find Feature IDs that are in existingIssues but not in the planning document
-      const featureIds = new Set(planningDocument.features.map(feature => feature.id));
+      const featureIds = new Set((planningDocument.features || []).map(feature => feature.id));
       const removedFeatures = Object.keys(existingIssues.features).filter(
         id => !featureIds.has(id)
       );
 
       // Find Story IDs that are in existingIssues but not in the planning document
-      const storyIds = new Set(planningDocument.stories.map(story => story.id));
+      const storyIds = new Set((planningDocument.stories || []).map(story => story.id));
       const removedStories = Object.keys(existingIssues.stories).filter(
         id => !storyIds.has(id)
       );
 
       // Find Enabler IDs that are in existingIssues but not in the planning document
-      const enablerIds = new Set(planningDocument.enablers.map(enabler => enabler.id));
+      const enablerIds = new Set((planningDocument.enablers || []).map(enabler => enabler.id));
       const removedEnablers = Object.keys(existingIssues.enablers).filter(
         id => !enablerIds.has(id)
       );
@@ -290,7 +290,7 @@ export class HierarchySynchronizer {
         }));
 
       // Find Features that have a Linear issue ID
-      const modifiedFeatures = planningDocument.features
+      const modifiedFeatures = (planningDocument.features || [])
         .filter(feature => existingIssues.features[feature.id])
         .map(feature => ({
           id: existingIssues.features[feature.id],
@@ -298,7 +298,7 @@ export class HierarchySynchronizer {
         }));
 
       // Find Stories that have a Linear issue ID
-      const modifiedStories = planningDocument.stories
+      const modifiedStories = (planningDocument.stories || [])
         .filter(story => existingIssues.stories[story.id])
         .map(story => ({
           id: existingIssues.stories[story.id],
@@ -306,7 +306,7 @@ export class HierarchySynchronizer {
         }));
 
       // Find Enablers that have a Linear issue ID
-      const modifiedEnablers = planningDocument.enablers
+      const modifiedEnablers = (planningDocument.enablers || [])
         .filter(enabler => existingIssues.enablers[enabler.id])
         .map(enabler => ({
           id: existingIssues.enablers[enabler.id],

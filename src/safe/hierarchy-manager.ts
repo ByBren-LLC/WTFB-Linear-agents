@@ -1,6 +1,6 @@
 /**
  * SAFe Hierarchy Manager
- * 
+ *
  * This module provides utilities for managing the SAFe hierarchy in Linear.
  */
 import { LinearClient, Issue } from '@linear/sdk';
@@ -22,7 +22,7 @@ export class SAFeHierarchyManager {
 
   /**
    * Creates a new SAFeHierarchyManager
-   * 
+   *
    * @param accessToken - Linear API access token
    * @param teamId - Linear team ID
    */
@@ -36,7 +36,7 @@ export class SAFeHierarchyManager {
 
   /**
    * Updates the SAFe hierarchy in Linear based on the planning document
-   * 
+   *
    * @param planningDocument - Planning document containing the SAFe hierarchy
    * @param existingIssues - Mapping of planning item IDs to Linear issue IDs
    */
@@ -50,45 +50,45 @@ export class SAFeHierarchyManager {
     }
   ): Promise<void> {
     try {
-      logger.info('Updating SAFe hierarchy', { 
+      logger.info('Updating SAFe hierarchy', {
         planningDocumentId: planningDocument.id,
         epicCount: planningDocument.epics.length,
-        featureCount: planningDocument.features.length,
-        storyCount: planningDocument.stories.length,
-        enablerCount: planningDocument.enablers.length
+        featureCount: planningDocument.features?.length || 0,
+        storyCount: planningDocument.stories?.length || 0,
+        enablerCount: planningDocument.enablers?.length || 0
       });
 
       // Update Epic-Feature relationships
       await this.updateEpicFeatureRelationships(
         planningDocument.epics,
-        planningDocument.features,
+        planningDocument.features || [],
         existingIssues.epics,
         existingIssues.features
       );
 
       // Update Feature-Story relationships
       await this.updateFeatureStoryRelationships(
-        planningDocument.features,
-        planningDocument.stories,
+        planningDocument.features || [],
+        planningDocument.stories || [],
         existingIssues.features,
         existingIssues.stories
       );
 
       // Update Feature-Enabler relationships
       await this.updateFeatureEnablerRelationships(
-        planningDocument.features,
-        planningDocument.enablers,
+        planningDocument.features || [],
+        planningDocument.enablers || [],
         existingIssues.features,
         existingIssues.enablers
       );
 
-      logger.info('SAFe hierarchy updated successfully', { 
-        planningDocumentId: planningDocument.id 
+      logger.info('SAFe hierarchy updated successfully', {
+        planningDocumentId: planningDocument.id
       });
     } catch (error) {
-      logger.error('Error updating SAFe hierarchy', { 
-        error, 
-        planningDocumentId: planningDocument.id 
+      logger.error('Error updating SAFe hierarchy', {
+        error,
+        planningDocumentId: planningDocument.id
       });
       throw error;
     }
@@ -96,7 +96,7 @@ export class SAFeHierarchyManager {
 
   /**
    * Updates the relationships between Epics and Features
-   * 
+   *
    * @param epics - Epics from the planning document
    * @param features - Features from the planning document
    * @param epicIds - Mapping of Epic IDs to Linear issue IDs
@@ -109,14 +109,14 @@ export class SAFeHierarchyManager {
     featureIds: Record<string, string>
   ): Promise<void> {
     try {
-      logger.info('Updating Epic-Feature relationships', { 
+      logger.info('Updating Epic-Feature relationships', {
         epicCount: epics.length,
         featureCount: features.length
       });
 
       // Create a map of Feature IDs to their parent Epic IDs
       const featureToEpicMap: Record<string, string> = {};
-      
+
       // Populate the map from the planning document
       for (const feature of features) {
         if (feature.epicId) {
@@ -139,11 +139,11 @@ export class SAFeHierarchyManager {
         const linearEpicId = epicIds[epicId];
 
         if (!linearFeatureId || !linearEpicId) {
-          logger.warn('Missing Linear ID for Epic-Feature relationship', { 
-            featureId, 
-            epicId, 
-            linearFeatureId, 
-            linearEpicId 
+          logger.warn('Missing Linear ID for Epic-Feature relationship', {
+            featureId,
+            epicId,
+            linearFeatureId,
+            linearEpicId
           });
           continue;
         }
@@ -154,10 +154,10 @@ export class SAFeHierarchyManager {
 
         // If the parent has changed, update it
         if (currentParentId !== linearEpicId) {
-          logger.info('Updating Feature parent', { 
-            featureId: linearFeatureId, 
-            oldParentId: currentParentId, 
-            newParentId: linearEpicId 
+          logger.info('Updating Feature parent', {
+            featureId: linearFeatureId,
+            oldParentId: currentParentId,
+            newParentId: linearEpicId
           });
 
           await this.issueUpdater.updateParent(linearFeatureId, linearEpicId);
@@ -173,7 +173,7 @@ export class SAFeHierarchyManager {
 
   /**
    * Updates the relationships between Features and Stories
-   * 
+   *
    * @param features - Features from the planning document
    * @param stories - Stories from the planning document
    * @param featureIds - Mapping of Feature IDs to Linear issue IDs
@@ -186,14 +186,14 @@ export class SAFeHierarchyManager {
     storyIds: Record<string, string>
   ): Promise<void> {
     try {
-      logger.info('Updating Feature-Story relationships', { 
+      logger.info('Updating Feature-Story relationships', {
         featureCount: features.length,
         storyCount: stories.length
       });
 
       // Create a map of Story IDs to their parent Feature IDs
       const storyToFeatureMap: Record<string, string> = {};
-      
+
       // Populate the map from the planning document
       for (const story of stories) {
         if (story.featureId) {
@@ -216,11 +216,11 @@ export class SAFeHierarchyManager {
         const linearFeatureId = featureIds[featureId];
 
         if (!linearStoryId || !linearFeatureId) {
-          logger.warn('Missing Linear ID for Feature-Story relationship', { 
-            storyId, 
-            featureId, 
-            linearStoryId, 
-            linearFeatureId 
+          logger.warn('Missing Linear ID for Feature-Story relationship', {
+            storyId,
+            featureId,
+            linearStoryId,
+            linearFeatureId
           });
           continue;
         }
@@ -231,10 +231,10 @@ export class SAFeHierarchyManager {
 
         // If the parent has changed, update it
         if (currentParentId !== linearFeatureId) {
-          logger.info('Updating Story parent', { 
-            storyId: linearStoryId, 
-            oldParentId: currentParentId, 
-            newParentId: linearFeatureId 
+          logger.info('Updating Story parent', {
+            storyId: linearStoryId,
+            oldParentId: currentParentId,
+            newParentId: linearFeatureId
           });
 
           await this.issueUpdater.updateParent(linearStoryId, linearFeatureId);
@@ -250,7 +250,7 @@ export class SAFeHierarchyManager {
 
   /**
    * Updates the relationships between Features and Enablers
-   * 
+   *
    * @param features - Features from the planning document
    * @param enablers - Enablers from the planning document
    * @param featureIds - Mapping of Feature IDs to Linear issue IDs
@@ -263,14 +263,14 @@ export class SAFeHierarchyManager {
     enablerIds: Record<string, string>
   ): Promise<void> {
     try {
-      logger.info('Updating Feature-Enabler relationships', { 
+      logger.info('Updating Feature-Enabler relationships', {
         featureCount: features.length,
         enablerCount: enablers.length
       });
 
       // Create a map of Enabler IDs to their parent Feature IDs
       const enablerToFeatureMap: Record<string, string> = {};
-      
+
       // Populate the map from the planning document
       for (const enabler of enablers) {
         if (enabler.featureId) {
@@ -293,11 +293,11 @@ export class SAFeHierarchyManager {
         const linearFeatureId = featureIds[featureId];
 
         if (!linearEnablerId || !linearFeatureId) {
-          logger.warn('Missing Linear ID for Feature-Enabler relationship', { 
-            enablerId, 
-            featureId, 
-            linearEnablerId, 
-            linearFeatureId 
+          logger.warn('Missing Linear ID for Feature-Enabler relationship', {
+            enablerId,
+            featureId,
+            linearEnablerId,
+            linearFeatureId
           });
           continue;
         }
@@ -308,10 +308,10 @@ export class SAFeHierarchyManager {
 
         // If the parent has changed, update it
         if (currentParentId !== linearFeatureId) {
-          logger.info('Updating Enabler parent', { 
-            enablerId: linearEnablerId, 
-            oldParentId: currentParentId, 
-            newParentId: linearFeatureId 
+          logger.info('Updating Enabler parent', {
+            enablerId: linearEnablerId,
+            oldParentId: currentParentId,
+            newParentId: linearFeatureId
           });
 
           await this.issueUpdater.updateParent(linearEnablerId, linearFeatureId);
