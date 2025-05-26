@@ -75,6 +75,7 @@ describe('OAuth Routes Integration', () => {
     it('should handle Linear OAuth initiation', async () => {
       mockedInitiateOAuth.mockImplementation((req, res) => {
         res.redirect('https://linear.app/oauth/authorize?client_id=test');
+        return res;
       });
 
       const response = await request(app)
@@ -86,8 +87,9 @@ describe('OAuth Routes Integration', () => {
     });
 
     it('should handle Linear OAuth callback', async () => {
-      mockedHandleOAuthCallback.mockImplementation((req, res) => {
+      mockedHandleOAuthCallback.mockImplementation(async (req, res) => {
         res.send('Linear OAuth successful');
+        return res;
       });
 
       const response = await request(app)
@@ -152,7 +154,7 @@ describe('OAuth Routes Integration', () => {
         .expect(200);
 
       // Mock the callback to check session data
-      mockedHandleConfluenceCallback.mockImplementation((req, res) => {
+      mockedHandleConfluenceCallback.mockImplementation(async (req, res) => {
         res.json({ organizationId: req.session.organizationId });
       });
 
@@ -169,6 +171,7 @@ describe('OAuth Routes Integration', () => {
     it('should handle OAuth initiation errors', async () => {
       mockedInitiateOAuth.mockImplementation((req, res) => {
         res.status(500).json({ error: 'OAuth initiation failed' });
+        return res;
       });
 
       const response = await request(app)
@@ -179,8 +182,9 @@ describe('OAuth Routes Integration', () => {
     });
 
     it('should handle OAuth callback errors', async () => {
-      mockedHandleOAuthCallback.mockImplementation((req, res) => {
+      mockedHandleOAuthCallback.mockImplementation(async (req, res) => {
         res.status(400).json({ error: 'Invalid authorization code' });
+        return res;
       });
 
       const response = await request(app)
@@ -203,7 +207,7 @@ describe('OAuth Routes Integration', () => {
     });
 
     it('should handle Confluence OAuth callback errors', async () => {
-      mockedHandleConfluenceCallback.mockImplementation((req, res) => {
+      mockedHandleConfluenceCallback.mockImplementation(async (req, res) => {
         res.status(400).json({ error: 'Invalid state parameter' });
       });
 

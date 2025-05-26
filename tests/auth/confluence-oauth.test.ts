@@ -15,13 +15,13 @@ describe('Confluence OAuth', () => {
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
-    
+
     // Setup environment variables
     process.env.CONFLUENCE_CLIENT_ID = 'test-client-id';
     process.env.CONFLUENCE_CLIENT_SECRET = 'test-client-secret';
     process.env.APP_URL = 'https://example.com';
   });
-  
+
   afterEach(() => {
     // Clean up environment variables
     delete process.env.CONFLUENCE_CLIENT_ID;
@@ -33,36 +33,36 @@ describe('Confluence OAuth', () => {
     it('should redirect to the Atlassian authorization URL', () => {
       const req = {
         query: { organizationId: 'test-org-id' },
-        session: {}
+        session: {} as any
       };
-      
+
       const res = {
         redirect: jest.fn()
       };
-      
+
       confluenceOAuth.initiateConfluenceOAuth(req, res);
-      
-      expect(req.session.organizationId).toBe('test-org-id');
+
+      expect((req.session as any).organizationId).toBe('test-org-id');
       expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://auth.atlassian.com/authorize'));
       expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('client_id=test-client-id'));
       expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('state=test-org-id'));
     });
-    
+
     it('should handle missing client ID', () => {
       delete process.env.CONFLUENCE_CLIENT_ID;
-      
+
       const req = {
         query: { organizationId: 'test-org-id' },
-        session: {}
+        session: {} as any
       };
-      
+
       const res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn()
       };
-      
+
       confluenceOAuth.initiateConfluenceOAuth(req, res);
-      
+
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Server configuration error' });
     });
@@ -77,13 +77,13 @@ describe('Confluence OAuth', () => {
         },
         session: {
           organizationId: 'test-org-id'
-        }
+        } as any
       };
-      
+
       const res = {
         redirect: jest.fn()
       };
-      
+
       // Mock token response
       mockedAxios.post.mockResolvedValueOnce({
         data: {
@@ -93,7 +93,7 @@ describe('Confluence OAuth', () => {
           scope: 'read:confluence-content.all'
         }
       });
-      
+
       // Mock resource response
       mockedAxios.get.mockResolvedValueOnce({
         data: [
@@ -104,9 +104,9 @@ describe('Confluence OAuth', () => {
           }
         ]
       });
-      
+
       await confluenceOAuth.handleConfluenceCallback(req, res);
-      
+
       // Verify token exchange request
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://auth.atlassian.com/oauth/token',
@@ -118,7 +118,7 @@ describe('Confluence OAuth', () => {
           redirect_uri: 'https://example.com/auth/confluence/callback'
         }
       );
-      
+
       // Verify resource request
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.atlassian.com/oauth/token/accessible-resources',
@@ -129,7 +129,7 @@ describe('Confluence OAuth', () => {
           }
         }
       );
-      
+
       // Verify token storage
       expect(mockedModels.storeConfluenceToken).toHaveBeenCalledWith(
         'test-org-id',
@@ -138,45 +138,45 @@ describe('Confluence OAuth', () => {
         'https://api.atlassian.com/ex/confluence/test-site-id',
         expect.any(Date)
       );
-      
+
       // Verify redirect
       expect(res.redirect).toHaveBeenCalledWith('/auth/confluence/success?organizationId=test-org-id');
     });
-    
+
     it('should handle missing authorization code', async () => {
       const req = {
         query: {},
         session: {
           organizationId: 'test-org-id'
-        }
+        } as any
       };
-      
+
       const res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn()
       };
-      
+
       await confluenceOAuth.handleConfluenceCallback(req, res);
-      
+
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'No authorization code received' });
     });
-    
+
     it('should handle missing organization ID', async () => {
       const req = {
         query: {
           code: 'test-auth-code'
         },
-        session: {}
+        session: {} as any
       };
-      
+
       const res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn()
       };
-      
+
       await confluenceOAuth.handleConfluenceCallback(req, res);
-      
+
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid state parameter' });
     });
@@ -185,7 +185,7 @@ describe('Confluence OAuth', () => {
   describe('refreshConfluenceToken', () => {
     it('should refresh an expired token', async () => {
       const organizationId = 'test-org-id';
-      
+
       // Mock token data
       mockedModels.getConfluenceToken.mockResolvedValueOnce({
         id: 1,
@@ -197,7 +197,7 @@ describe('Confluence OAuth', () => {
         created_at: new Date(),
         updated_at: new Date()
       });
-      
+
       // Mock token refresh response
       mockedAxios.post.mockResolvedValueOnce({
         data: {
@@ -206,9 +206,9 @@ describe('Confluence OAuth', () => {
           expires_in: 3600
         }
       });
-      
+
       const result = await confluenceOAuth.refreshConfluenceToken(organizationId);
-      
+
       // Verify token refresh request
       expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://auth.atlassian.com/oauth/token',
@@ -219,7 +219,7 @@ describe('Confluence OAuth', () => {
           refresh_token: 'test-refresh-token'
         }
       );
-      
+
       // Verify token storage
       expect(mockedModels.storeConfluenceToken).toHaveBeenCalledWith(
         organizationId,
@@ -228,24 +228,24 @@ describe('Confluence OAuth', () => {
         'https://api.atlassian.com/ex/confluence/test-site-id',
         expect.any(Date)
       );
-      
+
       expect(result).toBe('new-access-token');
     });
-    
+
     it('should handle missing token data', async () => {
       const organizationId = 'test-org-id';
-      
+
       // Mock missing token data
       mockedModels.getConfluenceToken.mockResolvedValueOnce(null);
-      
+
       const result = await confluenceOAuth.refreshConfluenceToken(organizationId);
-      
+
       expect(result).toBeNull();
     });
-    
+
     it('should handle refresh failure', async () => {
       const organizationId = 'test-org-id';
-      
+
       // Mock token data
       mockedModels.getConfluenceToken.mockResolvedValueOnce({
         id: 1,
@@ -257,12 +257,12 @@ describe('Confluence OAuth', () => {
         created_at: new Date(),
         updated_at: new Date()
       });
-      
+
       // Mock token refresh error
       mockedAxios.post.mockRejectedValueOnce(new Error('Refresh failed'));
-      
+
       const result = await confluenceOAuth.refreshConfluenceToken(organizationId);
-      
+
       expect(result).toBeNull();
     });
   });

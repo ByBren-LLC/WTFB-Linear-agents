@@ -4,14 +4,17 @@ import express from 'express';
 import session from 'express-session';
 import axios from 'axios';
 import * as models from '../../src/db/models';
+import * as tokens from '../../src/auth/tokens';
 
 // Mock external dependencies
 jest.mock('axios');
 jest.mock('../../src/db/models');
+jest.mock('../../src/auth/tokens');
 jest.mock('../../src/utils/logger');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 const mockedModels = models as jest.Mocked<typeof models>;
+const mockedTokens = tokens as jest.Mocked<typeof tokens>;
 
 // Import the actual OAuth functions (not mocked)
 import { initiateOAuth, handleOAuthCallback } from '../../src/auth/oauth';
@@ -106,7 +109,7 @@ describe('OAuth End-to-End Integration', () => {
       });
 
       // Mock token storage
-      mockedModels.storeTokens = jest.fn().mockResolvedValueOnce(undefined);
+      (mockedTokens.storeTokens as jest.Mock) = jest.fn().mockResolvedValueOnce(undefined);
 
       // Step 3: Handle callback
       const callbackResponse = await request(app)
@@ -128,7 +131,7 @@ describe('OAuth End-to-End Integration', () => {
       );
 
       // Verify token storage was called
-      expect(mockedModels.storeTokens).toHaveBeenCalledWith(
+      expect(mockedTokens.storeTokens).toHaveBeenCalledWith(
         'test-org-id',
         'Test Organization',
         'test-access-token',
@@ -183,7 +186,7 @@ describe('OAuth End-to-End Integration', () => {
       });
 
       // Mock token storage
-      mockedModels.storeConfluenceToken = jest.fn().mockResolvedValueOnce(undefined);
+      (mockedModels.storeConfluenceToken as jest.Mock) = jest.fn().mockResolvedValue(undefined);
 
       // Step 3: Handle callback
       const callbackResponse = await agent
@@ -293,7 +296,7 @@ describe('OAuth End-to-End Integration', () => {
         data: [{ id: 'site-id', name: 'Site', url: 'https://site.atlassian.net' }]
       });
 
-      mockedModels.storeConfluenceToken = jest.fn().mockResolvedValueOnce(undefined);
+      (mockedModels.storeConfluenceToken as jest.Mock) = jest.fn().mockResolvedValue(undefined);
 
       // Handle callback (should use session data)
       const response = await agent

@@ -13,10 +13,16 @@ jest.useFakeTimers();
 
 describe('Rate Limiter', () => {
   let rateLimiter: RateLimiter;
+  let setTimeoutSpy: jest.SpyInstance;
 
   beforeEach(() => {
+    setTimeoutSpy = jest.spyOn(global, 'setTimeout');
     rateLimiter = new RateLimiter();
     jest.clearAllTimers();
+  });
+
+  afterEach(() => {
+    setTimeoutSpy.mockRestore();
   });
 
   it('should allow requests within the rate limit', async () => {
@@ -26,7 +32,7 @@ describe('Rate Limiter', () => {
     }
 
     // No throttling should have occurred
-    expect(setTimeout).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
   it('should throttle requests that exceed the rate limit', async () => {
@@ -39,17 +45,17 @@ describe('Rate Limiter', () => {
     }
 
     // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
 
     // Make one more request (exceeding the limit)
     const throttlePromise = rateLimiter.throttle('testEndpoint');
-    
+
     // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
-    
+    expect(setTimeoutSpy).toHaveBeenCalled();
+
     // Fast-forward time to complete the throttling
     jest.runAllTimers();
-    
+
     // The promise should resolve
     await throttlePromise;
   });
@@ -72,26 +78,26 @@ describe('Rate Limiter', () => {
     }
 
     // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
 
     // Make one more request to endpoint1 (exceeding the limit)
     const throttlePromise1 = rateLimiter.throttle('endpoint1');
-    
+
     // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
-    
+    expect(setTimeoutSpy).toHaveBeenCalled();
+
     // Reset the mock
     jest.clearAllTimers();
-    
+
     // Make one more request to endpoint2 (exceeding the limit)
     const throttlePromise2 = rateLimiter.throttle('endpoint2');
-    
+
     // Throttling should occur again
-    expect(setTimeout).toHaveBeenCalled();
-    
+    expect(setTimeoutSpy).toHaveBeenCalled();
+
     // Fast-forward time to complete the throttling
     jest.runAllTimers();
-    
+
     // The promises should resolve
     await throttlePromise1;
     await throttlePromise2;
@@ -107,7 +113,7 @@ describe('Rate Limiter', () => {
     }
 
     // No throttling yet
-    expect(setTimeout).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
 
     // Advance time past the reset interval (60 seconds)
     jest.advanceTimersByTime(61 * 1000);
@@ -118,17 +124,17 @@ describe('Rate Limiter', () => {
     }
 
     // Still no throttling
-    expect(setTimeout).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
 
     // Make one more request (exceeding the limit again)
     const throttlePromise = rateLimiter.throttle('testEndpoint');
-    
+
     // Throttling should occur
-    expect(setTimeout).toHaveBeenCalled();
-    
+    expect(setTimeoutSpy).toHaveBeenCalled();
+
     // Fast-forward time to complete the throttling
     jest.runAllTimers();
-    
+
     // The promise should resolve
     await throttlePromise;
   });

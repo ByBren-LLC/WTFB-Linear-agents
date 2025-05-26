@@ -51,10 +51,10 @@ describe('ConflictResolver', () => {
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({}));
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({}));
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      storeConflict: jest.fn().mockResolvedValue(undefined),
-      storeResolvedConflict: jest.fn().mockResolvedValue(undefined),
-      getUnresolvedConflicts: jest.fn().mockResolvedValue([]),
-      getResolvedConflicts: jest.fn().mockResolvedValue([])
+      storeConflict: jest.fn().mockResolvedValue(undefined as any),
+      storeResolvedConflict: jest.fn().mockResolvedValue(undefined as any),
+      getUnresolvedConflicts: jest.fn().mockResolvedValue([] as any),
+      getResolvedConflicts: jest.fn().mockResolvedValue([] as any)
     }));
 
     // Create instance with mocked dependencies
@@ -67,7 +67,7 @@ describe('ConflictResolver', () => {
       syncStore,
       false // autoResolveConflicts
     );
-    
+
     // Get mock instances
     mockConfluenceClient = (ConfluenceClient as unknown) as jest.Mocked<ConfluenceClient>;
     mockLinearClient = (LinearClientWrapper as unknown) as jest.Mocked<LinearClientWrapper>;
@@ -127,7 +127,7 @@ describe('ConflictResolver', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockSyncStore.storeConflict as jest.Mock).mockRejectedValue(error);
+      (mockSyncStore.storeConflict as jest.Mock).mockRejectedValue(error as any);
 
       // Act
       const resolvedConflicts = await conflictResolver.resolveConflicts([conflict]);
@@ -231,7 +231,7 @@ describe('ConflictResolver', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockSyncStore.storeResolvedConflict as jest.Mock).mockRejectedValue(error);
+      (mockSyncStore.storeResolvedConflict as jest.Mock).mockRejectedValue(error as any);
 
       // Act & Assert
       await expect(conflictResolver.resolveConflict(
@@ -244,7 +244,7 @@ describe('ConflictResolver', () => {
   describe('getUnresolvedConflicts', () => {
     it('should get unresolved conflicts', async () => {
       // Arrange
-      (mockSyncStore.getUnresolvedConflicts as jest.Mock).mockResolvedValue([conflict]);
+      (mockSyncStore.getUnresolvedConflicts as jest.Mock).mockResolvedValue([conflict] as any);
 
       // Act
       const unresolvedConflicts = await conflictResolver.getUnresolvedConflicts();
@@ -267,7 +267,7 @@ describe('ConflictResolver', () => {
         isResolved: true,
         resolutionStrategy: ConflictResolutionStrategy.LINEAR
       };
-      (mockSyncStore.getResolvedConflicts as jest.Mock).mockResolvedValue([resolvedConflict]);
+      (mockSyncStore.getResolvedConflicts as jest.Mock).mockResolvedValue([resolvedConflict] as any);
 
       // Act
       const resolvedConflicts = await conflictResolver.getResolvedConflicts();

@@ -1,10 +1,11 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { SyncStore } from '../../src/sync/sync-store';
 import { Conflict, Change, ChangeType, ChangeSource, ChangeItemType } from '../../src/sync/change-detector';
-import { getDatabase } from '../../src/db/models';
+import * as dbModels from '../../src/db/models';
 
 // Mock dependencies
 jest.mock('../../src/db/models');
+const mockedDbModels = dbModels as jest.Mocked<typeof dbModels>;
 
 describe('SyncStore', () => {
   let syncStore: SyncStore;
@@ -61,7 +62,13 @@ describe('SyncStore', () => {
       all: jest.fn(),
       run: jest.fn()
     };
-    (getDatabase as jest.Mock).mockResolvedValue(mockDb);
+    // Mock database functions
+    mockedDbModels.getLastSyncTimestamp = jest.fn().mockResolvedValue(null);
+    mockedDbModels.updateLastSyncTimestamp = jest.fn().mockResolvedValue(undefined);
+    mockedDbModels.storeConflict = jest.fn().mockResolvedValue(undefined);
+    mockedDbModels.getUnresolvedConflicts = jest.fn().mockResolvedValue([]);
+    mockedDbModels.getResolvedConflicts = jest.fn().mockResolvedValue([]);
+    mockedDbModels.recordSyncHistory = jest.fn().mockResolvedValue(undefined);
 
     // Create instance
     syncStore = new SyncStore();
