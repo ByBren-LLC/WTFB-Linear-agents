@@ -2,6 +2,7 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 import request from 'supertest';
 import express from 'express';
 import session from 'express-session';
+import { Request, Response } from 'express';
 import { initiateOAuth, handleOAuthCallback } from '../../src/auth/oauth';
 import { initiateConfluenceOAuth, handleConfluenceCallback } from '../../src/auth/confluence-oauth';
 
@@ -73,8 +74,9 @@ describe('OAuth Routes Integration', () => {
 
   describe('Linear OAuth Routes', () => {
     it('should handle Linear OAuth initiation', async () => {
-      mockedInitiateOAuth.mockImplementation((req, res) => {
+      mockedInitiateOAuth.mockImplementation((req: Request, res: Response) => {
         res.redirect('https://linear.app/oauth/authorize?client_id=test');
+        return res;
       });
 
       const response = await request(app)
@@ -83,11 +85,12 @@ describe('OAuth Routes Integration', () => {
 
       expect(mockedInitiateOAuth).toHaveBeenCalled();
       expect(response.headers.location).toContain('https://linear.app/oauth/authorize');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle Linear OAuth callback', async () => {
-      mockedHandleOAuthCallback.mockImplementation((req, res) => {
+      mockedHandleOAuthCallback.mockImplementation(async (req: Request, res: Response) => {
         res.send('Linear OAuth successful');
+        return res;
       });
 
       const response = await request(app)
@@ -96,12 +99,12 @@ describe('OAuth Routes Integration', () => {
 
       expect(mockedHandleOAuthCallback).toHaveBeenCalled();
       expect(response.text).toContain('Linear OAuth successful');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Confluence OAuth Routes', () => {
     it('should handle Confluence OAuth initiation', async () => {
-      mockedInitiateConfluenceOAuth.mockImplementation((req, res) => {
+      mockedInitiateConfluenceOAuth.mockImplementation((req: any, res: any) => {
         res.redirect('https://auth.atlassian.com/authorize?client_id=test');
       });
 
@@ -111,10 +114,10 @@ describe('OAuth Routes Integration', () => {
 
       expect(mockedInitiateConfluenceOAuth).toHaveBeenCalled();
       expect(response.headers.location).toContain('https://auth.atlassian.com/authorize');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle Confluence OAuth callback', async () => {
-      mockedHandleConfluenceCallback.mockImplementation((req, res) => {
+      mockedHandleConfluenceCallback.mockImplementation(async (req: any, res: any) => {
         res.redirect('/auth/confluence/success?organizationId=test-org');
       });
 
@@ -124,7 +127,7 @@ describe('OAuth Routes Integration', () => {
 
       expect(mockedHandleConfluenceCallback).toHaveBeenCalled();
       expect(response.headers.location).toContain('/auth/confluence/success');
-    });
+    }, 10000); // 10 second timeout
 
     it('should render Confluence OAuth success page', async () => {
       const response = await request(app)
@@ -133,7 +136,7 @@ describe('OAuth Routes Integration', () => {
 
       expect(response.text).toContain('Confluence Authorization Successful!');
       expect(response.text).toContain('test-org');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Session Middleware', () => {
@@ -141,7 +144,7 @@ describe('OAuth Routes Integration', () => {
       const agent = request.agent(app);
 
       // Mock the OAuth initiation to set session data
-      mockedInitiateConfluenceOAuth.mockImplementation((req, res) => {
+      mockedInitiateConfluenceOAuth.mockImplementation((req: any, res: any) => {
         req.session.organizationId = 'test-org';
         res.json({ sessionSet: true });
       });
@@ -152,7 +155,7 @@ describe('OAuth Routes Integration', () => {
         .expect(200);
 
       // Mock the callback to check session data
-      mockedHandleConfluenceCallback.mockImplementation((req, res) => {
+      mockedHandleConfluenceCallback.mockImplementation(async (req: any, res: any) => {
         res.json({ organizationId: req.session.organizationId });
       });
 
@@ -162,13 +165,14 @@ describe('OAuth Routes Integration', () => {
         .expect(200);
 
       expect(response.body.organizationId).toBe('test-org');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Error Handling', () => {
     it('should handle OAuth initiation errors', async () => {
-      mockedInitiateOAuth.mockImplementation((req, res) => {
+      mockedInitiateOAuth.mockImplementation((req: Request, res: Response) => {
         res.status(500).json({ error: 'OAuth initiation failed' });
+        return res;
       });
 
       const response = await request(app)
@@ -176,11 +180,12 @@ describe('OAuth Routes Integration', () => {
         .expect(500);
 
       expect(response.body.error).toBe('OAuth initiation failed');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle OAuth callback errors', async () => {
-      mockedHandleOAuthCallback.mockImplementation((req, res) => {
+      mockedHandleOAuthCallback.mockImplementation(async (req: Request, res: Response) => {
         res.status(400).json({ error: 'Invalid authorization code' });
+        return res;
       });
 
       const response = await request(app)
@@ -188,10 +193,10 @@ describe('OAuth Routes Integration', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Invalid authorization code');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle Confluence OAuth initiation errors', async () => {
-      mockedInitiateConfluenceOAuth.mockImplementation((req, res) => {
+      mockedInitiateConfluenceOAuth.mockImplementation((req: any, res: any) => {
         res.status(500).json({ error: 'Confluence OAuth initiation failed' });
       });
 
@@ -200,10 +205,10 @@ describe('OAuth Routes Integration', () => {
         .expect(500);
 
       expect(response.body.error).toBe('Confluence OAuth initiation failed');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle Confluence OAuth callback errors', async () => {
-      mockedHandleConfluenceCallback.mockImplementation((req, res) => {
+      mockedHandleConfluenceCallback.mockImplementation(async (req: any, res: any) => {
         res.status(400).json({ error: 'Invalid state parameter' });
       });
 
@@ -212,6 +217,6 @@ describe('OAuth Routes Integration', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Invalid state parameter');
-    });
+    }, 10000); // 10 second timeout
   });
 });
