@@ -2,14 +2,15 @@
  * Tests for token management functionality
  */
 import * as tokenManager from '../../src/auth/tokens';
-import * as encryption from '../../src/utils/encryption';
-import { query } from '../../src/db/connection';
+import * as models from '../../src/db/models';
 import axios from 'axios';
 
 // Mock dependencies
-jest.mock('../../src/utils/encryption');
-jest.mock('../../src/db/connection');
+jest.mock('../../src/db/models');
 jest.mock('axios');
+
+const mockedModels = models as jest.Mocked<typeof models>;
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('Token Management', () => {
   // Mock data
@@ -19,29 +20,21 @@ describe('Token Management', () => {
   const refreshToken = 'test-refresh-token';
   const appUserId = 'test-app-user-id';
   const expiresIn = 3600;
-  
+
   // Reset mocks before each test
   beforeEach(() => {
     jest.resetAllMocks();
-    
+
     // Mock environment variables
     process.env.LINEAR_CLIENT_ID = 'test-client-id';
     process.env.LINEAR_CLIENT_SECRET = 'test-client-secret';
-    
-    // Mock encryption functions
-    (encryption.encrypt as jest.Mock).mockImplementation((text) => `encrypted-${text}`);
-    (encryption.decrypt as jest.Mock).mockImplementation((text) => text.replace('encrypted-', ''));
-    
-    // Mock database query
-    (query as jest.Mock).mockResolvedValue({ rows: [], rowCount: 0 });
   });
-  
+
   describe('storeTokens', () => {
-    it('should encrypt tokens and store them in the database', async () => {
-      // Mock query to return success
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 1 });
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 1 });
-      
+    it('should store tokens in the database', async () => {
+      // Mock storeLinearToken to succeed
+      mockedModels.storeLinearToken.mockResolvedValueOnce(undefined);
+
       await tokenManager.storeTokens(
         organizationId,
         organizationName,
@@ -50,38 +43,22 @@ describe('Token Management', () => {
         appUserId,
         expiresIn
       );
-      
-      // Verify encryption was called
-      expect(encryption.encrypt).toHaveBeenCalledWith(accessToken);
-      expect(encryption.encrypt).toHaveBeenCalledWith(refreshToken);
-      
-      // Verify database queries were executed
-      expect(query).toHaveBeenCalledTimes(2);
-      
-      // Verify organization insert/update
-      expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO organizations'),
-        [organizationId, organizationName]
-      );
-      
-      // Verify token insert/update with encrypted tokens
-      expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO tokens'),
-        [
-          organizationId,
-          `encrypted-${accessToken}`,
-          `encrypted-${refreshToken}`,
-          appUserId,
-          expect.any(Date)
-        ]
+
+      // Verify storeLinearToken was called with correct parameters
+      expect(mockedModels.storeLinearToken).toHaveBeenCalledWith(
+        organizationId,
+        accessToken,
+        refreshToken,
+        appUserId,
+        expect.any(Date)
       );
     });
-    
+
     it('should throw an error if database query fails', async () => {
-      // Mock query to throw an error
+      // Mock storeLinearToken to throw an error
       const dbError = new Error('Database error');
-      (query as jest.Mock).mockRejectedValueOnce(dbError);
-      
+      mockedModels.storeLinearToken.mockRejectedValueOnce(dbError);
+
       await expect(
         tokenManager.storeTokens(
           organizationId,
@@ -94,73 +71,61 @@ describe('Token Management', () => {
       ).rejects.toThrow(dbError);
     });
   });
-  
+
   describe('getAccessToken', () => {
     it('should return null if no tokens are found', async () => {
-      // Mock query to return empty result
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
-      
+      // Mock getAccessToken from models to return null
+      mockedModels.getAccessToken.mockResolvedValueOnce(null);
+
       const result = await tokenManager.getAccessToken(organizationId);
-      
+
       expect(result).toBeNull();
-      expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT'),
-        [organizationId]
-      );
+      expect(mockedModels.getAccessToken).toHaveBeenCalledWith(organizationId);
     });
-    
-    it('should decrypt and return the access token if valid', async () => {
-      // Mock query to return a valid token
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
-      
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{
-          access_token: `encrypted-${accessToken}`,
-          refresh_token: `encrypted-${refreshToken}`,
-          app_user_id: appUserId,
-          expires_at: expiresAt
-        }],
-        rowCount: 1
-      });
-      
+
+    it('should return the access token if valid', async () => {
+      // Mock getAccessToken from models to return a valid token
+      mockedModels.getAccessToken.mockResolvedValueOnce(accessToken);
+
       const result = await tokenManager.getAccessToken(organizationId);
-      
+
       expect(result).toBe(accessToken);
-      expect(encryption.decrypt).toHaveBeenCalledWith(`encrypted-${accessToken}`);
+      expect(mockedModels.getAccessToken).toHaveBeenCalledWith(organizationId);
     });
-    
+
     it('should attempt to refresh the token if expired', async () => {
-      // Mock query to return an expired token
-      const expiredDate = new Date();
-      expiredDate.setHours(expiredDate.getHours() - 1); // Token expired 1 hour ago
-      
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{
-          access_token: `encrypted-${accessToken}`,
-          refresh_token: `encrypted-${refreshToken}`,
-          app_user_id: appUserId,
-          expires_at: expiredDate
-        }],
-        rowCount: 1
-      });
-      
-      // Mock refreshAccessToken
+      // Mock getAccessToken to return null first (expired), then refreshToken to return new token
       const newAccessToken = 'new-access-token';
-      const newExpiresIn = 7200;
-      
+      mockedModels.getAccessToken.mockResolvedValueOnce(null);
+
+      // Mock getLinearToken for refresh process
+      const tokenData = {
+        id: 1,
+        organization_id: organizationId,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        app_user_id: appUserId,
+        expires_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      mockedModels.getLinearToken.mockResolvedValueOnce(tokenData);
+
       // Mock axios for token refresh
-      (axios.post as jest.Mock).mockResolvedValueOnce({
+      mockedAxios.post.mockResolvedValueOnce({
         data: {
           access_token: newAccessToken,
-          expires_in: newExpiresIn
+          expires_in: 7200
         }
       });
-      
+
+      // Mock storeLinearToken for storing refreshed token
+      mockedModels.storeLinearToken.mockResolvedValueOnce(undefined);
+
       const result = await tokenManager.getAccessToken(organizationId);
-      
+
       expect(result).toBe(newAccessToken);
-      expect(axios.post).toHaveBeenCalledWith(
+      expect(mockedAxios.post).toHaveBeenCalledWith(
         'https://api.linear.app/oauth/token',
         expect.objectContaining({
           grant_type: 'refresh_token',
@@ -168,68 +133,62 @@ describe('Token Management', () => {
         })
       );
     });
-    
+
     it('should return null if token refresh fails', async () => {
-      // Mock query to return an expired token
-      const expiredDate = new Date();
-      expiredDate.setHours(expiredDate.getHours() - 1); // Token expired 1 hour ago
-      
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{
-          access_token: `encrypted-${accessToken}`,
-          refresh_token: `encrypted-${refreshToken}`,
-          app_user_id: appUserId,
-          expires_at: expiredDate
-        }],
-        rowCount: 1
-      });
-      
+      // Mock getAccessToken to return null (no valid token)
+      mockedModels.getAccessToken.mockResolvedValueOnce(null);
+
+      // Mock getLinearToken for refresh process
+      const tokenData = {
+        id: 1,
+        organization_id: organizationId,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        app_user_id: appUserId,
+        expires_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      mockedModels.getLinearToken.mockResolvedValueOnce(tokenData);
+
       // Mock axios to throw an error during token refresh
-      (axios.post as jest.Mock).mockRejectedValueOnce(new Error('Refresh failed'));
-      
+      mockedAxios.post.mockRejectedValueOnce(new Error('Refresh failed'));
+
       const result = await tokenManager.getAccessToken(organizationId);
-      
+
       expect(result).toBeNull();
     });
   });
-  
+
   describe('revokeTokens', () => {
     it('should delete tokens from the database', async () => {
-      // Mock getAccessToken to return a valid token
-      jest.spyOn(tokenManager, 'getAccessToken').mockResolvedValueOnce(accessToken);
-      
-      // Mock query for delete operation
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 1 });
-      
+      // Mock deleteLinearToken to return true (successful deletion)
+      mockedModels.deleteLinearToken.mockResolvedValueOnce(true);
+
       const result = await tokenManager.revokeTokens(organizationId);
-      
+
       expect(result).toBe(true);
-      expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM tokens'),
-        [organizationId]
-      );
+      expect(mockedModels.deleteLinearToken).toHaveBeenCalledWith(organizationId);
     });
-    
+
     it('should return false if no tokens are found', async () => {
-      // Mock getAccessToken to return null
-      jest.spyOn(tokenManager, 'getAccessToken').mockResolvedValueOnce(null);
-      
+      // Mock deleteLinearToken to return false (no tokens found)
+      mockedModels.deleteLinearToken.mockResolvedValueOnce(false);
+
       const result = await tokenManager.revokeTokens(organizationId);
-      
+
       expect(result).toBe(false);
-      expect(query).not.toHaveBeenCalled();
+      expect(mockedModels.deleteLinearToken).toHaveBeenCalledWith(organizationId);
     });
-    
-    it('should return false if delete operation affects no rows', async () => {
-      // Mock getAccessToken to return a valid token
-      jest.spyOn(tokenManager, 'getAccessToken').mockResolvedValueOnce(accessToken);
-      
-      // Mock query for delete operation with no affected rows
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
-      
+
+    it('should return false if delete operation fails', async () => {
+      // Mock deleteLinearToken to throw an error
+      mockedModels.deleteLinearToken.mockRejectedValueOnce(new Error('Delete failed'));
+
       const result = await tokenManager.revokeTokens(organizationId);
-      
+
       expect(result).toBe(false);
+      expect(mockedModels.deleteLinearToken).toHaveBeenCalledWith(organizationId);
     });
   });
 });

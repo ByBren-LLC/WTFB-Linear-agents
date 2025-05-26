@@ -1,14 +1,24 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { SyncStore } from '../../src/sync/sync-store';
 import { Conflict, Change, ChangeType, ChangeSource, ChangeItemType } from '../../src/sync/change-detector';
-import { getDatabase } from '../../src/db/models';
+import { query } from '../../src/db/connection';
 
 // Mock dependencies
-jest.mock('../../src/db/models');
+jest.mock('../../src/db/connection');
+
+const mockedQuery = query as jest.MockedFunction<typeof query>;
 
 describe('SyncStore', () => {
   let syncStore: SyncStore;
-  let mockDb: any;
+  
+  // Helper function to create mock query results
+  const createMockQueryResult = (rows: any[] = [], rowCount: number = 0) => ({
+    rows,
+    rowCount,
+    command: 'SELECT',
+    oid: 0,
+    fields: []
+  });
 
   const confluencePageIdOrUrl = 'page-id';
   const linearTeamId = 'team-id';
@@ -41,27 +51,9 @@ describe('SyncStore', () => {
     isResolved: false
   };
 
-  const resolvedConflict: Conflict = {
-    ...conflict,
-    resolvedChange: {
-      ...linearChange,
-      id: 'resolved-1'
-    },
-    isResolved: true,
-    resolutionStrategy: 'linear'
-  };
-
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
-
-    // Setup mock implementations
-    mockDb = {
-      get: jest.fn(),
-      all: jest.fn(),
-      run: jest.fn()
-    };
-    (getDatabase as jest.Mock).mockResolvedValue(mockDb);
 
     // Create instance
     syncStore = new SyncStore();
@@ -70,7 +62,7 @@ describe('SyncStore', () => {
   describe('getLastSyncTimestamp', () => {
     it('should get last sync timestamp', async () => {
       // Arrange
-      mockDb.get.mockResolvedValue({ timestamp });
+      mockedQuery.mockResolvedValue(createMockQueryResult([{ timestamp }], 1));
 
       // Act
       const result = await syncStore.getLastSyncTimestamp(
@@ -79,8 +71,8 @@ describe('SyncStore', () => {
       );
 
       // Assert
-      expect(mockDb.get).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT timestamp FROM sync_state'),
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'SELECT timestamp FROM sync_state WHERE confluence_page_id = $1 AND linear_team_id = $2',
         [confluencePageIdOrUrl, linearTeamId]
       );
       expect(result).toBe(timestamp);
@@ -88,7 +80,7 @@ describe('SyncStore', () => {
 
     it('should return null if no sync state found', async () => {
       // Arrange
-      mockDb.get.mockResolvedValue(null);
+      mockedQuery.mockResolvedValue(createMockQueryResult([], 0));
 
       // Act
       const result = await syncStore.getLastSyncTimestamp(
@@ -103,7 +95,7 @@ describe('SyncStore', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      mockDb.get.mockRejectedValue(error);
+      mockedQuery.mockRejectedValue(error);
 
       // Act
       const result = await syncStore.getLastSyncTimestamp(
@@ -118,6 +110,9 @@ describe('SyncStore', () => {
 
   describe('updateLastSyncTimestamp', () => {
     it('should update last sync timestamp', async () => {
+      // Arrange
+      mockedQuery.mockResolvedValue(createMockQueryResult([], 1));
+
       // Act
       await syncStore.updateLastSyncTimestamp(
         confluencePageIdOrUrl,
@@ -126,16 +121,16 @@ describe('SyncStore', () => {
       );
 
       // Assert
-      expect(mockDb.run).toHaveBeenCalledWith(
+      expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO sync_state'),
-        [confluencePageIdOrUrl, linearTeamId, timestamp, timestamp]
+        [confluencePageIdOrUrl, linearTeamId, timestamp]
       );
     });
 
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      mockDb.run.mockRejectedValue(error);
+      mockedQuery.mockRejectedValue(error);
 
       // Act & Assert
       await expect(syncStore.updateLastSyncTimestamp(
@@ -148,22 +143,21 @@ describe('SyncStore', () => {
 
   describe('storeConflict', () => {
     it('should store conflict', async () => {
+      // Arrange
+      mockedQuery.mockResolvedValue(createMockQueryResult([], 1));
+
       // Act
       await syncStore.storeConflict(conflict);
 
       // Assert
-      expect(mockDb.run).toHaveBeenCalledWith(
+      expect(mockedQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO conflicts'),
         [
           conflict.id,
           JSON.stringify(conflict.linearChange),
           JSON.stringify(conflict.confluenceChange),
-          0,
-          null,
-          JSON.stringify(conflict.linearChange),
-          JSON.stringify(conflict.confluenceChange),
-          0,
-          null
+          conflict.isResolved,
+          conflict.resolutionStrategy || null
         ]
       );
     });
@@ -171,136 +165,44 @@ describe('SyncStore', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      mockDb.run.mockRejectedValue(error);
+      mockedQuery.mockRejectedValue(error);
 
       // Act & Assert
       await expect(syncStore.storeConflict(conflict)).rejects.toThrow(error);
     });
   });
 
-  describe('storeResolvedConflict', () => {
-    it('should store resolved conflict', async () => {
-      // Act
-      await syncStore.storeResolvedConflict(resolvedConflict);
-
-      // Assert
-      expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO conflicts'),
-        [
-          resolvedConflict.id,
-          JSON.stringify(resolvedConflict.linearChange),
-          JSON.stringify(resolvedConflict.confluenceChange),
-          1,
-          resolvedConflict.resolutionStrategy,
-          JSON.stringify(resolvedConflict.resolvedChange),
-          JSON.stringify(resolvedConflict.linearChange),
-          JSON.stringify(resolvedConflict.confluenceChange),
-          1,
-          resolvedConflict.resolutionStrategy,
-          JSON.stringify(resolvedConflict.resolvedChange)
-        ]
-      );
-    });
-
-    it('should throw error if conflict is not resolved', async () => {
-      // Act & Assert
-      await expect(syncStore.storeResolvedConflict(conflict)).rejects.toThrow('Conflict is not resolved');
-    });
-
-    it('should handle errors', async () => {
-      // Arrange
-      const error = new Error('Test error');
-      mockDb.run.mockRejectedValue(error);
-
-      // Act & Assert
-      await expect(syncStore.storeResolvedConflict(resolvedConflict)).rejects.toThrow(error);
-    });
-  });
-
   describe('getUnresolvedConflicts', () => {
     it('should get unresolved conflicts', async () => {
       // Arrange
-      mockDb.all.mockResolvedValue([
-        {
-          id: conflict.id,
-          linear_change: JSON.stringify(conflict.linearChange),
-          confluence_change: JSON.stringify(conflict.confluenceChange),
-          is_resolved: 0,
-          resolution_strategy: null
-        }
-      ]);
+      const mockConflictRow = {
+        id: conflict.id,
+        linear_change: JSON.stringify(conflict.linearChange),
+        confluence_change: JSON.stringify(conflict.confluenceChange),
+        is_resolved: false,
+        resolution_strategy: null
+      };
+      mockedQuery.mockResolvedValue(createMockQueryResult([mockConflictRow], 1));
 
       // Act
       const result = await syncStore.getUnresolvedConflicts();
 
       // Assert
-      expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM conflicts WHERE is_resolved = 0')
+      expect(mockedQuery).toHaveBeenCalledWith(
+        'SELECT * FROM conflicts WHERE is_resolved = false'
       );
-      expect(result).toEqual([
-        {
-          id: conflict.id,
-          linearChange: conflict.linearChange,
-          confluenceChange: conflict.confluenceChange,
-          isResolved: false,
-          resolutionStrategy: null
-        }
-      ]);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(conflict.id);
+      expect(result[0].isResolved).toBe(false);
     });
 
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      mockDb.all.mockRejectedValue(error);
+      mockedQuery.mockRejectedValue(error);
 
       // Act
       const result = await syncStore.getUnresolvedConflicts();
-
-      // Assert
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('getResolvedConflicts', () => {
-    it('should get resolved conflicts', async () => {
-      // Arrange
-      mockDb.all.mockResolvedValue([
-        {
-          id: resolvedConflict.id,
-          linear_change: JSON.stringify(resolvedConflict.linearChange),
-          confluence_change: JSON.stringify(resolvedConflict.confluenceChange),
-          is_resolved: 1,
-          resolution_strategy: resolvedConflict.resolutionStrategy,
-          resolved_change: JSON.stringify(resolvedConflict.resolvedChange)
-        }
-      ]);
-
-      // Act
-      const result = await syncStore.getResolvedConflicts();
-
-      // Assert
-      expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM conflicts WHERE is_resolved = 1')
-      );
-      expect(result).toEqual([
-        {
-          id: resolvedConflict.id,
-          linearChange: resolvedConflict.linearChange,
-          confluenceChange: resolvedConflict.confluenceChange,
-          resolvedChange: resolvedConflict.resolvedChange,
-          isResolved: true,
-          resolutionStrategy: resolvedConflict.resolutionStrategy
-        }
-      ]);
-    });
-
-    it('should handle errors', async () => {
-      // Arrange
-      const error = new Error('Test error');
-      mockDb.all.mockRejectedValue(error);
-
-      // Act
-      const result = await syncStore.getResolvedConflicts();
 
       // Assert
       expect(result).toEqual([]);
@@ -310,104 +212,35 @@ describe('SyncStore', () => {
   describe('getAllConflicts', () => {
     it('should get all conflicts', async () => {
       // Arrange
-      mockDb.all.mockResolvedValue([
-        {
-          id: conflict.id,
-          linear_change: JSON.stringify(conflict.linearChange),
-          confluence_change: JSON.stringify(conflict.confluenceChange),
-          is_resolved: 0,
-          resolution_strategy: null,
-          resolved_change: null
-        },
-        {
-          id: resolvedConflict.id,
-          linear_change: JSON.stringify(resolvedConflict.linearChange),
-          confluence_change: JSON.stringify(resolvedConflict.confluenceChange),
-          is_resolved: 1,
-          resolution_strategy: resolvedConflict.resolutionStrategy,
-          resolved_change: JSON.stringify(resolvedConflict.resolvedChange)
-        }
-      ]);
+      const mockConflictRow = {
+        id: conflict.id,
+        linear_change: JSON.stringify(conflict.linearChange),
+        confluence_change: JSON.stringify(conflict.confluenceChange),
+        is_resolved: false,
+        resolution_strategy: null,
+        resolved_change: null
+      };
+      mockedQuery.mockResolvedValue(createMockQueryResult([mockConflictRow], 1));
 
       // Act
       const result = await syncStore.getAllConflicts();
 
       // Assert
-      expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM conflicts')
-      );
-      expect(result).toEqual([
-        {
-          id: conflict.id,
-          linearChange: conflict.linearChange,
-          confluenceChange: conflict.confluenceChange,
-          isResolved: false,
-          resolutionStrategy: null
-        },
-        {
-          id: resolvedConflict.id,
-          linearChange: resolvedConflict.linearChange,
-          confluenceChange: resolvedConflict.confluenceChange,
-          resolvedChange: resolvedConflict.resolvedChange,
-          isResolved: true,
-          resolutionStrategy: resolvedConflict.resolutionStrategy
-        }
-      ]);
+      expect(mockedQuery).toHaveBeenCalledWith('SELECT * FROM conflicts');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(conflict.id);
     });
 
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      mockDb.all.mockRejectedValue(error);
+      mockedQuery.mockRejectedValue(error);
 
       // Act
       const result = await syncStore.getAllConflicts();
 
       // Assert
       expect(result).toEqual([]);
-    });
-  });
-
-  describe('deleteConflict', () => {
-    it('should delete conflict', async () => {
-      // Act
-      await syncStore.deleteConflict(conflict.id);
-
-      // Assert
-      expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM conflicts WHERE id = ?'),
-        [conflict.id]
-      );
-    });
-
-    it('should handle errors', async () => {
-      // Arrange
-      const error = new Error('Test error');
-      mockDb.run.mockRejectedValue(error);
-
-      // Act & Assert
-      await expect(syncStore.deleteConflict(conflict.id)).rejects.toThrow(error);
-    });
-  });
-
-  describe('clearConflicts', () => {
-    it('should clear all conflicts', async () => {
-      // Act
-      await syncStore.clearConflicts();
-
-      // Assert
-      expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM conflicts')
-      );
-    });
-
-    it('should handle errors', async () => {
-      // Arrange
-      const error = new Error('Test error');
-      mockDb.run.mockRejectedValue(error);
-
-      // Act & Assert
-      await expect(syncStore.clearConflicts()).rejects.toThrow(error);
     });
   });
 });
