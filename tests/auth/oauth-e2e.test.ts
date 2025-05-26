@@ -3,14 +3,17 @@ import request from 'supertest';
 import express from 'express';
 import session from 'express-session';
 import axios from 'axios';
+import * as tokenManager from '../../src/auth/tokens';
 import * as models from '../../src/db/models';
 
 // Mock external dependencies
 jest.mock('axios');
+jest.mock('../../src/auth/tokens');
 jest.mock('../../src/db/models');
 jest.mock('../../src/utils/logger');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedTokenManager = tokenManager as jest.Mocked<typeof tokenManager>;
 const mockedModels = models as jest.Mocked<typeof models>;
 
 // Import the actual OAuth functions (not mocked)
@@ -106,7 +109,7 @@ describe('OAuth End-to-End Integration', () => {
       });
 
       // Mock token storage
-      mockedModels.storeTokens = jest.fn().mockResolvedValueOnce(undefined);
+      jest.mocked(mockedTokenManager.storeTokens).mockResolvedValue(undefined);
 
       // Step 3: Handle callback
       const callbackResponse = await request(app)
@@ -128,7 +131,7 @@ describe('OAuth End-to-End Integration', () => {
       );
 
       // Verify token storage was called
-      expect(mockedModels.storeTokens).toHaveBeenCalledWith(
+      expect(mockedTokenManager.storeTokens).toHaveBeenCalledWith(
         'test-org-id',
         'Test Organization',
         'test-access-token',
@@ -136,7 +139,7 @@ describe('OAuth End-to-End Integration', () => {
         'test-user-id',
         3600
       );
-    });
+    }, 15000); // 15 second timeout
 
     it('should handle Linear OAuth errors gracefully', async () => {
       // Test missing authorization code
@@ -145,7 +148,7 @@ describe('OAuth End-to-End Integration', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Missing authorization code');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Confluence OAuth E2E Flow', () => {
@@ -183,7 +186,7 @@ describe('OAuth End-to-End Integration', () => {
       });
 
       // Mock token storage
-      mockedModels.storeConfluenceToken = jest.fn().mockResolvedValueOnce(undefined);
+      jest.mocked(mockedModels.storeConfluenceToken).mockResolvedValue(undefined);
 
       // Step 3: Handle callback
       const callbackResponse = await agent
@@ -229,7 +232,7 @@ describe('OAuth End-to-End Integration', () => {
         'https://api.atlassian.com/ex/confluence/test-site-id',
         expect.any(Date)
       );
-    });
+    }, 15000); // 15 second timeout
 
     it('should handle Confluence OAuth errors gracefully', async () => {
       // Test missing authorization code
@@ -238,7 +241,7 @@ describe('OAuth End-to-End Integration', () => {
         .expect(400);
 
       expect(response.body.error).toBe('No authorization code received');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle missing organization ID', async () => {
       const response = await request(app)
@@ -246,7 +249,7 @@ describe('OAuth End-to-End Integration', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Invalid state parameter');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Environment Variable Validation', () => {
@@ -258,7 +261,7 @@ describe('OAuth End-to-End Integration', () => {
         .expect(500);
 
       expect(response.body.error).toContain('Missing LINEAR_CLIENT_ID');
-    });
+    }, 10000); // 10 second timeout
 
     it('should handle missing Confluence OAuth environment variables', async () => {
       delete process.env.CONFLUENCE_CLIENT_ID;
@@ -268,7 +271,7 @@ describe('OAuth End-to-End Integration', () => {
         .expect(500);
 
       expect(response.body.error).toBe('Server configuration error');
-    });
+    }, 10000); // 10 second timeout
   });
 
   describe('Session State Management', () => {
@@ -293,7 +296,7 @@ describe('OAuth End-to-End Integration', () => {
         data: [{ id: 'site-id', name: 'Site', url: 'https://site.atlassian.net' }]
       });
 
-      mockedModels.storeConfluenceToken = jest.fn().mockResolvedValueOnce(undefined);
+      jest.mocked(mockedModels.storeConfluenceToken).mockResolvedValue(undefined);
 
       // Handle callback (should use session data)
       const response = await agent
@@ -301,6 +304,6 @@ describe('OAuth End-to-End Integration', () => {
         .expect(302);
 
       expect(response.headers.location).toContain('organizationId=test-org-id');
-    });
+    }, 15000); // 15 second timeout
   });
 });

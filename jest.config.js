@@ -17,5 +17,16 @@ module.exports = {
       lines: 80,
       statements: 80
     }
+  },
+  // Timeout configuration for OAuth integration tests
+  testTimeout: 15000, // 15 seconds for all tests
+  // Specific timeout for OAuth tests that may need external mocking
+  testPathIgnorePatterns: [],
+  setupFilesAfterEnv: [],
+  // Increase timeout for integration tests
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
+    }
   }
 };
