@@ -108,21 +108,166 @@ confluence-publisher --file=sync-report.md --space=PLAN --parent=123456
 
 ## Docker Deployment
 
-### Production Mode
+The Linear Planning Agent is designed to run in Docker for consistent deployment across environments.
+
+### Quick Start with Docker
 
 ```bash
-# Build and start the containers
+# 1. Build and start all services (PostgreSQL + App)
 docker-compose up --build -d
 
-# Run CLI commands inside the container
+# 2. Verify services are running
+docker-compose ps
+
+# 3. Test CLI access
 docker-compose exec app npm run cli -- --help
 ```
 
-### Development Mode
+### Docker CLI Access Methods
+
+#### Method 1: Execute Commands in Running Container (Recommended)
+```bash
+# Start services in background
+docker-compose up -d
+
+# Run CLI commands
+docker-compose exec app npm run cli -- --help
+docker-compose exec app npm run cli parse --confluence-url "https://your-confluence-url"
+docker-compose exec app npm run cli create --confluence-url "https://url" --org-id wordstofilmby --team-id LIN
+```
+
+#### Method 2: Interactive Shell Access
+```bash
+# Get shell access to the container
+docker-compose exec app bash
+
+# Inside container, run commands directly
+npm run cli --help
+npm run cli parse --confluence-url "https://cheddarfox.atlassian.net/wiki/spaces/..."
+npm run cli create --confluence-url "https://url" --org-id wordstofilmby --team-id LIN
+```
+
+#### Method 3: One-off Commands
+```bash
+# Run single commands without persistent container
+docker-compose run --rm app npm run cli -- --help
+docker-compose run --rm app npm run cli parse --confluence-url "https://your-url"
+```
+
+### Docker CLI Examples
+
+#### Parse a Confluence Page
+```bash
+docker-compose exec app npm run cli parse \
+  --confluence-url "https://cheddarfox.atlassian.net/wiki/spaces/YOUR_SPACE/pages/123456/Your+Page" \
+  --output json
+```
+
+#### Create Linear Issues from Confluence
+```bash
+docker-compose exec app npm run cli create \
+  --confluence-url "https://cheddarfox.atlassian.net/wiki/spaces/YOUR_SPACE/pages/123456/Your+Page" \
+  --org-id wordstofilmby \
+  --team-id LIN \
+  --dry-run  # Optional: test without creating issues
+```
+
+#### Start Synchronization
+```bash
+docker-compose exec app npm run cli sync start \
+  --confluence-url "https://your-confluence-url" \
+  --org-id wordstofilmby \
+  --team-id LIN \
+  --interval 300000 \
+  --auto-resolve false
+```
+
+#### Check Sync Status
+```bash
+docker-compose exec app npm run cli sync status \
+  --confluence-url "https://your-confluence-url" \
+  --org-id wordstofilmby \
+  --team-id LIN
+```
+
+#### Manually Trigger Sync
+```bash
+docker-compose exec app npm run cli sync trigger \
+  --confluence-url "https://your-confluence-url" \
+  --org-id wordstofilmby \
+  --team-id LIN
+```
+
+#### Stop Synchronization
+```bash
+docker-compose exec app npm run cli sync stop \
+  --confluence-url "https://your-confluence-url" \
+  --org-id wordstofilmby \
+  --team-id LIN
+```
+
+### Docker Environment Configuration
+
+The Docker setup includes:
+- **PostgreSQL Database**: For persistent data storage
+- **SQLite Database**: For synchronization state
+- **Express Server**: For OAuth callbacks and webhooks
+- **CLI Interface**: For all planning operations
+
+#### Environment Variables for Docker
+```bash
+# Database (Docker internal networking)
+DATABASE_URL=postgresql://postgres:postgres@db:5432/linear_agent
+
+# Linear Configuration
+LINEAR_CLIENT_ID=your_client_id
+LINEAR_CLIENT_SECRET=your_client_secret
+LINEAR_REDIRECT_URI=http://localhost:3000/auth/callback
+LINEAR_ORGANIZATION_ID=wordstofilmby
+LINEAR_TEAM_ID=LIN
+
+# Confluence Configuration
+CONFLUENCE_USERNAME=your_email@domain.com
+CONFLUENCE_API_TOKEN=your_api_token
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+
+# Webhook Configuration
+WEBHOOK_SECRET=your_webhook_secret
+
+# Slack Integration (Optional)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+### Docker Logs and Debugging
 
 ```bash
-# Build and start the containers in development mode
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -d
+# View all logs
+docker-compose logs -f
+
+# View app logs only
+docker-compose logs -f app
+
+# View database logs
+docker-compose logs -f db
+
+# Debug inside container
+docker-compose exec app bash
+```
+
+### Docker Management
+
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (⚠️ deletes database data)
+docker-compose down -v
+
+# Rebuild and restart
+docker-compose up --build -d
+
+# Update just the app (after code changes)
+docker-compose up --build app -d
 ```
 
 ## Project Structure
@@ -137,6 +282,88 @@ docker-compose -f docker-compose.yml -f docker-compose.override.yml up --build -
   - `/src/safe`: SAFe methodology implementation
   - `/src/sync`: Synchronization between Linear and Confluence
 
+## Webhook Integration
+
+The Linear Planning Agent supports comprehensive webhook integration for real-time synchronization between Linear and Slack.
+
+### Webhook Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   LINEAR APP    │───▶│  YOUR SERVER    │───▶│   SLACK APP     │
+│  (OAuth App)    │    │ (Planning Agent)│    │ (Incoming Hook) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                       │                       │
+        │                       │                       │
+    Webhook                 Processes &              Incoming
+    Events                  Forwards to              Webhook
+                           Slack                     URL
+```
+
+### Required Webhooks
+
+#### 1. Linear Webhooks (Incoming to Your Server)
+- **Purpose**: Receive events from Linear (issue updates, comments, etc.)
+- **URL**: `https://your-domain.com/webhook` (or `http://localhost:3000/webhook` for local)
+- **Events**: Issues, Comments, Projects, Cycles, Labels, Issue attachments, Users, Permission changes
+- **Security**: Verified using `WEBHOOK_SECRET` from Linear app settings
+
+#### 2. Slack Incoming Webhooks (Outgoing from Your Server)
+- **Purpose**: Send notifications TO Slack channels
+- **URL**: Generated when creating Slack app (`https://hooks.slack.com/services/...`)
+- **Format**: JSON payloads with formatted messages
+- **Usage**: Agent notifications, error alerts, planning completion notices
+
+### Webhook Setup Guide
+
+#### Step 1: Linear Webhook Configuration
+1. In your Linear OAuth app settings
+2. Add webhook URL: `https://your-domain.com/webhook`
+3. Select events: Issues, Comments, Projects, Cycles, Labels
+4. Copy the webhook signing secret to `WEBHOOK_SECRET` in `.env`
+
+#### Step 2: Slack App Creation
+1. Go to https://api.slack.com/apps
+2. Create new app: "WTFB Linear Planning Agent"
+3. Enable "Incoming Webhooks"
+4. Add webhook to workspace and select channel
+5. Copy webhook URL to `SLACK_WEBHOOK_URL` in `.env`
+
+#### Step 3: Environment Configuration
+```bash
+# Linear Webhook (for receiving events)
+WEBHOOK_SECRET=lin_wh_your_webhook_secret_here
+
+# Slack Webhook (for sending notifications)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../...
+```
+
+### Webhook Event Flow
+
+1. **Linear Event Occurs** (issue created, comment added, etc.)
+2. **Linear Sends Webhook** to your server endpoint
+3. **Server Verifies Signature** using webhook secret
+4. **Server Processes Event** based on event type and action
+5. **Server Sends Notification** to Slack (if configured)
+6. **Slack Displays Message** in configured channel
+
+### Supported Linear Events
+
+- **Issues**: Created, updated, deleted, assigned, status changed
+- **Comments**: Created, updated, deleted, mentions
+- **Projects**: Created, updated, deleted, status changed
+- **Cycles**: Created, updated, deleted, started, completed
+- **Labels**: Created, updated, deleted, applied, removed
+- **Users**: Permission changes, team assignments
+
+### Slack Notification Types
+
+- **Planning Completion**: When planning documents are processed
+- **Issue Creation**: When Linear issues are created from Confluence
+- **Sync Status**: Synchronization success/failure notifications
+- **Error Alerts**: When errors occur in the planning agent
+- **Agent Mentions**: When the agent is mentioned in Linear issues/comments
+
 ## Documentation
 
 For detailed setup and usage instructions, see:
@@ -144,6 +371,7 @@ For detailed setup and usage instructions, see:
 - [Linear Setup Guide](docs/linear-setup-guide.md)
 - [Confluence Setup Guide](docs/confluence-setup-guide.md)
 - [Synchronization Documentation](docs/synchronization.md)
+- [OAuth Setup Guide](docs/oauth-setup.md)
 
 ## Resources
 
