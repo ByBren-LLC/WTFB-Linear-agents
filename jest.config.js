@@ -25,10 +25,10 @@ module.exports = {
     enableGlobally: false // We'll enable per-test for better control
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  // TypeScript configuration
-  globals: {
-    'ts-jest': {
+  // TypeScript configuration - Updated for Jest 29+
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.json'
-    }
+    }]
   }
 };
