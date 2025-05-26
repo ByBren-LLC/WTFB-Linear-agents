@@ -17,5 +17,10 @@ module.exports = {
       lines: 80,
       statements: 80
     }
-  }
+  },
+  // Timer mocking configuration
+  fakeTimers: {
+    enableGlobally: false // We'll enable per-test for better control
+  },
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
 };
