@@ -3,7 +3,8 @@
  *
  * This module provides utilities for updating relationships between issues in Linear.
  */
-import { LinearClient, Issue, LinearDocument } from '@linear/sdk';
+import { LinearClient, Issue } from '@linear/sdk';
+import { IssueRelationType } from '@linear/sdk/dist/_generated_documents';
 import * as logger from '../utils/logger';
 
 /**
@@ -116,7 +117,7 @@ export class RelationshipUpdater {
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: LinearDocument.IssueRelationType.Blocks
+                type: IssueRelationType.Blocks
               });
 
               logger.info('Added blocking relationship', {
@@ -157,7 +158,7 @@ export class RelationshipUpdater {
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: LinearDocument.IssueRelationType.Related
+                type: IssueRelationType.Related
               });
 
               logger.info('Added related relationship', {
