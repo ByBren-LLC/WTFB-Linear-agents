@@ -364,8 +364,8 @@ export class SAFeLinearImplementation {
         filter: {
           team: { id: { eq: teamId } },
           name: { startsWith: 'PI-' },
-          startsAt: { lte: now.toISOString() },
-          endsAt: { gte: now.toISOString() }
+          startsAt: { lte: now },
+          endsAt: { gte: now }
         }
       });
 

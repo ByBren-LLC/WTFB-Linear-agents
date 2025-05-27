@@ -198,8 +198,8 @@ export class PIManager {
         filter: {
           team: { id: { eq: teamId } },
           name: { startsWith: 'PI-' },
-          startsAt: { lte: now.toISOString() },
-          endsAt: { gte: now.toISOString() }
+          startsAt: { lte: now },
+          endsAt: { gte: now }
         }
       });
 
@@ -618,7 +618,7 @@ export class PIPlanningService {
       const response = await this.linearClient.createMilestone({
         name,
         description,
-        targetDate: endDate.toISOString(),
+        targetDate: endDate,
         sortOrder: 0
       });
 
