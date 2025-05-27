@@ -101,7 +101,9 @@ describe('Retry Logic', () => {
   });
 
   it.skip('should throw the error if the function fails after all retries', async () => {
-    // TODO: Fix LinearNetworkError constructor issue
+    // NOTE: This test was skipped due to incorrect test logic, not LinearNetworkError constructor issues
+    // The test uses a regular Error (non-retryable) but expects retry behavior
+    // Should be rewritten to use LinearNetworkError for proper retry testing
     const error = new Error('Network error');
     const fn = jest.fn().mockRejectedValue(error);
 
