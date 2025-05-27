@@ -616,25 +616,26 @@ export class PIPlanningService {
     description: string
   ) {
     try {
-      // In Linear, we'll represent a Program Increment as a milestone
-      const response = await this.linearClient.createMilestone({
+      // In Linear SDK v2.6.0, we'll represent a Program Increment as a cycle
+      const response = await this.linearClient.createCycle({
+        teamId,
         name,
         description,
-        targetDate: endDate,
-        sortOrder: 0
+        startsAt: startDate,
+        endsAt: endDate
       });
 
-      if (!response.success || !response.milestone) {
+      if (!response.success || !response.cycle) {
         throw new Error('Failed to create Program Increment');
       }
 
-      const milestone = await response.milestone;
+      const cycle = await response.cycle;
       logger.info('Created Program Increment', {
-        piId: milestone.id,
+        piId: cycle.id,
         name
       });
 
-      return milestone;
+      return cycle;
     } catch (error) {
       logger.error('Error creating Program Increment', { error, name });
       throw error;
@@ -654,7 +655,7 @@ export class PIPlanningService {
 
       for (const featureId of featureIds) {
         const response = await this.linearClient.updateIssue(featureId, {
-          milestoneId: piId
+          cycleId: piId
         });
 
         if (!response.success) {
@@ -679,7 +680,7 @@ export class PIPlanningService {
    */
   async getProgramIncrements() {
     try {
-      const response = await this.linearClient.milestones();
+      const response = await this.linearClient.cycles();
 
       return response.nodes;
     } catch (error) {
@@ -695,12 +696,12 @@ export class PIPlanningService {
   async getCurrentProgramIncrement() {
     try {
       const now = new Date();
-      const milestones = await this.linearClient.milestones();
+      const cycles = await this.linearClient.cycles();
 
-      // Find the milestone with the closest target date in the future
-      const currentPI = milestones.nodes
-        .filter(milestone => new Date(milestone.targetDate) >= now)
-        .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime())[0];
+      // Find the cycle with the closest end date in the future
+      const currentPI = cycles.nodes
+        .filter((cycle: any) => new Date(cycle.endsAt) >= now)
+        .sort((a: any, b: any) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
 
       return currentPI;
     } catch (error) {

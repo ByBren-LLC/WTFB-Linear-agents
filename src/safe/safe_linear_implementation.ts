@@ -442,7 +442,8 @@ export class SAFeLinearImplementation {
         throw new Error(`Failed to create ${labelName} label`);
       }
 
-      return response.issueLabel.id;
+      const issueLabel = await response.issueLabel;
+      return issueLabel.id;
     } catch (error) {
       logger.error(`Error getting ${labelName} label ID`, { error });
       throw error;
