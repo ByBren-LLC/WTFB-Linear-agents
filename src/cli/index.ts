@@ -104,10 +104,7 @@ program
       const document = await confluenceClient.parsePageByUrl(options.confluenceUrl);
 
       // Extract planning information
-      // TODO: Implement proper section extraction
-      const sections: any[] = []; // Placeholder for sections
-      const elements: any[] = document.elements || []; // Type conversion
-      const extractor = new PlanningExtractor(elements, sections);
+      const extractor = new PlanningExtractor(document.elements, document.sections);
       const planningDocument = extractor.getPlanningDocument();
 
       // Output the planning document

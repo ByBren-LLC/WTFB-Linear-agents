@@ -233,21 +233,7 @@
 <a name='L168'></a><a href='#L168'>168</a>
 <a name='L169'></a><a href='#L169'>169</a>
 <a name='L170'></a><a href='#L170'>170</a>
-<a name='L171'></a><a href='#L171'>171</a>
-<a name='L172'></a><a href='#L172'>172</a>
-<a name='L173'></a><a href='#L173'>173</a>
-<a name='L174'></a><a href='#L174'>174</a>
-<a name='L175'></a><a href='#L175'>175</a>
-<a name='L176'></a><a href='#L176'>176</a>
-<a name='L177'></a><a href='#L177'>177</a>
-<a name='L178'></a><a href='#L178'>178</a>
-<a name='L179'></a><a href='#L179'>179</a>
-<a name='L180'></a><a href='#L180'>180</a>
-<a name='L181'></a><a href='#L181'>181</a>
-<a name='L182'></a><a href='#L182'>182</a>
-<a name='L183'></a><a href='#L183'>183</a>
-<a name='L184'></a><a href='#L184'>184</a>
-<a name='L185'></a><a href='#L185'>185</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L171'></a><a href='#L171'>171</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -256,20 +242,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -440,43 +412,29 @@
 import { Epic, Feature, Story, Enabler } from './models';
 <span class="cstat-no" title="statement not covered" >import { isEpicSection, isFeatureSection, isStorySection, isEnablerSection, extractAcceptanceCriteria, extractStoryPoints, extractAttributes, determineEnablerType, extractTextFromElements } from './pattern-recognition';</span>
 <span class="cstat-no" title="statement not covered" >import { v4 as uuidv4 } from 'uuid';</span>
-&nbsp;
-// These interfaces will be imported from the Parse Confluence Documents task
-// For now, we'll define them here as placeholders
-interface ParsedElement {
-  type: string;
-  content: string | ParsedElement[];
-  attributes?: Record&lt;string, string&gt;;
-}
-&nbsp;
-interface DocumentSection {
-  title: string;
-  level: number;
-  content: ParsedElement[];
-  subsections: DocumentSection[];
-}
+import { ConfluenceSection } from '../confluence/parser';
 &nbsp;
 /**
  * Identifies planning structure in document sections.
  * @param sections Document sections
  * @returns Object containing sections categorized by planning item type
  */
-export const <span class="cstat-no" title="statement not covered" >identifyPlanningStructure = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): {</span>
-  epicSections: DocumentSection[];
-  featureSections: DocumentSection[];
-  storySections: DocumentSection[];
-  enablerSections: DocumentSection[];
+export const <span class="cstat-no" title="statement not covered" >identifyPlanningStructure = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): {</span>
+  epicSections: ConfluenceSection[];
+  featureSections: ConfluenceSection[];
+  storySections: ConfluenceSection[];
+  enablerSections: ConfluenceSection[];
 } =&gt; {
 <span class="cstat-no" title="statement not covered" >  logger.info('Identifying planning structure in document');</span>
-  
-  const epicSections: DocumentSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  const featureSections: DocumentSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  const storySections: DocumentSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  const enablerSections: DocumentSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  
+&nbsp;
+  const epicSections: ConfluenceSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
+  const featureSections: ConfluenceSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
+  const storySections: ConfluenceSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
+  const enablerSections: ConfluenceSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
   // Flatten sections to make it easier to analyze
   const flattenedSections = <span class="cstat-no" title="statement not covered" >flattenDocumentStructure(sections);</span>
-  
+&nbsp;
   // Categorize sections
 <span class="cstat-no" title="statement not covered" >  flattenedSections.forEach(<span class="fstat-no" title="function not covered" >section </span>=&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    if (isEpicSection(section)) {</span>
@@ -489,7 +447,7 @@ export const <span class="cstat-no" title="statement not covered" >identifyPlann
 <span class="cstat-no" title="statement not covered" >      enablerSections.push(section);</span>
     }
   });
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return {</span>
     epicSections,
     featureSections,
@@ -503,19 +461,19 @@ export const <span class="cstat-no" title="statement not covered" >identifyPlann
  * @param sections Document sections
  * @returns Flattened array of document sections
  */
-export const <span class="cstat-no" title="statement not covered" >flattenDocumentStructure = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): DocumentSection[] =&gt; {</span>
-  const flattened: DocumentSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  
-  const flatten = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(s</span>ection: DocumentSection) =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >flattenDocumentStructure = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): ConfluenceSection[] =&gt; {</span>
+  const flattened: ConfluenceSection[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+  const flatten = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(s</span>ection: ConfluenceSection) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    flattened.push(section);</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (section.subsections &amp;&amp; section.subsections.length &gt; 0) {</span>
 <span class="cstat-no" title="statement not covered" >      section.subsections.forEach(flatten);</span>
     }
   };
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  sections.forEach(flatten);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return flattened;</span>
 };
 &nbsp;
@@ -524,13 +482,13 @@ export const <span class="cstat-no" title="statement not covered" >flattenDocume
  * @param sections Document sections
  * @returns Array of epics
  */
-export const <span class="cstat-no" title="statement not covered" >extractEpicsFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): Epic[] =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractEpicsFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): Epic[] =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  logger.info(`Extracting epics from ${sections.length} sections`);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return sections.map(<span class="fstat-no" title="function not covered" >section </span>=&gt; {</span>
-    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
+    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
     const attributes = <span class="cstat-no" title="statement not covered" >extractAttributes(section);</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    return {</span>
       id: uuidv4(),
       type: 'epic',
@@ -547,13 +505,13 @@ export const <span class="cstat-no" title="statement not covered" >extractEpicsF
  * @param sections Document sections
  * @returns Array of features
  */
-export const <span class="cstat-no" title="statement not covered" >extractFeaturesFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): Feature[] =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractFeaturesFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): Feature[] =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  logger.info(`Extracting features from ${sections.length} sections`);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return sections.map(<span class="fstat-no" title="function not covered" >section </span>=&gt; {</span>
-    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
+    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
     const attributes = <span class="cstat-no" title="statement not covered" >extractAttributes(section);</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    return {</span>
       id: uuidv4(),
       type: 'feature',
@@ -571,15 +529,15 @@ export const <span class="cstat-no" title="statement not covered" >extractFeatur
  * @param sections Document sections
  * @returns Array of stories
  */
-export const <span class="cstat-no" title="statement not covered" >extractStoriesFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): Story[] =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractStoriesFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): Story[] =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  logger.info(`Extracting stories from ${sections.length} sections`);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return sections.map(<span class="fstat-no" title="function not covered" >section </span>=&gt; {</span>
-    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
+    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
     const acceptanceCriteria = <span class="cstat-no" title="statement not covered" >extractAcceptanceCriteria(section);</span>
     const storyPoints = <span class="cstat-no" title="statement not covered" >extractStoryPoints(section);</span>
     const attributes = <span class="cstat-no" title="statement not covered" >extractAttributes(section);</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    return {</span>
       id: uuidv4(),
       type: 'story',
@@ -597,14 +555,14 @@ export const <span class="cstat-no" title="statement not covered" >extractStorie
  * @param sections Document sections
  * @returns Array of enablers
  */
-export const <span class="cstat-no" title="statement not covered" >extractEnablersFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: DocumentSection[]): Enabler[] =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractEnablersFromSections = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ections: ConfluenceSection[]): Enabler[] =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  logger.info(`Extracting enablers from ${sections.length} sections`);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return sections.map(<span class="fstat-no" title="function not covered" >section </span>=&gt; {</span>
-    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
+    const description = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
     const enablerType = <span class="cstat-no" title="statement not covered" >determineEnablerType(section);</span>
     const attributes = <span class="cstat-no" title="statement not covered" >extractAttributes(section);</span>
-    
+&nbsp;
 <span class="cstat-no" title="statement not covered" >    return {</span>
       id: uuidv4(),
       type: 'enabler',
@@ -622,7 +580,7 @@ export const <span class="cstat-no" title="statement not covered" >extractEnable
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-26T22:29:29.271Z
+                at 2025-05-27T01:28:44.476Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

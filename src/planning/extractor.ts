@@ -7,36 +7,22 @@ import * as logger from '../utils/logger';
 import { PlanningDocument, Epic, Feature, Story, Enabler } from './models';
 import { identifyPlanningStructure, extractEpicsFromSections, extractFeaturesFromSections, extractStoriesFromSections, extractEnablersFromSections } from './structure-analyzer';
 import { buildEpicFeatureRelationships, buildFeatureStoryRelationships, buildFeatureEnablerRelationships } from './relationship-analyzer';
-
-// These interfaces will be imported from the Parse Confluence Documents task
-// For now, we'll define them here as placeholders
-interface ParsedElement {
-  type: string;
-  content: string | ParsedElement[];
-  attributes?: Record<string, string>;
-}
-
-interface DocumentSection {
-  title: string;
-  level: number;
-  content: ParsedElement[];
-  subsections: DocumentSection[];
-}
+import { ConfluenceElement, ConfluenceSection, ConfluenceElementType } from '../confluence/parser';
 
 /**
  * Extracts planning information from parsed Confluence documents.
  */
 export class PlanningExtractor {
-  private document: ParsedElement[];
-  private sections: DocumentSection[];
+  private document: ConfluenceElement[];
+  private sections: ConfluenceSection[];
   private planningDocument: PlanningDocument;
 
   /**
    * Creates a new PlanningExtractor.
-   * @param document The parsed Confluence document
+   * @param document The parsed Confluence document elements
    * @param sections The document sections
    */
-  constructor(document: ParsedElement[], sections: DocumentSection[]) {
+  constructor(document: ConfluenceElement[], sections: ConfluenceSection[]) {
     this.document = document;
     this.sections = sections;
     this.planningDocument = this.extractPlanningInformation();
@@ -146,11 +132,11 @@ export class PlanningExtractor {
   private extractDocumentTitle(): string {
     // Find the first heading element
     const headingElement = this.document.find(element =>
-      element.type === 'heading' &&
-      element.attributes?.level === '1'
+      element.type === ConfluenceElementType.HEADING &&
+      element.attributes?.level === 1
     );
 
-    if (headingElement && typeof headingElement.content === 'string') {
+    if (headingElement && headingElement.content) {
       return headingElement.content;
     }
 

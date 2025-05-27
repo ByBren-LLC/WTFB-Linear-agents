@@ -7,43 +7,29 @@ import * as logger from '../utils/logger';
 import { Epic, Feature, Story, Enabler } from './models';
 import { isEpicSection, isFeatureSection, isStorySection, isEnablerSection, extractAcceptanceCriteria, extractStoryPoints, extractAttributes, determineEnablerType, extractTextFromElements } from './pattern-recognition';
 import { v4 as uuidv4 } from 'uuid';
-
-// These interfaces will be imported from the Parse Confluence Documents task
-// For now, we'll define them here as placeholders
-interface ParsedElement {
-  type: string;
-  content: string | ParsedElement[];
-  attributes?: Record<string, string>;
-}
-
-interface DocumentSection {
-  title: string;
-  level: number;
-  content: ParsedElement[];
-  subsections: DocumentSection[];
-}
+import { ConfluenceSection } from '../confluence/parser';
 
 /**
  * Identifies planning structure in document sections.
  * @param sections Document sections
  * @returns Object containing sections categorized by planning item type
  */
-export const identifyPlanningStructure = (sections: DocumentSection[]): {
-  epicSections: DocumentSection[];
-  featureSections: DocumentSection[];
-  storySections: DocumentSection[];
-  enablerSections: DocumentSection[];
+export const identifyPlanningStructure = (sections: ConfluenceSection[]): {
+  epicSections: ConfluenceSection[];
+  featureSections: ConfluenceSection[];
+  storySections: ConfluenceSection[];
+  enablerSections: ConfluenceSection[];
 } => {
   logger.info('Identifying planning structure in document');
-  
-  const epicSections: DocumentSection[] = [];
-  const featureSections: DocumentSection[] = [];
-  const storySections: DocumentSection[] = [];
-  const enablerSections: DocumentSection[] = [];
-  
+
+  const epicSections: ConfluenceSection[] = [];
+  const featureSections: ConfluenceSection[] = [];
+  const storySections: ConfluenceSection[] = [];
+  const enablerSections: ConfluenceSection[] = [];
+
   // Flatten sections to make it easier to analyze
   const flattenedSections = flattenDocumentStructure(sections);
-  
+
   // Categorize sections
   flattenedSections.forEach(section => {
     if (isEpicSection(section)) {
@@ -56,7 +42,7 @@ export const identifyPlanningStructure = (sections: DocumentSection[]): {
       enablerSections.push(section);
     }
   });
-  
+
   return {
     epicSections,
     featureSections,
@@ -70,19 +56,19 @@ export const identifyPlanningStructure = (sections: DocumentSection[]): {
  * @param sections Document sections
  * @returns Flattened array of document sections
  */
-export const flattenDocumentStructure = (sections: DocumentSection[]): DocumentSection[] => {
-  const flattened: DocumentSection[] = [];
-  
-  const flatten = (section: DocumentSection) => {
+export const flattenDocumentStructure = (sections: ConfluenceSection[]): ConfluenceSection[] => {
+  const flattened: ConfluenceSection[] = [];
+
+  const flatten = (section: ConfluenceSection) => {
     flattened.push(section);
-    
+
     if (section.subsections && section.subsections.length > 0) {
       section.subsections.forEach(flatten);
     }
   };
-  
+
   sections.forEach(flatten);
-  
+
   return flattened;
 };
 
@@ -91,13 +77,13 @@ export const flattenDocumentStructure = (sections: DocumentSection[]): DocumentS
  * @param sections Document sections
  * @returns Array of epics
  */
-export const extractEpicsFromSections = (sections: DocumentSection[]): Epic[] => {
+export const extractEpicsFromSections = (sections: ConfluenceSection[]): Epic[] => {
   logger.info(`Extracting epics from ${sections.length} sections`);
-  
+
   return sections.map(section => {
-    const description = extractTextFromElements(section.content);
+    const description = extractTextFromElements(section.elements);
     const attributes = extractAttributes(section);
-    
+
     return {
       id: uuidv4(),
       type: 'epic',
@@ -114,13 +100,13 @@ export const extractEpicsFromSections = (sections: DocumentSection[]): Epic[] =>
  * @param sections Document sections
  * @returns Array of features
  */
-export const extractFeaturesFromSections = (sections: DocumentSection[]): Feature[] => {
+export const extractFeaturesFromSections = (sections: ConfluenceSection[]): Feature[] => {
   logger.info(`Extracting features from ${sections.length} sections`);
-  
+
   return sections.map(section => {
-    const description = extractTextFromElements(section.content);
+    const description = extractTextFromElements(section.elements);
     const attributes = extractAttributes(section);
-    
+
     return {
       id: uuidv4(),
       type: 'feature',
@@ -138,15 +124,15 @@ export const extractFeaturesFromSections = (sections: DocumentSection[]): Featur
  * @param sections Document sections
  * @returns Array of stories
  */
-export const extractStoriesFromSections = (sections: DocumentSection[]): Story[] => {
+export const extractStoriesFromSections = (sections: ConfluenceSection[]): Story[] => {
   logger.info(`Extracting stories from ${sections.length} sections`);
-  
+
   return sections.map(section => {
-    const description = extractTextFromElements(section.content);
+    const description = extractTextFromElements(section.elements);
     const acceptanceCriteria = extractAcceptanceCriteria(section);
     const storyPoints = extractStoryPoints(section);
     const attributes = extractAttributes(section);
-    
+
     return {
       id: uuidv4(),
       type: 'story',
@@ -164,14 +150,14 @@ export const extractStoriesFromSections = (sections: DocumentSection[]): Story[]
  * @param sections Document sections
  * @returns Array of enablers
  */
-export const extractEnablersFromSections = (sections: DocumentSection[]): Enabler[] => {
+export const extractEnablersFromSections = (sections: ConfluenceSection[]): Enabler[] => {
   logger.info(`Extracting enablers from ${sections.length} sections`);
-  
+
   return sections.map(section => {
-    const description = extractTextFromElements(section.content);
+    const description = extractTextFromElements(section.elements);
     const enablerType = determineEnablerType(section);
     const attributes = extractAttributes(section);
-    
+
     return {
       id: uuidv4(),
       type: 'enabler',

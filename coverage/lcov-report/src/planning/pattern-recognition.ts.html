@@ -32,7 +32,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/59</span>
+                <span class='fraction'>0/61</span>
             </div>
         
             
@@ -332,35 +332,7 @@
 <a name='L267'></a><a href='#L267'>267</a>
 <a name='L268'></a><a href='#L268'>268</a>
 <a name='L269'></a><a href='#L269'>269</a>
-<a name='L270'></a><a href='#L270'>270</a>
-<a name='L271'></a><a href='#L271'>271</a>
-<a name='L272'></a><a href='#L272'>272</a>
-<a name='L273'></a><a href='#L273'>273</a>
-<a name='L274'></a><a href='#L274'>274</a>
-<a name='L275'></a><a href='#L275'>275</a>
-<a name='L276'></a><a href='#L276'>276</a>
-<a name='L277'></a><a href='#L277'>277</a>
-<a name='L278'></a><a href='#L278'>278</a>
-<a name='L279'></a><a href='#L279'>279</a>
-<a name='L280'></a><a href='#L280'>280</a>
-<a name='L281'></a><a href='#L281'>281</a>
-<a name='L282'></a><a href='#L282'>282</a>
-<a name='L283'></a><a href='#L283'>283</a>
-<a name='L284'></a><a href='#L284'>284</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L270'></a><a href='#L270'>270</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -635,40 +607,26 @@
  */
 &nbsp;
 import * as logger from '../utils/logger';
-&nbsp;
-// These interfaces will be imported from the Parse Confluence Documents task
-// For now, we'll define them here as placeholders
-interface ParsedElement {
-  type: string;
-  content: string | ParsedElement[];
-  attributes?: Record&lt;string, string&gt;;
-}
-&nbsp;
-interface DocumentSection {
-  title: string;
-  level: number;
-  content: ParsedElement[];
-  subsections: DocumentSection[];
-}
+import { ConfluenceElement, ConfluenceSection } from '../confluence/parser';
 &nbsp;
 /**
  * Checks if a section represents an epic.
  * @param section The document section to check
  * @returns True if the section represents an epic, false otherwise
  */
-export const <span class="cstat-no" title="statement not covered" >isEpicSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): boolean =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >isEpicSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): boolean =&gt; {</span>
   // Check if the section title contains "Epic" or has specific epic markers
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  
+&nbsp;
   // Epic patterns
   const epicPatterns = <span class="cstat-no" title="statement not covered" >[</span>
     /\bepic\b/i,
     /\bepic:/i,
     /^e\d+:/i, // E1:, E2:, etc.
   ];
-  
+&nbsp;
   // Check if any pattern matches
-<span class="cstat-no" title="statement not covered" >  return epicPatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> || </span>
+<span class="cstat-no" title="statement not covered" >  return epicPatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> ||</span>
     // Check if the section has a specific level (usually level 1 or 2)
     (section.level === 1 &amp;&amp; !isFeatureSection(section) &amp;&amp; !isStorySection(section) &amp;&amp; !isEnablerSection(section));
 };
@@ -678,19 +636,19 @@ export const <span class="cstat-no" title="statement not covered" >isEpicSection
  * @param section The document section to check
  * @returns True if the section represents a feature, false otherwise
  */
-export const <span class="cstat-no" title="statement not covered" >isFeatureSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): boolean =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >isFeatureSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): boolean =&gt; {</span>
   // Check if the section title contains "Feature" or has specific feature markers
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  
+&nbsp;
   // Feature patterns
   const featurePatterns = <span class="cstat-no" title="statement not covered" >[</span>
     /\bfeature\b/i,
     /\bfeature:/i,
     /^f\d+:/i, // F1:, F2:, etc.
   ];
-  
+&nbsp;
   // Check if any pattern matches
-<span class="cstat-no" title="statement not covered" >  return featurePatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> || </span>
+<span class="cstat-no" title="statement not covered" >  return featurePatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> ||</span>
     // Check if the section has a specific level (usually level 2 or 3)
     (section.level === 2 &amp;&amp; !isEpicSection(section) &amp;&amp; !isStorySection(section) &amp;&amp; !isEnablerSection(section));
 };
@@ -700,10 +658,10 @@ export const <span class="cstat-no" title="statement not covered" >isFeatureSect
  * @param section The document section to check
  * @returns True if the section represents a story, false otherwise
  */
-export const <span class="cstat-no" title="statement not covered" >isStorySection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): boolean =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >isStorySection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): boolean =&gt; {</span>
   // Check if the section title contains "Story" or has specific story markers
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  
+&nbsp;
   // Story patterns
   const storyPatterns = <span class="cstat-no" title="statement not covered" >[</span>
     /\bstory\b/i,
@@ -712,9 +670,9 @@ export const <span class="cstat-no" title="statement not covered" >isStorySectio
     /^s\d+:/i, // S1:, S2:, etc.
     /\bas a\b.*\bi want\b.*\bso that\b/i, // As a... I want... So that...
   ];
-  
+&nbsp;
   // Check if any pattern matches
-<span class="cstat-no" title="statement not covered" >  return storyPatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> || </span>
+<span class="cstat-no" title="statement not covered" >  return storyPatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span> ||</span>
     // Check if the section has a specific level (usually level 3 or 4)
     (section.level === 3 &amp;&amp; !isEpicSection(section) &amp;&amp; !isFeatureSection(section) &amp;&amp; !isEnablerSection(section));
 };
@@ -724,10 +682,10 @@ export const <span class="cstat-no" title="statement not covered" >isStorySectio
  * @param section The document section to check
  * @returns True if the section represents an enabler, false otherwise
  */
-export const <span class="cstat-no" title="statement not covered" >isEnablerSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): boolean =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >isEnablerSection = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): boolean =&gt; {</span>
   // Check if the section title contains "Enabler" or has specific enabler markers
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  
+&nbsp;
   // Enabler patterns
   const enablerPatterns = <span class="cstat-no" title="statement not covered" >[</span>
     /\benabler\b/i,
@@ -738,7 +696,7 @@ export const <span class="cstat-no" title="statement not covered" >isEnablerSect
     /\bresearch\b/i,
     /^e\d+:/i, // E1:, E2:, etc. (may conflict with epic pattern)
   ];
-  
+&nbsp;
   // Check if any pattern matches
 <span class="cstat-no" title="statement not covered" >  return enablerPatterns.some(<span class="fstat-no" title="function not covered" >pattern </span>=&gt; <span class="cstat-no" title="statement not covered" >pattern.test(titleLower))</span>;</span>
 };
@@ -748,10 +706,10 @@ export const <span class="cstat-no" title="statement not covered" >isEnablerSect
  * @param section The document section
  * @returns The enabler type
  */
-export const <span class="cstat-no" title="statement not covered" >determineEnablerType = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): 'architecture' | 'infrastructure' | 'technical_debt' | 'research' =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >determineEnablerType = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): 'architecture' | 'infrastructure' | 'technical_debt' | 'research' =&gt; {</span>
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
-  
+  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  if (titleLower.includes('architecture') || contentText.includes('architecture')) {</span>
 <span class="cstat-no" title="statement not covered" >    return 'architecture';</span>
   } else <span class="cstat-no" title="statement not covered" >if (titleLower.includes('infrastructure') || contentText.includes('infrastructure')) {</span>
@@ -761,7 +719,7 @@ export const <span class="cstat-no" title="statement not covered" >determineEnab
   } else <span class="cstat-no" title="statement not covered" ><span class="missing-if-branch" title="if path not taken" >I</span>if (titleLower.includes('research') || contentText.includes('research')) {</span>
 <span class="cstat-no" title="statement not covered" >    return 'research';</span>
   }
-  
+&nbsp;
   // Default to architecture if no specific type is found
 <span class="cstat-no" title="statement not covered" >  return 'architecture';</span>
 };
@@ -771,19 +729,19 @@ export const <span class="cstat-no" title="statement not covered" >determineEnab
  * @param section The document section
  * @returns Array of acceptance criteria
  */
-export const <span class="cstat-no" title="statement not covered" >extractAcceptanceCriteria = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): string[] =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractAcceptanceCriteria = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): string[] =&gt; {</span>
   const acceptanceCriteria: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
-  
+&nbsp;
   // Look for acceptance criteria in the section content
-  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
-  
+  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
+&nbsp;
   // Look for acceptance criteria section
   const acSectionMatch = <span class="cstat-no" title="statement not covered" >contentText.match(/acceptance criteria:?([\s\S]*?)(?=\n\s*\n|\n\s*#|\n\s*\*\*|\n\s*-|\n\s*\d+\.|\n\s*\[|\n\s*\{|\n\s*&lt;|\n\s*$)/i);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (acSectionMatch &amp;&amp; acSectionMatch[1]) {</span>
     // Split by newlines and bullet points
     const acLines = <span class="cstat-no" title="statement not covered" >acSectionMatch[1].split(/\n\s*[-*•]|\n\s*\d+\./).filter(Boolean);</span>
-    
+&nbsp;
     // Clean up each line
 <span class="cstat-no" title="statement not covered" >    acLines.forEach(<span class="fstat-no" title="function not covered" >line </span>=&gt; {</span>
       const trimmedLine = <span class="cstat-no" title="statement not covered" >line.trim();</span>
@@ -792,18 +750,18 @@ export const <span class="cstat-no" title="statement not covered" >extractAccept
       }
     });
   }
-  
+&nbsp;
   // Look for bullet points that might be acceptance criteria
   const bulletPointMatches = <span class="cstat-no" title="statement not covered" >contentText.match(/\n\s*[-*•].*|\n\s*\d+\..*/g);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (bulletPointMatches) {</span>
 <span class="cstat-no" title="statement not covered" >    bulletPointMatches.forEach(<span class="fstat-no" title="function not covered" >match </span>=&gt; {</span>
       const trimmedMatch = <span class="cstat-no" title="statement not covered" >match.trim().replace(/^[-*•]\s*|\d+\.\s*/, '');</span>
-      
+&nbsp;
       // Check if it looks like an acceptance criterion
 <span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (</span>
-        trimmedMatch.toLowerCase().includes('should') || 
-        trimmedMatch.toLowerCase().includes('must') || 
+        trimmedMatch.toLowerCase().includes('should') ||
+        trimmedMatch.toLowerCase().includes('must') ||
         trimmedMatch.toLowerCase().includes('will') ||
         trimmedMatch.toLowerCase().includes('can')
       ) {
@@ -811,7 +769,7 @@ export const <span class="cstat-no" title="statement not covered" >extractAccept
       }
     });
   }
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return acceptanceCriteria;</span>
 };
 &nbsp;
@@ -820,11 +778,11 @@ export const <span class="cstat-no" title="statement not covered" >extractAccept
  * @param section The document section
  * @returns Story points or undefined if not found
  */
-export const <span class="cstat-no" title="statement not covered" >extractStoryPoints = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): number | undefined =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractStoryPoints = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): number | undefined =&gt; {</span>
   // Look for story points in the section title and content
   const titleLower = <span class="cstat-no" title="statement not covered" >section.title.toLowerCase();</span>
-  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
-  
+  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
+&nbsp;
   // Story points patterns
   const storyPointsPatterns = <span class="cstat-no" title="statement not covered" >[</span>
     /(\d+)\s*(?:story\s*points?|sp|points?)/i,
@@ -834,7 +792,7 @@ export const <span class="cstat-no" title="statement not covered" >extractStoryP
     /effort:?\s*(\d+)/i,
     /estimate:?\s*(\d+)/i,
   ];
-  
+&nbsp;
   // Check title first
 <span class="cstat-no" title="statement not covered" >  for (const pattern of storyPointsPatterns) {</span>
     const match = <span class="cstat-no" title="statement not covered" >titleLower.match(pattern);</span>
@@ -842,7 +800,7 @@ export const <span class="cstat-no" title="statement not covered" >extractStoryP
 <span class="cstat-no" title="statement not covered" >      return parseInt(match[1], 10);</span>
     }
   }
-  
+&nbsp;
   // Then check content
 <span class="cstat-no" title="statement not covered" >  for (const pattern of storyPointsPatterns) {</span>
     const match = <span class="cstat-no" title="statement not covered" >contentText.match(pattern);</span>
@@ -850,7 +808,7 @@ export const <span class="cstat-no" title="statement not covered" >extractStoryP
 <span class="cstat-no" title="statement not covered" >      return parseInt(match[1], 10);</span>
     }
   }
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return undefined;</span>
 };
 &nbsp;
@@ -859,13 +817,13 @@ export const <span class="cstat-no" title="statement not covered" >extractStoryP
  * @param section The document section
  * @returns Record of attributes
  */
-export const <span class="cstat-no" title="statement not covered" >extractAttributes = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: DocumentSection): Record&lt;string, any&gt; =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractAttributes = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>s</span>ection: ConfluenceSection): Record&lt;string, any&gt; =&gt; {</span>
   const attributes: Record&lt;string, any&gt; = <span class="cstat-no" title="statement not covered" >{};</span>
-  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.content);</span>
-  
+  const contentText = <span class="cstat-no" title="statement not covered" >extractTextFromElements(section.elements);</span>
+&nbsp;
   // Look for key-value pairs in the content
   const keyValuePairs = <span class="cstat-no" title="statement not covered" >contentText.match(/([A-Za-z][A-Za-z0-9_]*):?\s*([^,\n]*)/g);</span>
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (keyValuePairs) {</span>
 <span class="cstat-no" title="statement not covered" >    keyValuePairs.forEach(<span class="fstat-no" title="function not covered" >pair </span>=&gt; {</span>
       const [key, value] = <span class="cstat-no" title="statement not covered" >pair.split(/:\s*/);</span>
@@ -874,19 +832,19 @@ export const <span class="cstat-no" title="statement not covered" >extractAttrib
       }
     });
   }
-  
+&nbsp;
   // Look for labels
   const labelsMatch = <span class="cstat-no" title="statement not covered" >contentText.match(/labels?:?\s*([^,\n]*)/i);</span>
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (labelsMatch &amp;&amp; labelsMatch[1]) {</span>
 <span class="cstat-no" title="statement not covered" >    attributes.labels = labelsMatch[1].trim().split(/\s*,\s*/);</span>
   }
-  
+&nbsp;
   // Look for priority
   const priorityMatch = <span class="cstat-no" title="statement not covered" >contentText.match(/priority:?\s*([^,\n]*)/i);</span>
 <span class="cstat-no" title="statement not covered" >  <span class="missing-if-branch" title="if path not taken" >I</span>if (priorityMatch &amp;&amp; priorityMatch[1]) {</span>
 <span class="cstat-no" title="statement not covered" >    attributes.priority = priorityMatch[1].trim();</span>
   }
-  
+&nbsp;
 <span class="cstat-no" title="statement not covered" >  return attributes;</span>
 };
 &nbsp;
@@ -895,11 +853,11 @@ export const <span class="cstat-no" title="statement not covered" >extractAttrib
  * @param element The parsed element
  * @returns The extracted text
  */
-export const <span class="cstat-no" title="statement not covered" >extractText = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>e</span>lement: ParsedElement): string =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  if (typeof element.content === 'string') {</span>
+export const <span class="cstat-no" title="statement not covered" >extractText = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>e</span>lement: ConfluenceElement): string =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  if (element.content) {</span>
 <span class="cstat-no" title="statement not covered" >    return element.content;</span>
-  } else <span class="cstat-no" title="statement not covered" ><span class="missing-if-branch" title="if path not taken" >I</span>if (Array.isArray(element.content)) {</span>
-<span class="cstat-no" title="statement not covered" >    return element.content.map(extractText).join(' ');</span>
+  } else <span class="cstat-no" title="statement not covered" ><span class="missing-if-branch" title="if path not taken" >I</span>if (element.children &amp;&amp; element.children.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >    return element.children.map(extractText).join(' ');</span>
   }
 <span class="cstat-no" title="statement not covered" >  return '';</span>
 };
@@ -909,7 +867,7 @@ export const <span class="cstat-no" title="statement not covered" >extractText =
  * @param elements The parsed elements
  * @returns The extracted text
  */
-export const <span class="cstat-no" title="statement not covered" >extractTextFromElements = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>e</span>lements: ParsedElement[]): string =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" >extractTextFromElements = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(</span>e</span>lements: ConfluenceElement[]): string =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  return elements.map(extractText).join('\n');</span>
 };
 &nbsp;</pre></td></tr></table></pre>
@@ -919,7 +877,7 @@ export const <span class="cstat-no" title="statement not covered" >extractTextFr
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-26T22:29:29.271Z
+                at 2025-05-27T01:28:44.476Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -329,7 +329,7 @@ export class ChangeDetector {
       }
 
       // Extract planning information
-      const extractor = new PlanningExtractor(document);
+      const extractor = new PlanningExtractor(document.elements, document.sections);
       const planningDocument = extractor.getPlanningDocument();
 
       // If this is the first sync, treat all items as created
