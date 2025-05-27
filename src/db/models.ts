@@ -18,7 +18,7 @@ export interface LinearToken {
   id: number;
   organization_id: string;
   access_token: string;
-  refresh_token: string;
+  refresh_token: string | null;
   app_user_id: string;
   expires_at: Date;
   created_at: Date;
@@ -32,7 +32,7 @@ export interface ConfluenceToken {
   id: number;
   organization_id: string;
   access_token: string;
-  refresh_token: string;
+  refresh_token: string | null;
   site_url: string;
   expires_at: Date;
   created_at: Date;
@@ -501,7 +501,7 @@ export const getSyncHistory = async (
 export const storeLinearToken = async (
   organizationId: string,
   accessToken: string,
-  refreshToken: string,
+  refreshToken: string | null,
   appUserId: string,
   expiresAt: Date
 ): Promise<void> => {
