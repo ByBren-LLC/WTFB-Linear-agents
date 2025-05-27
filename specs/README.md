@@ -6,7 +6,7 @@ This directory contains all specifications, documentation, and workflow manageme
 
 ### 📋 `todo/` - Ready to Assign
 Implementation specifications and stories ready for remote agent assignment.
-- **11 files** ready for immediate assignment
+- **5 files** ready for immediate assignment
 - Implementation documents for features and technical enablers
 - User stories and technical specifications
 
@@ -18,13 +18,13 @@ Work items currently being implemented by remote agents.
 
 ### ✅ `done/` - Completed Work
 Successfully implemented and merged specifications.
-- **7 completed implementations**
+- **0 completed implementations**
 - Reference materials for completed features
 - Historical record of delivered work
 
 ### 🚫 `blocked/` - Waiting on Dependencies
 Work items blocked by external dependencies.
-- **4 OAuth-dependent files** waiting on authentication infrastructure
+- **0 blocked files** waiting on authentication infrastructure
 - Clear dependency documentation
 - Ready to move to `todo/` when unblocked
 
@@ -54,21 +54,63 @@ Old planning documents and superseded specifications.
 
 ## Workflow Usage
 
-### For Project Managers
-1. **Assign Work**: Copy assignments from `remote_agent_assignments/current.md`
-2. **Track Progress**: Monitor files moving through `todo/` → `doing/` → `done/`
-3. **Manage Blockers**: Review `blocked/` folder for dependency issues
+### 🎯 Complete Agent Assignment Process
 
-### For Remote Agents
+#### **Phase 1: Planning and Preparation**
+```bash
+# 1. Update WIP folder counts
+./scripts/update-wip-counts.sh
+
+# 2. List available work
+./scripts/assign-agents.sh list
+
+# 3. Prepare current work package
+./scripts/assign-agents.sh prepare
+
+# 4. Update current assignments
+./scripts/assign-agents.sh update-current
+```
+
+#### **Phase 2: Agent Assignment**
+```bash
+# 5. Copy assignments from specs/remote_agent_assignments/current.md
+# 6. Send to remote agents:
+#    - Augment Code Remote agents
+#    - Claude CLI agents
+#    - Other SWE agents
+```
+
+#### **Phase 3: Work Execution**
+```bash
+# 7. When agent starts work
+./scripts/assign-agents.sh move [filename] doing
+
+# 8. When agent completes work
+./scripts/assign-agents.sh move [filename] done
+
+# 9. Update counts after changes
+./scripts/update-wip-counts.sh
+```
+
+### For Project Managers
+1. **Plan Work**: Use `./scripts/start-planning-agent.sh` for new planning
+2. **Assign Work**: Use `./scripts/assign-agents.sh` workflow above
+3. **Track Progress**: Monitor files moving through `todo/` → `doing/` → `done/`
+4. **Manage Blockers**: Review `blocked/` folder for dependency issues
+
+### For Remote Agents (Any Type)
 1. **Get Assignment**: Receive copy-paste assignment with all necessary links
 2. **Read Kickoff**: Follow kickoff note for detailed context
 3. **Study Implementation**: Review implementation document in appropriate WIP folder
-4. **Move Files**: Update file location as work progresses through WIP stages
+4. **Create Linear Issue**: Follow kickoff note instructions
+5. **Implement**: Create branch, implement, submit PR
+6. **Update Status**: PM moves files through WIP stages
 
 ### For ARCHitect-in-the-IDE
 1. **Review Progress**: Monitor WIP folder transitions
 2. **Unblock Work**: Move items from `blocked/` to `todo/` when dependencies resolve
 3. **Quality Control**: Ensure completed work moves to `done/` folder
+4. **Architectural Oversight**: Review PRs for architectural compliance
 
 ## File Movement Guidelines
 
@@ -92,12 +134,12 @@ git mv specs/blocked/[filename] specs/todo/[filename]
 
 ## Current Status
 
-- **Todo**: 11 files ready for assignment
+- **Todo**: 5 files ready for assignment
 - **Doing**: 0 files (ready for active work)
-- **Done**: 7 completed implementations
-- **Blocked**: 4 OAuth-dependent files
+- **Done**: 0 completed implementations
+- **Blocked**: 0 blocked files
 - **Templates**: 5 reusable templates
-- **Kickoff Notes**: 25+ detailed agent instructions
+- **Kickoff Notes**: 26 detailed agent instructions
 
 ## Integration with Tools
 
@@ -115,3 +157,49 @@ git mv specs/blocked/[filename] specs/todo/[filename]
 - Copy-paste assignments include all necessary file links
 - Agents work with local files to reduce API calls
 - Clear progression through WIP stages
+
+## 🤖 Automation Scripts
+
+### Planning Scripts
+- **`./scripts/start-planning-agent.sh`** - Initialize planning agents for new work
+- **`./scripts/update-wip-counts.sh`** - Programmatically update file counts in READMEs
+
+### Assignment Scripts
+- **`./scripts/assign-agents.sh list`** - List available work with status
+- **`./scripts/assign-agents.sh status`** - Show current WIP status
+- **`./scripts/assign-agents.sh prepare`** - Prepare work packages for assignment
+- **`./scripts/assign-agents.sh update-current`** - Update current assignments
+- **`./scripts/assign-agents.sh move [file] [target]`** - Move files through WIP workflow
+
+### Supported Agent Types
+- **Augment Code Remote** - Full-featured remote agents
+- **Claude CLI** - Command-line interface agents
+- **Other SWE Agents** - Any software engineering agent that can:
+  - Read GitHub repositories
+  - Create branches and PRs
+  - Follow detailed instructions
+  - Create Linear issues
+
+## 🎯 Complete Workflow Example
+
+```bash
+# 1. Plan new work (if needed)
+./scripts/start-planning-agent.sh "https://confluence-url" "Feature Name"
+
+# 2. Prepare assignments for current work
+./scripts/update-wip-counts.sh
+./scripts/assign-agents.sh list
+./scripts/assign-agents.sh prepare
+./scripts/assign-agents.sh update-current
+
+# 3. Send assignments to agents (copy from specs/remote_agent_assignments/current.md)
+
+# 4. Track work progress
+./scripts/assign-agents.sh move enhanced-slack-notifier-story.md doing
+./scripts/assign-agents.sh move enhanced-slack-notifier-story.md done
+
+# 5. Update documentation
+./scripts/update-wip-counts.sh
+```
+
+This workflow enables systematic deployment of any number of agents across different platforms while maintaining SAFe methodology compliance and architectural oversight.
