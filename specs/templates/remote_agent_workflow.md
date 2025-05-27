@@ -58,8 +58,8 @@ This three-tiered documentation approach ensures agents have both high-level con
 I'm assigning you to implement the [Task Name] [User Story/Technical Enabler/Spike] for our Linear Planning Agent project. This is a [priority level] component that will [brief description of purpose].
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/[task_name]_kickoff.md
+1. Pull the latest code from the dev branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/[task_name]_kickoff.md
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -240,19 +240,19 @@ The ARCHitect-in-the-IDE reviews all PRs using the following criteria:
 
 Our repository contains kickoff notes for the following components:
 
-1. [Parse Confluence Documents](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/parse_confluence_documents_kickoff.md)
-2. [Confluence API Integration](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/confluence_api_integration_kickoff.md)
-3. [Extract Planning Information](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/extract_planning_information_kickoff.md)
-4. [Create Linear Issues from Planning Data](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/create_linear_issues_from_planning_data_kickoff.md)
-5. [Maintain SAFe Hierarchy](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/maintain_safe_hierarchy_kickoff.md)
-6. [Synchronize Linear with Confluence](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/synchronize_linear_with_confluence_kickoff.md)
-7. [Planning Session State Management](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/planning_session_state_management_kickoff.md)
-8. [Create Planning Session UI](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/create_planning_session_ui_kickoff.md)
-9. [Linear API Error Handling](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/linear_api_error_handling_kickoff.md)
-10. [Implement Token Management](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/implement_token_management_kickoff.md)
-11. [Database Schema Design](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/database_schema_design_kickoff.md)
-12. [SAFe Implementation in Linear](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/safe_implementation_in_linear_kickoff.md)
-13. [Implement PI Planning Support](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/implement_pi_planning_support_kickoff.md)
+1. [Parse Confluence Documents](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/parse_confluence_documents_kickoff.md)
+2. [Confluence API Integration](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/confluence_api_integration_kickoff.md)
+3. [Extract Planning Information](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/extract_planning_information_kickoff.md)
+4. [Create Linear Issues from Planning Data](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/create_linear_issues_from_planning_data_kickoff.md)
+5. [Maintain SAFe Hierarchy](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/maintain_safe_hierarchy_kickoff.md)
+6. [Synchronize Linear with Confluence](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/synchronize_linear_with_confluence_kickoff.md)
+7. [Planning Session State Management](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/planning_session_state_management_kickoff.md)
+8. [Create Planning Session UI](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/create_planning_session_ui_kickoff.md)
+9. [Linear API Error Handling](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/linear_api_error_handling_kickoff.md)
+10. [Implement Token Management](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/implement_token_management_kickoff.md)
+11. [Database Schema Design](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/database_schema_design_kickoff.md)
+12. [SAFe Implementation in Linear](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/safe_implementation_in_linear_kickoff.md)
+13. [Implement PI Planning Support](https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/implement_pi_planning_support_kickoff.md)
 
 ## Lessons Learned
 
