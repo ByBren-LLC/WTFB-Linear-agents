@@ -126,6 +126,7 @@ docker-compose exec app npm run cli -- --help
 ### Docker CLI Access Methods
 
 #### Method 1: Execute Commands in Running Container (Recommended)
+
 ```bash
 # Start services in background
 docker-compose up -d
@@ -137,6 +138,7 @@ docker-compose exec app npm run cli create --confluence-url "https://url" --org-
 ```
 
 #### Method 2: Interactive Shell Access
+
 ```bash
 # Get shell access to the container
 docker-compose exec app bash
@@ -148,6 +150,7 @@ npm run cli create --confluence-url "https://url" --org-id wordstofilmby --team-
 ```
 
 #### Method 3: One-off Commands
+
 ```bash
 # Run single commands without persistent container
 docker-compose run --rm app npm run cli -- --help
@@ -157,6 +160,7 @@ docker-compose run --rm app npm run cli parse --confluence-url "https://your-url
 ### Docker CLI Examples
 
 #### Parse a Confluence Page
+
 ```bash
 docker-compose exec app npm run cli parse \
   --confluence-url "https://cheddarfox.atlassian.net/wiki/spaces/YOUR_SPACE/pages/123456/Your+Page" \
@@ -164,6 +168,7 @@ docker-compose exec app npm run cli parse \
 ```
 
 #### Create Linear Issues from Confluence
+
 ```bash
 docker-compose exec app npm run cli create \
   --confluence-url "https://cheddarfox.atlassian.net/wiki/spaces/YOUR_SPACE/pages/123456/Your+Page" \
@@ -173,6 +178,7 @@ docker-compose exec app npm run cli create \
 ```
 
 #### Start Synchronization
+
 ```bash
 docker-compose exec app npm run cli sync start \
   --confluence-url "https://your-confluence-url" \
@@ -183,6 +189,7 @@ docker-compose exec app npm run cli sync start \
 ```
 
 #### Check Sync Status
+
 ```bash
 docker-compose exec app npm run cli sync status \
   --confluence-url "https://your-confluence-url" \
@@ -191,6 +198,7 @@ docker-compose exec app npm run cli sync status \
 ```
 
 #### Manually Trigger Sync
+
 ```bash
 docker-compose exec app npm run cli sync trigger \
   --confluence-url "https://your-confluence-url" \
@@ -199,6 +207,7 @@ docker-compose exec app npm run cli sync trigger \
 ```
 
 #### Stop Synchronization
+
 ```bash
 docker-compose exec app npm run cli sync stop \
   --confluence-url "https://your-confluence-url" \
@@ -209,12 +218,14 @@ docker-compose exec app npm run cli sync stop \
 ### Docker Environment Configuration
 
 The Docker setup includes:
+
 - **PostgreSQL Database**: For persistent data storage
 - **SQLite Database**: For synchronization state
 - **Express Server**: For OAuth callbacks and webhooks
 - **CLI Interface**: For all planning operations
 
 #### Environment Variables for Docker
+
 ```bash
 # Database (Docker internal networking)
 DATABASE_URL=postgresql://postgres:postgres@db:5432/linear_agent
@@ -272,8 +283,17 @@ docker-compose up --build app -d
 
 ## Project Structure
 
-- `/scripts`: Shell scripts for initializing and managing agents
-- `/specs`: Templates and specifications for planning and implementation
+- `/scripts`: Automation scripts for workflow management and agent assignment
+  - `start-planning-agent.sh`: Initialize planning agents for new work
+  - `assign-agents.sh`: Complete agent assignment workflow automation
+  - `update-wip-counts.sh`: Programmatically update documentation counts
+- `/specs`: Work-In-Progress (WIP) methodology and agent specifications
+  - `todo/`: Work ready for agent assignment
+  - `doing/`: Work currently in progress
+  - `done/`: Completed work
+  - `templates/`: Reusable templates for planning and implementation
+  - `kickoff_notes/`: Detailed instructions for remote agents
+  - `remote_agent_assignments/`: Copy-paste ready agent assignments
 - `/src`: Source code for the Linear Planning Agent
   - `/src/cli`: CLI implementation
   - `/src/confluence`: Confluence API integration
@@ -281,6 +301,54 @@ docker-compose up --build app -d
   - `/src/planning`: Planning data extraction and processing
   - `/src/safe`: SAFe methodology implementation
   - `/src/sync`: Synchronization between Linear and Confluence
+
+## 🤖 Automation and Agent Management
+
+The Linear Planning Agent includes comprehensive automation for managing remote agents and workflow execution.
+
+### Planning Automation
+
+```bash
+# Initialize planning for new work
+./scripts/start-planning-agent.sh "https://confluence-url" "Feature Name"
+```
+
+### Agent Assignment Workflow
+
+```bash
+# 1. List available work
+./scripts/assign-agents.sh list
+
+# 2. Prepare work package for assignment
+./scripts/assign-agents.sh prepare
+
+# 3. Update current assignments
+./scripts/assign-agents.sh update-current
+
+# 4. Move work through WIP stages
+./scripts/assign-agents.sh move [filename] doing
+./scripts/assign-agents.sh move [filename] done
+
+# 5. Update documentation counts
+./scripts/update-wip-counts.sh
+```
+
+### Supported Agent Types
+
+- **Augment Code Remote**: Full-featured remote agents
+- **Claude CLI**: Command-line interface agents
+- **Any SWE Agent**: Supporting GitHub, Linear, branch/PR workflows
+
+### WIP Methodology
+
+The project follows a Work-In-Progress methodology for systematic agent deployment:
+
+- **todo/**: Work ready for immediate assignment
+- **doing/**: Work currently being implemented by agents
+- **done/**: Successfully completed and merged work
+- **blocked/**: Work waiting on dependencies
+
+For complete automation documentation, see `scripts/README.md` and `specs/README.md`.
 
 ## Webhook Integration
 
@@ -303,12 +371,14 @@ The Linear Planning Agent supports comprehensive webhook integration for real-ti
 ### Required Webhooks
 
 #### 1. Linear Webhooks (Incoming to Your Server)
+
 - **Purpose**: Receive events from Linear (issue updates, comments, etc.)
 - **URL**: `https://your-domain.com/webhook` (or `http://localhost:3000/webhook` for local)
 - **Events**: Issues, Comments, Projects, Cycles, Labels, Issue attachments, Users, Permission changes
 - **Security**: Verified using `WEBHOOK_SECRET` from Linear app settings
 
 #### 2. Slack Incoming Webhooks (Outgoing from Your Server)
+
 - **Purpose**: Send notifications TO Slack channels
 - **URL**: Generated when creating Slack app (`https://hooks.slack.com/services/...`)
 - **Format**: JSON payloads with formatted messages
@@ -317,12 +387,14 @@ The Linear Planning Agent supports comprehensive webhook integration for real-ti
 ### Webhook Setup Guide
 
 #### Step 1: Linear Webhook Configuration
+
 1. In your Linear OAuth app settings
 2. Add webhook URL: `https://your-domain.com/webhook`
 3. Select events: Issues, Comments, Projects, Cycles, Labels
 4. Copy the webhook signing secret to `WEBHOOK_SECRET` in `.env`
 
 #### Step 2: Slack App Creation
+
 1. Go to https://api.slack.com/apps
 2. Create new app: "WTFB Linear Planning Agent"
 3. Enable "Incoming Webhooks"
@@ -330,6 +402,7 @@ The Linear Planning Agent supports comprehensive webhook integration for real-ti
 5. Copy webhook URL to `SLACK_WEBHOOK_URL` in `.env`
 
 #### Step 3: Environment Configuration
+
 ```bash
 # Linear Webhook (for receiving events)
 WEBHOOK_SECRET=lin_wh_your_webhook_secret_here
