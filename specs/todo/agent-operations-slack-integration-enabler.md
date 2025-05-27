@@ -1,15 +1,18 @@
 # Technical Enabler Implementation: Agent Operations Slack Integration
 
 ## Enabler Information
+
 - **Enabler ID**: TBD (to be assigned in Linear)
 - **Type**: Architecture
 - **Story Points**: 8
 - **Priority**: Medium
 
 ## Enabler Description
+
 Complete the Agent Operations Slack Integration by wiring the existing SlackNotifier class into the Linear Planning Agent's operational workflows. This enabler will provide operational intelligence notifications for planning operations, system health monitoring, error handling, and workflow status updates that complement (not duplicate) Linear's existing Slack integration.
 
 ## Justification
+
 The Linear Planning Agent currently has a well-implemented SlackNotifier class but it's not integrated into the application workflows. While Linear already notifies Slack about issue creation/updates, there's a significant gap in operational intelligence notifications for:
 
 - **Planning Operations**: Bulk planning completion, PI planning results, SAFe hierarchy creation
@@ -35,6 +38,7 @@ These operational notifications provide value beyond Linear's issue-focused noti
 **Key Insight**: Linear notifies about individual issue changes, we provide operational intelligence about the planning agent system itself.
 
 ## Acceptance Criteria
+
 - [ ] SlackNotifier is integrated into PlanningAgent for planning operation notifications
 - [ ] SlackNotifier is integrated into SyncManager for synchronization status notifications
 - [ ] SlackNotifier is integrated into webhook handlers for operational event notifications
@@ -48,16 +52,20 @@ These operational notifications provide value beyond Linear's issue-focused noti
 - [ ] Comprehensive testing validates all notification scenarios
 
 ## Technical Context
+
 ### Existing Implementation Analysis
+
 The foundation is solid with a complete SlackNotifier implementation:
 
 **✅ Already Implemented:**
+
 - `src/integrations/slack.ts`: Complete SlackNotifier class with webhook integration
 - Environment configuration: `SLACK_WEBHOOK_URL` in `.env.template` and Docker
 - Basic notification methods: `sendNotification`, `sendPlanningCompleteNotification`, `sendErrorNotification`
 - Proper error handling and logging within SlackNotifier
 
 **❌ Missing Integration Points:**
+
 - PlanningAgent doesn't use SlackNotifier for planning completion/failure notifications
 - SyncManager doesn't use SlackNotifier for sync status/conflict notifications
 - Webhook handlers don't use SlackNotifier for operational event notifications
@@ -66,6 +74,7 @@ The foundation is solid with a complete SlackNotifier implementation:
 - No system health monitoring notifications
 
 ### Integration Architecture
+
 The enabler will integrate SlackNotifier at key operational points:
 
 ```
@@ -83,6 +92,7 @@ The enabler will integrate SlackNotifier at key operational points:
 ```
 
 ### Notification Categories
+
 1. **Planning Operations** (No Linear duplication)
    - Bulk planning completion with statistics
    - PI planning session results
@@ -108,7 +118,9 @@ The enabler will integrate SlackNotifier at key operational points:
    - Unhandled exceptions in core workflows
 
 ## Implementation Plan
+
 ### Files to Create/Modify
+
 1. **`src/integrations/enhanced-slack-notifier.ts`** (CREATE)
    - Extend SlackNotifier with operational intelligence methods
    - Add notification categories and formatting
@@ -135,6 +147,7 @@ The enabler will integrate SlackNotifier at key operational points:
    - Notification throttling and deduplication
 
 ### Key Components/Functions
+
 1. **Enhanced Notification Methods**
    - `sendPlanningStatistics(epicCount, featureCount, storyCount, duration)`
    - `sendSyncStatusUpdate(syncResult, conflictCount, resolutionCount)`
@@ -154,31 +167,37 @@ The enabler will integrate SlackNotifier at key operational points:
    - Throttling and rate limiting for notifications
 
 ### Technology Choices
+
 - **Existing SlackNotifier**: Extend rather than replace to maintain compatibility
 - **Axios**: Continue using existing HTTP client for Slack webhook calls
 - **Environment Configuration**: Leverage existing SLACK_WEBHOOK_URL setup
 - **Logging Integration**: Use existing logger for notification tracking
 
 ## Testing Approach
+
 ### Unit Tests
+
 - Test enhanced SlackNotifier methods with mock Slack webhook
 - Test integration points in PlanningAgent, SyncManager, webhook handlers
 - Test notification formatting and content validation
 - Test error handling and graceful degradation
 
 ### Integration Tests
+
 - Test end-to-end notification flows for each operational scenario
 - Test notification throttling and deduplication
 - Test configuration management and notification routing
 - Test system health monitoring and alerting
 
 ### Manual Testing
+
 - Verify notifications appear in Slack with correct formatting
 - Confirm no duplication with Linear's existing Slack integration
 - Test notification content is actionable and informative
 - Validate error scenarios don't break core functionality
 
 ## Implementation Steps
+
 1. **Create Enhanced SlackNotifier** with operational intelligence methods
 2. **Integrate into PlanningAgent** for planning operation notifications
 3. **Integrate into SyncManager** for synchronization status notifications
@@ -191,7 +210,9 @@ The enabler will integrate SlackNotifier at key operational points:
 10. **Performance testing** to ensure notifications don't impact core operations
 
 ## SAFe Considerations
+
 This technical enabler:
+
 - **Enables Operational Excellence**: Provides visibility into planning agent operations
 - **Supports Continuous Monitoring**: Enables proactive system health management
 - **Enhances Team Collaboration**: Keeps teams informed of planning operations and issues
@@ -199,6 +220,7 @@ This technical enabler:
 - **Supports DevOps Culture**: Enables monitoring, alerting, and operational intelligence
 
 ## Security Considerations
+
 - Slack webhook URL must be kept secure and not logged
 - Notification content should not include sensitive data (tokens, credentials)
 - Rate limiting prevents notification spam or abuse
@@ -206,6 +228,7 @@ This technical enabler:
 - Configuration allows disabling notifications for security-sensitive environments
 
 ## Performance Considerations
+
 - Notifications are asynchronous and don't block core operations
 - Notification throttling prevents excessive Slack API usage
 - Failed notifications are logged but don't retry indefinitely
@@ -213,6 +236,7 @@ This technical enabler:
 - Background health monitoring has minimal performance impact
 
 ## Documentation Requirements
+
 - Update setup guide with Slack notification configuration
 - Document notification types and their purposes
 - Create troubleshooting guide for notification issues
@@ -220,6 +244,7 @@ This technical enabler:
 - Provide examples of notification content and formatting
 
 ## Definition of Done
+
 - [ ] All acceptance criteria are met
 - [ ] Enhanced SlackNotifier is implemented with operational intelligence methods
 - [ ] PlanningAgent integrates SlackNotifier for planning notifications
@@ -235,6 +260,7 @@ This technical enabler:
 - [ ] Security requirements are met for notification content and configuration
 
 ## Notes for Implementation
+
 - Extend existing SlackNotifier rather than replacing to maintain compatibility
 - Focus on operational intelligence that complements Linear's issue notifications
 - Ensure notifications are actionable and provide value to operations teams
@@ -243,13 +269,16 @@ This technical enabler:
 - Test thoroughly to ensure no duplication with Linear's existing Slack integration
 
 ## Related Linear Issues
+
 This enabler should be linked to:
+
 - Any existing Slack integration issues
 - System monitoring and observability issues
 - Planning agent operational issues
 - Any issues related to remote agent management and workflow automation
 
 ## Next Steps After Completion
+
 1. Monitor notification effectiveness and adjust content/frequency as needed
 2. Implement additional operational intelligence based on team feedback
 3. Consider integration with other monitoring and alerting systems

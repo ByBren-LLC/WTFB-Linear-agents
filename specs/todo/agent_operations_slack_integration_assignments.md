@@ -11,8 +11,9 @@ Copy-paste these assignment messages to remote agents for the Agent Operations S
 I'm assigning you to implement the Agent Operations Slack Integration Technical Enabler for our Linear Planning Agent project. This is a medium priority architectural component that will complete the integration of operational intelligence notifications into the planning agent workflows, providing visibility into planning operations, system health, and workflow status that complement Linear's existing Slack integration.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/agent_operations_slack_integration_enabler_kickoff.md
+
+1. Pull the latest code from the main branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/agent_operations_slack_integration_enabler_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -30,8 +31,9 @@ This is a medium priority task that enables operational intelligence notificatio
 I'm assigning you to implement the Enhanced SlackNotifier for Operational Intelligence User Story for our Linear Planning Agent project. This is a medium priority component that will extend the existing SlackNotifier with operational intelligence methods for planning statistics, system health, and workflow notifications.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/enhanced_slack_notifier_story_kickoff.md
+
+1. Pull the latest code from the main branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/enhanced_slack_notifier_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -49,8 +51,9 @@ This is a medium priority task that is part of the Agent Operations Slack Integr
 I'm assigning you to implement the Planning Agent Slack Integration User Story for our Linear Planning Agent project. This is a medium priority component that will integrate the Enhanced SlackNotifier into the PlanningAgent to provide notifications about planning operations, completion statistics, and failures.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/planning_agent_slack_integration_story_kickoff.md
+
+1. Pull the latest code from the main branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/planning_agent_slack_integration_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -68,8 +71,9 @@ This is a medium priority task that depends on the completion of the Enhanced Sl
 I'm assigning you to implement the System Health Monitoring with Slack Notifications User Story for our Linear Planning Agent project. This is a medium priority component that will provide proactive monitoring of OAuth tokens, API rate limits, system resources, and operational health with Slack notifications.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/system_health_monitoring_story_kickoff.md
+
+1. Pull the latest code from the main branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/system_health_monitoring_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
