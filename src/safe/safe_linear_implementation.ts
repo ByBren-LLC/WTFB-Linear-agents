@@ -52,15 +52,16 @@ export class SAFeLinearImplementation {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Epic: ${response.error}`);
+        throw new Error('Failed to create Epic');
       }
 
+      const issue = await response.issue;
       logger.info('Created Epic', {
-        epicId: response.issue.id,
+        epicId: issue.id,
         title
       });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error creating Epic', { error, title });
       throw error;
@@ -103,16 +104,17 @@ export class SAFeLinearImplementation {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Feature: ${response.error}`);
+        throw new Error('Failed to create Feature');
       }
 
+      const issue = await response.issue;
       logger.info('Created Feature', {
-        featureId: response.issue.id,
+        featureId: issue.id,
         epicId,
         title
       });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error creating Feature', { error, epicId, title });
       throw error;
@@ -143,16 +145,17 @@ export class SAFeLinearImplementation {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Story: ${response.error}`);
+        throw new Error('Failed to create Story');
       }
 
+      const issue = await response.issue;
       logger.info('Created Story', {
-        storyId: response.issue.id,
+        storyId: issue.id,
         featureId,
         title
       });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error creating Story', { error, featureId, title });
       throw error;
@@ -190,16 +193,17 @@ export class SAFeLinearImplementation {
       });
 
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Technical Enabler: ${response.error}`);
+        throw new Error('Failed to create Technical Enabler');
       }
 
+      const issue = await response.issue;
       logger.info('Created Technical Enabler', {
-        enablerId: response.issue.id,
+        enablerId: issue.id,
         parentId,
         title
       });
 
-      return response.issue;
+      return issue;
     } catch (error) {
       logger.error('Error creating Technical Enabler', { error, parentId, title });
       throw error;
@@ -227,15 +231,16 @@ export class SAFeLinearImplementation {
       });
 
       if (!response.success || !response.cycle) {
-        throw new Error(`Failed to create Program Increment: ${response.error}`);
+        throw new Error('Failed to create Program Increment');
       }
 
+      const cycle = await response.cycle;
       logger.info('Created Program Increment', {
-        piId: response.cycle.id,
+        piId: cycle.id,
         name
       });
 
-      return response.cycle;
+      return cycle;
     } catch (error) {
       logger.error('Error creating Program Increment', { error, name });
       throw error;
@@ -258,9 +263,10 @@ export class SAFeLinearImplementation {
         });
 
         if (!response.success) {
-          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}: ${response.error}`);
+          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}`);
         } else {
-          results.push(response.issue);
+          const issue = await response.issue;
+          results.push(issue);
           logger.info('Assigned feature to PI', { featureId, piId });
         }
       }

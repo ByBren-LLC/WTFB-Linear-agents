@@ -623,15 +623,16 @@ export class PIPlanningService {
       });
 
       if (!response.success || !response.milestone) {
-        throw new Error(`Failed to create Program Increment: ${response.error}`);
+        throw new Error('Failed to create Program Increment');
       }
 
+      const milestone = await response.milestone;
       logger.info('Created Program Increment', {
-        piId: response.milestone.id,
+        piId: milestone.id,
         name
       });
 
-      return response.milestone;
+      return milestone;
     } catch (error) {
       logger.error('Error creating Program Increment', { error, name });
       throw error;
@@ -655,9 +656,10 @@ export class PIPlanningService {
         });
 
         if (!response.success) {
-          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}: ${response.error}`);
+          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}`);
         } else {
-          results.push(response.issue);
+          const issue = await response.issue;
+          results.push(issue);
           logger.info('Assigned feature to PI', { featureId, piId });
         }
       }
