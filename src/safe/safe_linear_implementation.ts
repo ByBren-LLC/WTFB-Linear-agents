@@ -226,8 +226,8 @@ export class SAFeLinearImplementation {
         teamId,
         name: `PI-${name}`,
         description,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDate,
+        endsAt: endDate
       });
 
       if (!response.success || !response.cycle) {
@@ -370,8 +370,8 @@ export class SAFeLinearImplementation {
         filter: {
           team: { id: { eq: teamId } },
           name: { startsWith: 'PI-' },
-          startsAt: { lte: now.toISOString() },
-          endsAt: { gte: now.toISOString() }
+          startsAt: { lte: now },
+          endsAt: { gte: now }
         }
       });
 
