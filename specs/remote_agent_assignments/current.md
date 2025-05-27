@@ -11,8 +11,9 @@ Copy-paste these assignment messages to remote agents for the OAuth Routes Integ
 I'm assigning you to implement the OAuth Routes Integration Technical Enabler for our Linear Planning Agent project. This is a high priority architectural component that will complete the OAuth authentication system by integrating missing Confluence OAuth routes into the Express server.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_routes_integration_enabler_kickoff.md
+
+1. Pull the latest code from the dev branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/oauth_routes_integration_enabler_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -30,8 +31,9 @@ This is a high priority task with no dependencies. This enabler blocks all Confl
 I'm assigning you to implement the Register Confluence OAuth Routes User Story for our Linear Planning Agent project. This is a high priority component that will register the missing Confluence OAuth routes in the Express server to enable Confluence authentication.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/confluence_oauth_routes_story_kickoff.md
+
+1. Pull the latest code from the dev branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/confluence_oauth_routes_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -49,8 +51,9 @@ This is a high priority task that is part of the OAuth Routes Integration Techni
 I'm assigning you to implement the Complete OAuth Environment Configuration User Story for our Linear Planning Agent project. This is a high priority component that will complete the environment variable templates and Docker configuration for OAuth functionality.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_environment_config_story_kickoff.md
+
+1. Pull the latest code from the dev branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/oauth_environment_config_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
@@ -68,8 +71,9 @@ This is a high priority task that is part of the OAuth Routes Integration Techni
 I'm assigning you to implement the Create OAuth Applications and Validate Testing User Story for our Linear Planning Agent project. This is a high priority component that will create OAuth applications in Linear and Atlassian Developer Console and validate the complete OAuth flow in local Docker environment.
 
 Please:
-1. Pull the latest code from the main branch of our repository: https://github.com/ByBren-LLC/WTFB-Linear-agents
-2. Read your kickoff note: https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/main/specs/kickoff_notes/oauth_applications_setup_story_kickoff.md
+
+1. Pull the latest code from the dev branch of our repository: <https://github.com/ByBren-LLC/WTFB-Linear-agents>
+2. Read your kickoff note: <https://github.com/ByBren-LLC/WTFB-Linear-agents/blob/dev/specs/kickoff_notes/oauth_applications_setup_story_kickoff.md>
 3. Create a Linear issue as instructed in the kickoff note
 4. Study the implementation document referenced in the kickoff note
 5. Implement the task according to the specifications
