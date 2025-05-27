@@ -55,13 +55,28 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
     }
 
     // Exchange the authorization code for an access token
-    const tokenResponse = await axios.post('https://api.linear.app/oauth/token', {
+    logger.info('Attempting token exchange', {
       client_id: clientId,
-      client_secret: clientSecret,
       redirect_uri: redirectUri,
-      code,
+      code: typeof code === 'string' ? code.substring(0, 10) + '...' : 'invalid',
       grant_type: 'authorization_code'
     });
+
+    // Linear requires URL-encoded form data, not JSON!
+    const tokenResponse = await axios.post('https://api.linear.app/oauth/token',
+      new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code: code as string,
+        grant_type: 'authorization_code'
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
@@ -154,8 +169,18 @@ export const handleOAuthCallback = async (req: Request, res: Response) => {
         </body>
       </html>
     `);
-  } catch (error) {
-    logger.error('OAuth callback error', { error });
+  } catch (error: any) {
+    logger.error('OAuth callback error', {
+      error: error?.message,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      data: error?.response?.data,
+      config: {
+        url: error?.config?.url,
+        method: error?.config?.method,
+        data: error?.config?.data
+      }
+    });
     res.status(500).json({ error: 'Failed to complete OAuth flow' });
   }
 };
