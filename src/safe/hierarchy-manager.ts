@@ -307,7 +307,8 @@ export class SAFeHierarchyManager {
         // Get the current parent of the enabler
         const enablerResponse = await this.linearClient.issue(linearEnablerId);
         const enabler = await enablerResponse;
-        const currentParentId = enabler.parent?.id || null;
+        const parent = enabler.parent ? await enabler.parent : null;
+        const currentParentId = parent?.id || null;
 
         // If the parent has changed, update it
         if (currentParentId !== linearFeatureId) {

@@ -264,7 +264,7 @@ export class ChangeDetector {
         // Determine item type
         let itemType: ChangeItemType;
         const labels = issue.labels?.nodes || [];
-        const labelNames = labels.map(label => label.name);
+        const labelNames = labels.map((label: { name: string }) => label.name);
 
         if (labelNames.includes('Epic')) {
           itemType = ChangeItemType.EPIC;
