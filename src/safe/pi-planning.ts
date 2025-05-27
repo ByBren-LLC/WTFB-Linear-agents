@@ -312,8 +312,8 @@ export class PIManager {
           teamId,
           name: `${pi.name}-I${i + 1}${isIP ? '-IP' : ''}`,
           description: isIP ? 'Innovation and Planning Iteration' : `Iteration ${i + 1}`,
-          startsAt: iterationStartDate.toISOString(),
-          endsAt: iterationEndDate.toISOString()
+          startsAt: iterationStartDate,
+          endsAt: iterationEndDate
         });
 
         if (!cycle.success || !cycle.cycle) {

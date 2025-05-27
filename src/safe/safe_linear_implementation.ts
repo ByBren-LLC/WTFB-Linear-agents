@@ -222,8 +222,8 @@ export class SAFeLinearImplementation {
         teamId,
         name: `PI-${name}`,
         description,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDate,
+        endsAt: endDate
       });
 
       if (!response.success || !response.cycle) {
