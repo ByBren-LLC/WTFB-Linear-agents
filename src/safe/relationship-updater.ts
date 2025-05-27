@@ -3,7 +3,7 @@
  *
  * This module provides utilities for updating relationships between issues in Linear.
  */
-import { LinearClient, Issue } from '@linear/sdk';
+import { LinearClient, Issue, LinearDocument } from '@linear/sdk';
 import * as logger from '../utils/logger';
 
 /**
@@ -112,10 +112,11 @@ export class RelationshipUpdater {
           // Add new blocking relationships
           for (const relatedIssueId of relatedIssueIds) {
             if (!currentBlockingIds.includes(relatedIssueId)) {
+              // Use Linear SDK v2.6.0 enum constant for issue relationship type
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: 'blocks'
+                type: LinearDocument.IssueRelationType.Blocks
               });
 
               logger.info('Added blocking relationship', {
@@ -152,10 +153,11 @@ export class RelationshipUpdater {
           // Add new related relationships
           for (const relatedIssueId of relatedIssueIds) {
             if (!currentRelatedIds.includes(relatedIssueId)) {
+              // Use Linear SDK v2.6.0 enum constant for issue relationship type
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: 'relates'
+                type: LinearDocument.IssueRelationType.Related
               });
 
               logger.info('Added related relationship', {
