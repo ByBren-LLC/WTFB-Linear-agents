@@ -329,7 +329,10 @@ export class ChangeDetector {
       }
 
       // Extract planning information
-      const extractor = new PlanningExtractor(document);
+      // Convert ConfluenceDocument to expected types
+      const elements = document.elements as any[];
+      const sections = document.sections as any[];
+      const extractor = new PlanningExtractor(elements, sections);
       const planningDocument = extractor.getPlanningDocument();
 
       // If this is the first sync, treat all items as created
