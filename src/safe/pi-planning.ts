@@ -655,9 +655,10 @@ export class PIPlanningService {
         });
 
         if (!response.success) {
-          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}: ${response.error}`);
+          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}`);
         } else {
-          results.push(response.issue);
+          const issue = await response.issue;
+          results.push(issue);
           logger.info('Assigned feature to PI', { featureId, piId });
         }
       }

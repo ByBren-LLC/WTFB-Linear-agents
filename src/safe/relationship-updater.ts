@@ -53,7 +53,7 @@ export class RelationshipUpdater {
       });
 
       if (!response.success) {
-        throw new Error(`Failed to update parent-child relationship: ${response.error}`);
+        throw new Error('Failed to update parent-child relationship');
       }
 
       logger.info('Parent-child relationship updated successfully', {
