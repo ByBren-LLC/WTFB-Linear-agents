@@ -1,12 +1,15 @@
 # Create Linear Issues from Planning Data - Implementation Document
 
 ## Overview
+
 This user story will implement the functionality to create Linear issues from extracted planning information. This component will use the Linear API to create properly structured issues with the appropriate hierarchy and relationships.
 
 ## User Story
+
 As a Linear Planning Agent, I need to be able to create Linear issues from extracted planning information so that I can maintain the SAFe hierarchy and relationships in Linear.
 
 ## Acceptance Criteria
+
 1. The agent can create epics, features, stories, and enablers in Linear
 2. The agent can create parent-child relationships between issues
 3. The agent can set appropriate labels, priorities, and other attributes
@@ -18,14 +21,17 @@ As a Linear Planning Agent, I need to be able to create Linear issues from extra
 9. The implementation is well-documented with JSDoc comments
 
 ## Technical Context
+
 After extracting planning information from a Confluence document, the Linear Planning Agent needs to create corresponding issues in Linear. This involves mapping the planning information to Linear entities and creating the appropriate hierarchy and relationships.
 
 ### Existing Code
+
 - `src/planning/models.ts`: Planning information models (to be implemented in the Extract Planning Information task)
 - `src/safe/safe_linear_implementation.ts`: SAFe implementation in Linear
 - `src/auth/tokens.ts`: Token management for Linear OAuth
 
 ### Dependencies
+
 - Extract Planning Information (User Story)
 - SAFe Implementation in Linear (Spike)
 - Linear API Error Handling (Technical Enabler)
@@ -33,6 +39,7 @@ After extracting planning information from a Confluence document, the Linear Pla
 ## Implementation Plan
 
 ### 1. Implement Issue Creator
+
 - Create a new file `src/linear/issue-creator.ts` for the Linear issue creator
 - Implement a class that takes planning information and creates Linear issues
 - Implement methods for creating different types of issues
@@ -83,6 +90,7 @@ export class LinearIssueCreator {
 ```
 
 ### 2. Implement Issue Mapping
+
 - Implement functions to map planning information to Linear issues
 - Handle conversion of attributes, labels, and other metadata
 
@@ -117,6 +125,7 @@ export const mapStoryPointsToEstimate = (storyPoints?: number): number | undefin
 ```
 
 ### 3. Implement Issue Updater
+
 - Implement functions to update existing issues
 - Handle merging of changes and conflict resolution
 
@@ -156,6 +165,7 @@ export class LinearIssueUpdater {
 ```
 
 ### 4. Implement Issue Finder
+
 - Implement functions to find existing issues
 - Use titles, identifiers, or other attributes to match issues
 
@@ -201,6 +211,7 @@ export class LinearIssueFinder {
 ```
 
 ### 5. Implement Rate Limiting and Error Handling
+
 - Implement rate limiting to respect Linear API limits
 - Implement error handling for API errors
 - Implement retry logic for transient errors
@@ -218,6 +229,7 @@ export const handleLinearError = (error: any): Error => {
 ```
 
 ### 6. Implement Planning Session Manager
+
 - Implement a class to manage the planning session
 - Track progress and handle errors during issue creation
 
@@ -269,6 +281,7 @@ export class PlanningSessionManager {
 ```
 
 ### 7. Write Tests
+
 - Write unit tests for all components
 - Write integration tests with mock Linear API
 - Test error handling and rate limiting
@@ -291,17 +304,20 @@ describe('LinearIssueUpdater', () => {
 ```
 
 ### 8. Document the API
+
 - Add JSDoc comments to all functions and classes
 - Create a README.md file for the Linear issue creator
 - Document usage examples and limitations
 
 ## Testing Approach
+
 - Unit tests for all components
 - Integration tests with mock Linear API
 - Test error handling and rate limiting
 - Test with various planning document structures
 
 ## Definition of Done
+
 - All acceptance criteria are met
 - All tests are passing
 - Code is well-documented with JSDoc comments
@@ -309,9 +325,11 @@ describe('LinearIssueUpdater', () => {
 - The implementation is reviewed and approved by the team
 
 ## Estimated Effort
+
 - 5 story points (approximately 5 days of work)
 
 ## Resources
+
 - [Linear API Documentation](https://developers.linear.app/docs/)
 - [Linear SDK Documentation](https://github.com/linear/linear/tree/master/packages/sdk)
 - [SAFe Documentation](https://www.scaledagileframework.com/)
