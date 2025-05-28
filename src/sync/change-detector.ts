@@ -264,7 +264,7 @@ export class ChangeDetector {
         // Determine item type
         let itemType: ChangeItemType;
         const labels = issue.labels?.nodes || [];
-        const labelNames = labels.map(label => label.name);
+        const labelNames = labels.map((label: { name: string }) => label.name);
 
         if (labelNames.includes('Epic')) {
           itemType = ChangeItemType.EPIC;
@@ -329,7 +329,10 @@ export class ChangeDetector {
       }
 
       // Extract planning information
-      const extractor = new PlanningExtractor(document);
+      // Convert ConfluenceDocument to expected types
+      const elements = document.elements as any[];
+      const sections = document.sections as any[];
+      const extractor = new PlanningExtractor(elements, sections);
       const planningDocument = extractor.getPlanningDocument();
 
       // If this is the first sync, treat all items as created

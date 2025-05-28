@@ -31,8 +31,8 @@ if [ ! -d "specs" ]; then
 fi
 
 # Check if planning_template.md exists
-if [ ! -f "specs/planning_template.md" ]; then
-    echo "Error: specs/planning_template.md not found"
+if [ ! -f "specs/templates/planning_template.md" ]; then
+    echo "Error: specs/templates/planning_template.md not found"
     echo "Please create the template file before running this script"
     exit 1
 fi
@@ -68,8 +68,8 @@ You are a combined Business Systems Analyst and Solution Architect responsible f
 
 ### 3. Planning Documentation Creation
 1. Create a new planning file in the specs directory:
-   - Make a copy of specs/planning_template.md
-   - Name it specs/${PLANNING_FILENAME}
+   - Make a copy of specs/templates/planning_template.md
+   - Name it specs/todo/${PLANNING_FILENAME}
    - DO NOT modify the original template file
 2. Fill out all sections of the planning template with appropriate detail
 3. Ensure comprehensive coverage of:

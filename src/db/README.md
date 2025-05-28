@@ -1,6 +1,10 @@
 # Database Schema Design
 
-This directory contains the database schema design for the Linear Planning Agent. The schema is designed to store OAuth tokens, planning sessions, and relationships between planning entities (Epics, Features, Stories, Enablers).
+This directory contains the database schema design for the Linear Planning Agent. The schema is designed to store OAuth tokens, planning sessions, synchronization state, and relationships between planning entities (Epics, Features, Stories, Enablers).
+
+## Database Integration
+
+As of migration 006, all data is stored in a unified PostgreSQL database. Previously, synchronization data was stored in SQLite, but this has been integrated into the main PostgreSQL schema for consistency and performance.
 
 ## Database Schema
 
@@ -94,6 +98,48 @@ planning_sessions
     |       └── planning_stories
     |
     └── planning_enablers
+
+### sync_state
+
+Stores synchronization timestamps between Confluence pages and Linear teams.
+
+- `id`: Primary key
+- `confluence_page_id`: Confluence page ID or URL
+- `linear_team_id`: Linear team ID
+- `timestamp`: Last synchronization timestamp
+- `created_at`: Record creation timestamp
+- `updated_at`: Record update timestamp
+
+### conflicts
+
+Stores synchronization conflicts that need resolution.
+
+- `id`: Conflict ID (primary key)
+- `linear_change`: JSON representation of Linear change
+- `confluence_change`: JSON representation of Confluence change
+- `is_resolved`: Boolean indicating if conflict is resolved
+- `resolution_strategy`: Strategy used to resolve conflict
+- `resolved_change`: JSON representation of resolved change
+- `created_at`: Record creation timestamp
+- `updated_at`: Record update timestamp
+
+### sync_history
+
+Stores history of synchronization operations.
+
+- `id`: Primary key
+- `confluence_page_id`: Confluence page ID
+- `linear_team_id`: Linear team ID
+- `success`: Boolean indicating if sync was successful
+- `error`: Error message if sync failed
+- `created_issues`: Number of issues created
+- `updated_issues`: Number of issues updated
+- `confluence_changes`: Number of Confluence changes
+- `conflicts_detected`: Number of conflicts detected
+- `conflicts_resolved`: Number of conflicts resolved
+- `timestamp`: Sync operation timestamp
+- `created_at`: Record creation timestamp
+
 ```
 
 ## Migration System
@@ -124,11 +170,11 @@ CRUD operations for each table are implemented in `src/db/models.ts`. These func
 Example usage:
 
 ```typescript
-import { 
-  storeLinearToken, 
-  getLinearToken, 
+import {
+  storeLinearToken,
+  getLinearToken,
   createPlanningSession,
-  getPlanningSessionsByOrganization 
+  getPlanningSessionsByOrganization
 } from './db/models';
 
 // Store a token

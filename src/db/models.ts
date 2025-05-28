@@ -1,8 +1,13 @@
 import { query, getClient } from './connection';
 import * as logger from '../utils/logger';
 import { runMigrations } from './migrations';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+
+// Mock database interface for testing
+export interface DatabaseInterface {
+  get(query: string, params?: any[]): Promise<any>;
+  all(query: string, params?: any[]): Promise<any[]>;
+  run(query: string, params?: any[]): Promise<any>;
+}
 
 // TypeScript interfaces for database tables
 
@@ -13,7 +18,7 @@ export interface LinearToken {
   id: number;
   organization_id: string;
   access_token: string;
-  refresh_token: string;
+  refresh_token: string | null;
   app_user_id: string;
   expires_at: Date;
   created_at: Date;
@@ -27,7 +32,7 @@ export interface ConfluenceToken {
   id: number;
   organization_id: string;
   access_token: string;
-  refresh_token: string;
+  refresh_token: string | null;
   site_url: string;
   expires_at: Date;
   created_at: Date;
@@ -206,67 +211,286 @@ export const initializeDatabase = async (): Promise<void> => {
   }
 };
 
-// SQLite database for synchronization
-let db: Database | null = null;
+// Sync State CRUD Operations
 
 /**
- * Gets the SQLite database instance
+ * Gets the last synchronization timestamp
  */
-export const getDatabase = async (): Promise<Database> => {
-  if (!db) {
-    db = await open({
-      filename: process.env.SQLITE_DB_PATH || './data/sync.db',
-      driver: sqlite3.Database
-    });
+export const getLastSyncTimestamp = async (
+  confluencePageId: string,
+  linearTeamId: string
+): Promise<number | null> => {
+  try {
+    const result = await query(
+      'SELECT timestamp FROM sync_state WHERE confluence_page_id = $1 AND linear_team_id = $2',
+      [confluencePageId, linearTeamId]
+    );
 
-    // Create tables if they don't exist
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS sync_state (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        confluence_page_id TEXT NOT NULL,
-        linear_team_id TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(confluence_page_id, linear_team_id)
-      );
+    if (result.rows.length === 0) {
+      return null;
+    }
 
-      CREATE TABLE IF NOT EXISTS conflicts (
-        id TEXT PRIMARY KEY,
-        linear_change TEXT NOT NULL,
-        confluence_change TEXT NOT NULL,
-        is_resolved INTEGER NOT NULL DEFAULT 0,
-        resolution_strategy TEXT,
-        resolved_change TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS sync_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        confluence_page_id TEXT NOT NULL,
-        linear_team_id TEXT NOT NULL,
-        success INTEGER NOT NULL,
-        error TEXT,
-        created_issues INTEGER NOT NULL DEFAULT 0,
-        updated_issues INTEGER NOT NULL DEFAULT 0,
-        confluence_changes INTEGER NOT NULL DEFAULT 0,
-        conflicts_detected INTEGER NOT NULL DEFAULT 0,
-        conflicts_resolved INTEGER NOT NULL DEFAULT 0,
-        timestamp INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_sync_state_confluence_page_id ON sync_state(confluence_page_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_state_linear_team_id ON sync_state(linear_team_id);
-      CREATE INDEX IF NOT EXISTS idx_conflicts_is_resolved ON conflicts(is_resolved);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_confluence_page_id ON sync_history(confluence_page_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_linear_team_id ON sync_history(linear_team_id);
-      CREATE INDEX IF NOT EXISTS idx_sync_history_timestamp ON sync_history(timestamp);
-    `);
+    return result.rows[0].timestamp;
+  } catch (error) {
+    logger.error('Error getting last sync timestamp', { error, confluencePageId, linearTeamId });
+    throw error;
   }
+};
 
-  return db;
+/**
+ * Updates the last synchronization timestamp
+ */
+export const updateLastSyncTimestamp = async (
+  confluencePageId: string,
+  linearTeamId: string,
+  timestamp: number
+): Promise<void> => {
+  try {
+    await query(
+      `
+        INSERT INTO sync_state (confluence_page_id, linear_team_id, timestamp)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (confluence_page_id, linear_team_id)
+        DO UPDATE SET timestamp = $3, updated_at = NOW()
+      `,
+      [confluencePageId, linearTeamId, timestamp]
+    );
+
+    logger.info('Sync timestamp updated', { confluencePageId, linearTeamId, timestamp });
+  } catch (error) {
+    logger.error('Error updating sync timestamp', { error, confluencePageId, linearTeamId, timestamp });
+    throw error;
+  }
+};
+
+/**
+ * Stores a conflict in the database
+ */
+export const storeConflict = async (
+  conflictId: string,
+  linearChange: any,
+  confluenceChange: any,
+  isResolved: boolean = false,
+  resolutionStrategy?: string,
+  resolvedChange?: any
+): Promise<void> => {
+  try {
+    await query(
+      `
+        INSERT INTO conflicts (
+          id, linear_change, confluence_change, is_resolved, resolution_strategy, resolved_change
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (id)
+        DO UPDATE SET
+          linear_change = $2,
+          confluence_change = $3,
+          is_resolved = $4,
+          resolution_strategy = $5,
+          resolved_change = $6,
+          updated_at = NOW()
+      `,
+      [
+        conflictId,
+        JSON.stringify(linearChange),
+        JSON.stringify(confluenceChange),
+        isResolved,
+        resolutionStrategy || null,
+        resolvedChange ? JSON.stringify(resolvedChange) : null
+      ]
+    );
+
+    logger.info('Conflict stored', { conflictId, isResolved });
+  } catch (error) {
+    logger.error('Error storing conflict', { error, conflictId });
+    throw error;
+  }
+};
+
+/**
+ * Gets unresolved conflicts
+ */
+export const getUnresolvedConflicts = async (): Promise<any[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM conflicts WHERE is_resolved = FALSE ORDER BY created_at DESC'
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      linearChange: JSON.parse(row.linear_change),
+      confluenceChange: JSON.parse(row.confluence_change),
+      isResolved: row.is_resolved,
+      resolutionStrategy: row.resolution_strategy,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+  } catch (error) {
+    logger.error('Error getting unresolved conflicts', { error });
+    throw error;
+  }
+};
+
+/**
+ * Gets resolved conflicts
+ */
+export const getResolvedConflicts = async (): Promise<any[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM conflicts WHERE is_resolved = TRUE ORDER BY updated_at DESC'
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      linearChange: JSON.parse(row.linear_change),
+      confluenceChange: JSON.parse(row.confluence_change),
+      resolvedChange: row.resolved_change ? JSON.parse(row.resolved_change) : null,
+      isResolved: row.is_resolved,
+      resolutionStrategy: row.resolution_strategy,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+  } catch (error) {
+    logger.error('Error getting resolved conflicts', { error });
+    throw error;
+  }
+};
+
+/**
+ * Gets all conflicts
+ */
+export const getAllConflicts = async (): Promise<any[]> => {
+  try {
+    const result = await query(
+      'SELECT * FROM conflicts ORDER BY created_at DESC'
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      linearChange: JSON.parse(row.linear_change),
+      confluenceChange: JSON.parse(row.confluence_change),
+      resolvedChange: row.resolved_change ? JSON.parse(row.resolved_change) : null,
+      isResolved: row.is_resolved,
+      resolutionStrategy: row.resolution_strategy,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+  } catch (error) {
+    logger.error('Error getting all conflicts', { error });
+    throw error;
+  }
+};
+
+/**
+ * Deletes a conflict
+ */
+export const deleteConflict = async (conflictId: string): Promise<boolean> => {
+  try {
+    const result = await query(
+      'DELETE FROM conflicts WHERE id = $1',
+      [conflictId]
+    );
+
+    const deleted = (result.rowCount ?? 0) > 0;
+    if (deleted) {
+      logger.info('Conflict deleted', { conflictId });
+    } else {
+      logger.warn('No conflict found to delete', { conflictId });
+    }
+
+    return deleted;
+  } catch (error) {
+    logger.error('Error deleting conflict', { error, conflictId });
+    throw error;
+  }
+};
+
+/**
+ * Clears all conflicts
+ */
+export const clearConflicts = async (): Promise<void> => {
+  try {
+    await query('DELETE FROM conflicts');
+    logger.info('All conflicts cleared');
+  } catch (error) {
+    logger.error('Error clearing conflicts', { error });
+    throw error;
+  }
+};
+
+/**
+ * Records sync history
+ */
+export const recordSyncHistory = async (
+  confluencePageId: string,
+  linearTeamId: string,
+  success: boolean,
+  timestamp: number,
+  error?: string,
+  createdIssues: number = 0,
+  updatedIssues: number = 0,
+  confluenceChanges: number = 0,
+  conflictsDetected: number = 0,
+  conflictsResolved: number = 0
+): Promise<void> => {
+  try {
+    await query(
+      `
+        INSERT INTO sync_history (
+          confluence_page_id, linear_team_id, success, error, created_issues,
+          updated_issues, confluence_changes, conflicts_detected, conflicts_resolved, timestamp
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `,
+      [
+        confluencePageId,
+        linearTeamId,
+        success,
+        error || null,
+        createdIssues,
+        updatedIssues,
+        confluenceChanges,
+        conflictsDetected,
+        conflictsResolved,
+        timestamp
+      ]
+    );
+
+    logger.info('Sync history recorded', {
+      confluencePageId,
+      linearTeamId,
+      success,
+      createdIssues,
+      updatedIssues
+    });
+  } catch (error) {
+    logger.error('Error recording sync history', { error, confluencePageId, linearTeamId });
+    throw error;
+  }
+};
+
+/**
+ * Gets sync history for a page and team
+ */
+export const getSyncHistory = async (
+  confluencePageId: string,
+  linearTeamId: string,
+  limit: number = 50
+): Promise<any[]> => {
+  try {
+    const result = await query(
+      `
+        SELECT * FROM sync_history
+        WHERE confluence_page_id = $1 AND linear_team_id = $2
+        ORDER BY created_at DESC
+        LIMIT $3
+      `,
+      [confluencePageId, linearTeamId, limit]
+    );
+
+    return result.rows;
+  } catch (error) {
+    logger.error('Error getting sync history', { error, confluencePageId, linearTeamId });
+    throw error;
+  }
 };
 
 // Linear Token CRUD Operations
@@ -277,7 +501,7 @@ export const getDatabase = async (): Promise<Database> => {
 export const storeLinearToken = async (
   organizationId: string,
   accessToken: string,
-  refreshToken: string,
+  refreshToken: string | null,
   appUserId: string,
   expiresAt: Date
 ): Promise<void> => {
@@ -1654,4 +1878,27 @@ export const deletePIFeature = async (featureId: number): Promise<boolean> => {
     logger.error('Error deleting PI feature', { error, featureId });
     throw error;
   }
+};
+
+/**
+ * Gets a database interface for testing purposes
+ * This function is primarily used by tests to mock database operations
+ */
+export const getDatabase = async (): Promise<DatabaseInterface> => {
+  return {
+    async get(sql: string, params: any[] = []): Promise<any> {
+      const result = await query(sql, params);
+      return result.rows.length > 0 ? result.rows[0] : null;
+    },
+
+    async all(sql: string, params: any[] = []): Promise<any[]> {
+      const result = await query(sql, params);
+      return result.rows;
+    },
+
+    async run(sql: string, params: any[] = []): Promise<any> {
+      const result = await query(sql, params);
+      return result;
+    }
+  };
 };

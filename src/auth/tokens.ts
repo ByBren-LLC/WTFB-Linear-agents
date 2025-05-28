@@ -24,7 +24,7 @@ export const storeTokens = async (
   organizationId: string,
   organizationName: string,
   accessToken: string,
-  refreshToken: string,
+  refreshToken: string | null,
   appUserId: string,
   expiresIn: number
 ): Promise<void> => {
@@ -64,6 +64,12 @@ export const refreshToken = async (organizationId: string): Promise<string | nul
       logger.error(`No tokens found for organization ${organizationId}`);
       return null;
     }
+
+    if (!tokenData.refresh_token) {
+      logger.error(`No refresh token available for organization ${organizationId}`);
+      return null;
+    }
+
     const clientId = process.env.LINEAR_CLIENT_ID;
     const clientSecret = process.env.LINEAR_CLIENT_SECRET;
 

@@ -17,5 +17,18 @@ module.exports = {
       lines: 80,
       statements: 80
     }
+  },
+  // Timeout configuration for OAuth integration tests
+  testTimeout: 15000, // 15 seconds for all tests
+  // Timer mocking configuration
+  fakeTimers: {
+    enableGlobally: false // We'll enable per-test for better control
+  },
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  // TypeScript configuration - Updated for Jest 29+
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.json'
+    }]
   }
 };

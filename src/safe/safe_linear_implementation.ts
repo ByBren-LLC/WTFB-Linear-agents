@@ -1,6 +1,6 @@
 /**
  * SAFe Implementation in Linear
- * 
+ *
  * This module provides utilities for implementing SAFe methodology in Linear,
  * based on the research findings and recommendations.
  */
@@ -22,11 +22,11 @@ export enum EnablerType {
  */
 export class SAFeLinearImplementation {
   private linearClient: LinearClient;
-  
+
   constructor(accessToken: string) {
     this.linearClient = new LinearClient({ accessToken });
   }
-  
+
   /**
    * Creates an Epic in Linear
    */
@@ -39,34 +39,35 @@ export class SAFeLinearImplementation {
     try {
       // Get label IDs
       const labelIds = await this.getLabelIds(labels);
-      
+
       // Get the Epic label ID
       const epicLabelId = await this.getSafeLabelId('Epic');
-      
+
       // Create the Epic
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[EPIC] ${title}`,
         description,
         labelIds: [...labelIds, epicLabelId]
       });
-      
+
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Epic: ${response.error}`);
+        throw new Error('Failed to create Epic');
       }
-      
-      logger.info('Created Epic', { 
-        epicId: response.issue.id, 
-        title 
+
+      const issue = await response.issue;
+      logger.info('Created Epic', {
+        epicId: issue.id,
+        title
       });
-      
-      return response.issue;
+
+      return issue;
     } catch (error) {
       logger.error('Error creating Epic', { error, title });
       throw error;
     }
   }
-  
+
   /**
    * Creates a Feature in Linear as a child of an Epic
    */
@@ -81,10 +82,10 @@ export class SAFeLinearImplementation {
     try {
       // Get label IDs
       const labelIds = await this.getLabelIds(labels);
-      
+
       // Get the Feature label ID
       const featureLabelId = await this.getSafeLabelId('Feature');
-      
+
       // Get the Business/Enabler label ID if needed
       let categoryLabelId: string | null = null;
       if (isBusinessFeature) {
@@ -92,33 +93,34 @@ export class SAFeLinearImplementation {
       } else {
         categoryLabelId = await this.getSafeLabelId('Enabler');
       }
-      
+
       // Create the Feature
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[FEATURE] ${title}`,
         description,
         labelIds: [...labelIds, featureLabelId, ...(categoryLabelId ? [categoryLabelId] : [])],
         parentId: epicId
       });
-      
+
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Feature: ${response.error}`);
+        throw new Error('Failed to create Feature');
       }
-      
-      logger.info('Created Feature', { 
-        featureId: response.issue.id, 
+
+      const issue = await response.issue;
+      logger.info('Created Feature', {
+        featureId: issue.id,
         epicId,
-        title 
+        title
       });
-      
-      return response.issue;
+
+      return issue;
     } catch (error) {
       logger.error('Error creating Feature', { error, epicId, title });
       throw error;
     }
   }
-  
+
   /**
    * Creates a Story in Linear as a child of a Feature
    */
@@ -132,33 +134,34 @@ export class SAFeLinearImplementation {
     try {
       // Get label IDs
       const labelIds = await this.getLabelIds(labels);
-      
+
       // Create the Story
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title,
         description,
         labelIds,
         parentId: featureId
       });
-      
+
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Story: ${response.error}`);
+        throw new Error('Failed to create Story');
       }
-      
-      logger.info('Created Story', { 
-        storyId: response.issue.id, 
+
+      const issue = await response.issue;
+      logger.info('Created Story', {
+        storyId: issue.id,
         featureId,
-        title 
+        title
       });
-      
-      return response.issue;
+
+      return issue;
     } catch (error) {
       logger.error('Error creating Story', { error, featureId, title });
       throw error;
     }
   }
-  
+
   /**
    * Creates a Technical Enabler in Linear
    */
@@ -173,39 +176,40 @@ export class SAFeLinearImplementation {
     try {
       // Get label IDs
       const labelIds = await this.getLabelIds(labels);
-      
+
       // Get the Enabler label ID
       const enablerLabelId = await this.getSafeLabelId('Enabler');
-      
+
       // Get the Enabler Type label ID
       const typeLabelId = await this.getSafeLabelId(enablerType);
-      
+
       // Create the Enabler
-      const response = await this.linearClient.issueCreate({
+      const response = await this.linearClient.createIssue({
         teamId,
         title: `[ENABLER] ${title}`,
         description,
         labelIds: [...labelIds, enablerLabelId, typeLabelId],
         ...(parentId ? { parentId } : {})
       });
-      
+
       if (!response.success || !response.issue) {
-        throw new Error(`Failed to create Technical Enabler: ${response.error}`);
+        throw new Error('Failed to create Technical Enabler');
       }
-      
-      logger.info('Created Technical Enabler', { 
-        enablerId: response.issue.id, 
+
+      const issue = await response.issue;
+      logger.info('Created Technical Enabler', {
+        enablerId: issue.id,
         parentId,
-        title 
+        title
       });
-      
-      return response.issue;
+
+      return issue;
     } catch (error) {
       logger.error('Error creating Technical Enabler', { error, parentId, title });
       throw error;
     }
   }
-  
+
   /**
    * Creates a Program Increment in Linear using Cycles
    */
@@ -218,30 +222,31 @@ export class SAFeLinearImplementation {
   ) {
     try {
       // Create the Cycle
-      const response = await this.linearClient.cycleCreate({
+      const response = await this.linearClient.createCycle({
         teamId,
         name: `PI-${name}`,
         description,
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDate,
+        endsAt: endDate
       });
-      
+
       if (!response.success || !response.cycle) {
-        throw new Error(`Failed to create Program Increment: ${response.error}`);
+        throw new Error('Failed to create Program Increment');
       }
-      
-      logger.info('Created Program Increment', { 
-        piId: response.cycle.id, 
-        name 
+
+      const cycle = await response.cycle;
+      logger.info('Created Program Increment', {
+        piId: cycle.id,
+        name
       });
-      
-      return response.cycle;
+
+      return cycle;
     } catch (error) {
       logger.error('Error creating Program Increment', { error, name });
       throw error;
     }
   }
-  
+
   /**
    * Assigns features to a Program Increment
    */
@@ -251,90 +256,91 @@ export class SAFeLinearImplementation {
   ) {
     try {
       const results = [];
-      
+
       for (const featureId of featureIds) {
-        const response = await this.linearClient.issueUpdate(featureId, {
+        const response = await this.linearClient.updateIssue(featureId, {
           cycleId: piId
         });
-        
+
         if (!response.success) {
-          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}: ${response.error}`);
+          logger.warn(`Failed to assign feature ${featureId} to PI ${piId}`);
         } else {
-          results.push(response.issue);
+          const issue = await response.issue;
+          results.push(issue);
           logger.info('Assigned feature to PI', { featureId, piId });
         }
       }
-      
+
       return results;
     } catch (error) {
       logger.error('Error assigning features to PI', { error, piId, featureIds });
       throw error;
     }
   }
-  
+
   /**
    * Gets all Epics
    */
   async getEpics(teamId: string) {
     try {
       const epicLabelId = await this.getSafeLabelId('Epic');
-      
+
       const response = await this.linearClient.issues({
         filter: {
           team: { id: { eq: teamId } },
           labels: { id: { eq: epicLabelId } }
         }
       });
-      
+
       return response.nodes;
     } catch (error) {
       logger.error('Error getting Epics', { error, teamId });
       throw error;
     }
   }
-  
+
   /**
    * Gets all Features
    */
   async getFeatures(teamId: string) {
     try {
       const featureLabelId = await this.getSafeLabelId('Feature');
-      
+
       const response = await this.linearClient.issues({
         filter: {
           team: { id: { eq: teamId } },
           labels: { id: { eq: featureLabelId } }
         }
       });
-      
+
       return response.nodes;
     } catch (error) {
       logger.error('Error getting Features', { error, teamId });
       throw error;
     }
   }
-  
+
   /**
    * Gets all Enablers
    */
   async getEnablers(teamId: string) {
     try {
       const enablerLabelId = await this.getSafeLabelId('Enabler');
-      
+
       const response = await this.linearClient.issues({
         filter: {
           team: { id: { eq: teamId } },
           labels: { id: { eq: enablerLabelId } }
         }
       });
-      
+
       return response.nodes;
     } catch (error) {
       logger.error('Error getting Enablers', { error, teamId });
       throw error;
     }
   }
-  
+
   /**
    * Gets all Program Increments
    */
@@ -346,14 +352,14 @@ export class SAFeLinearImplementation {
           name: { startsWith: 'PI-' }
         }
       });
-      
+
       return response.nodes;
     } catch (error) {
       logger.error('Error getting Program Increments', { error, teamId });
       throw error;
     }
   }
-  
+
   /**
    * Gets the current Program Increment
    */
@@ -364,22 +370,22 @@ export class SAFeLinearImplementation {
         filter: {
           team: { id: { eq: teamId } },
           name: { startsWith: 'PI-' },
-          startsAt: { lte: now.toISOString() },
-          endsAt: { gte: now.toISOString() }
+          startsAt: { lte: now },
+          endsAt: { gte: now }
         }
       });
-      
+
       if (cycles.nodes.length === 0) {
         return null;
       }
-      
+
       return cycles.nodes[0];
     } catch (error) {
       logger.error('Error getting current Program Increment', { error, teamId });
       throw error;
     }
   }
-  
+
   /**
    * Gets label IDs for the given label names
    */
@@ -388,9 +394,9 @@ export class SAFeLinearImplementation {
       if (!labelNames.length) {
         return [];
       }
-      
+
       const labels = await this.linearClient.issueLabels();
-      
+
       return labels.nodes
         .filter(label => labelNames.includes(label.name))
         .map(label => label.id);
@@ -399,20 +405,20 @@ export class SAFeLinearImplementation {
       throw error;
     }
   }
-  
+
   /**
    * Gets or creates a SAFe label ID
    */
   private async getSafeLabelId(labelName: string): Promise<string> {
     try {
       const labels = await this.linearClient.issueLabels();
-      
+
       const label = labels.nodes.find(label => label.name === labelName);
-      
+
       if (label) {
         return label.id;
       }
-      
+
       // Create the label if it doesn't exist
       const colorMap: Record<string, string> = {
         'Epic': '#F2994A',
@@ -424,19 +430,20 @@ export class SAFeLinearImplementation {
         'Technical Debt': '#EB5757',
         'Research': '#F2C94C'
       };
-      
+
       const color = colorMap[labelName] || '#4EA7FC';
-      
-      const response = await this.linearClient.issueLabelCreate({
+
+      const response = await this.linearClient.createIssueLabel({
         name: labelName,
         color
       });
-      
+
       if (!response.success || !response.issueLabel) {
         throw new Error(`Failed to create ${labelName} label`);
       }
-      
-      return response.issueLabel.id;
+
+      const issueLabel = await response.issueLabel;
+      return issueLabel.id;
     } catch (error) {
       logger.error(`Error getting ${labelName} label ID`, { error });
       throw error;
