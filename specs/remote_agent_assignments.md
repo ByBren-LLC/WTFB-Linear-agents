@@ -28,6 +28,146 @@ Please let me know if you have any questions or need clarification on any aspect
 **KICKOFF NOTE NEEDED:**
 - Create: `specs/kickoff_notes/typescript_linear_sdk_fixes_kickoff.md`
 - Reference: Implementation document with detailed TypeScript patterns
+
+---
+
+## URGENT: TypeScript Strict Mode Compliance - 4-Agent Coordinated Effort
+
+### Agent #1: Jest Mock Type Infrastructure (LIN-39)
+
+**INITIAL AGENT MESSAGE:**
+
+```markdown
+# Remote Agent Assignment: Jest Mock Type Infrastructure Fixes
+
+I'm assigning you to fix Jest Mock Type Infrastructure issues as part of a coordinated 4-agent effort to resolve TypeScript strict mode compliance. This is URGENT - blocking all tests.
+
+**Linear Issue:** LIN-39
+**Branch:** fix/jest-mock-type-infrastructure
+**Priority:** CRITICAL - Blocking all tests
+
+Please:
+1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Create branch: fix/jest-mock-type-infrastructure
+3. Fix all Jest mock type inference issues in test files
+4. Focus on resolving `never` type errors in mock functions
+5. Ensure all test files pass TypeScript strict mode
+6. Submit PR when complete
+
+**Key Files to Fix:**
+- tests/sync/change-detector.test.ts
+- tests/safe/safe_linear_implementation.test.ts
+- tests/safe/hierarchy-manager.test.ts
+- tests/safe/hierarchy-synchronizer.test.ts
+- tests/safe/pi-planning.test.ts
+
+**Specific Issues:**
+- Jest mock functions being inferred as `never` type
+- `mockResolvedValue({})` causing type errors
+- Need proper type annotations for mock return values
+
+This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+```
+
+### Agent #2: Linear SDK v2.6.0 Compatibility (LIN-40)
+
+**INITIAL AGENT MESSAGE:**
+
+```markdown
+# Remote Agent Assignment: Linear SDK v2.6.0 Compatibility Fixes
+
+I'm assigning you to fix Linear SDK v2.6.0 compatibility issues as part of a coordinated 4-agent effort.
+
+**Linear Issue:** LIN-40
+**Branch:** fix/linear-sdk-v2-6-0-compatibility
+**Priority:** HIGH - SDK compatibility
+
+Please:
+1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Create branch: fix/linear-sdk-v2-6-0-compatibility
+3. Fix all Linear SDK property access patterns
+4. Update missing method implementations
+5. Submit PR when complete
+
+**Key Issues:**
+- `parentId` should be `parent` property access
+- `cycleId` should be `cycle` property access
+- Missing methods like `cycleCreate`, `issueUpdate`
+- Linear SDK v2.6.0 interface changes
+
+**Files to Fix:**
+- src/safe/safe_linear_implementation.test.ts
+- src/safe/pi-planning.test.ts
+- Any source files with Linear SDK usage
+
+This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+```
+
+### Agent #3: SAFe Model Type Completeness (LIN-41)
+
+**INITIAL AGENT MESSAGE:**
+
+```markdown
+# Remote Agent Assignment: SAFe Model Type Completeness Fixes
+
+I'm assigning you to fix SAFe Model Type Completeness issues as part of a coordinated 4-agent effort.
+
+**Linear Issue:** LIN-41
+**Branch:** fix/safe-model-type-completeness
+**Priority:** HIGH - Type safety
+
+Please:
+1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Create branch: fix/safe-model-type-completeness
+3. Fix all SAFe model type definitions and enum mismatches
+4. Ensure complete type coverage for Epic, Feature, Story, Enabler
+5. Submit PR when complete
+
+**Key Issues:**
+- Missing required properties in Epic, Feature, Story, Enabler types
+- Enum mismatches: "Architecture" vs "architecture"
+- Array relationships: features should be Feature[] not string[]
+- Type completeness for test and production usage
+
+**Files to Fix:**
+- src/planning/models.ts
+- tests/safe/hierarchy-manager.test.ts
+- tests/safe/hierarchy-synchronizer.test.ts
+
+This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+```
+
+### Agent #4: Source Code Property Access (LIN-42)
+
+**INITIAL AGENT MESSAGE:**
+
+```markdown
+# Remote Agent Assignment: Source Code Property Access Fixes
+
+I'm assigning you to fix Source Code Property Access issues as part of a coordinated 4-agent effort.
+
+**Linear Issue:** LIN-42
+**Branch:** fix/source-code-property-access
+**Priority:** MEDIUM - Property definitions
+
+Please:
+1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
+2. Create branch: fix/source-code-property-access
+3. Fix missing property definitions in core source files
+4. Ensure all property access patterns work correctly
+5. Submit PR when complete
+
+**Key Issues:**
+- SyncOptions.intervalMinutes property missing
+- Property access errors in source code
+- Type definitions need missing properties
+
+**Files to Fix:**
+- src/sync/sync-manager.ts
+- Any other source files with property access errors
+
+This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+```
 - Linear Issue: LIN-27 (already created)
 
 **IMPLEMENTATION DOCUMENT NEEDED:**
