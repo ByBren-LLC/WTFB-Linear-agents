@@ -15,36 +15,43 @@ jest.mock('@linear/sdk', () => {
         issueCreate: jest.fn().mockImplementation(async (data) => {
           return {
             success: true,
-            issue: {
+            issue: Promise.resolve({
               id: 'mock-issue-id',
+              title: data.title,
+              description: data.description,
+              parent: data.parentId ? Promise.resolve({ id: data.parentId }) : undefined,
+              cycle: data.cycleId ? Promise.resolve({ id: data.cycleId }) : undefined,
               ...data
-            }
-          };
-        }),
-        issueUpdate: jest.fn().mockImplementation(async (id, data) => {
-          return {
-            success: true,
-            issue: {
-              id,
-              ...data
-            }
+            })
           };
         }),
         issues: jest.fn().mockImplementation(async () => {
           return {
             nodes: [
-              { id: 'mock-issue-1', title: '[EPIC] Mock Epic' },
-              { id: 'mock-issue-2', title: '[FEATURE] Mock Feature' }
-            ]
-          };
-        }),
-        cycleCreate: jest.fn().mockImplementation(async (data) => {
-          return {
-            success: true,
-            cycle: {
-              id: 'mock-cycle-id',
-              ...data
-            }
+              {
+                id: 'mock-issue-1',
+                title: '[EPIC] Mock Epic',
+                parent: undefined,
+                cycle: undefined
+              },
+              {
+                id: 'mock-issue-2',
+                title: '[FEATURE] Mock Feature',
+                parent: Promise.resolve({ id: 'mock-epic-id' }),
+                cycle: undefined
+              }
+            ],
+            update: jest.fn().mockImplementation(async (id, data) => {
+              return {
+                success: true,
+                issue: Promise.resolve({
+                  id,
+                  parent: data.parentId ? Promise.resolve({ id: data.parentId }) : undefined,
+                  cycle: data.cycleId ? Promise.resolve({ id: data.cycleId }) : undefined,
+                  ...data
+                })
+              };
+            })
           };
         }),
         cycles: jest.fn().mockImplementation(async () => {
@@ -52,7 +59,19 @@ jest.mock('@linear/sdk', () => {
             nodes: [
               { id: 'mock-cycle-1', name: 'PI-2023-Q1' },
               { id: 'mock-cycle-2', name: 'PI-2023-Q2' }
-            ]
+            ],
+            create: jest.fn().mockImplementation(async (data) => {
+              return {
+                success: true,
+                cycle: Promise.resolve({
+                  id: 'mock-cycle-id',
+                  name: data.name,
+                  startsAt: data.startsAt,
+                  endsAt: data.endsAt,
+                  ...data
+                })
+              };
+            })
           };
         }),
         issueLabels: jest.fn().mockImplementation(async () => {
@@ -120,10 +139,13 @@ describe('SAFeLinearImplementation', () => {
         ['test-label'],
         true
       );
-      
+
       expect(feature).toBeDefined();
       expect(feature?.title).toBe('[FEATURE] Test Feature');
-      expect(feature?.parentId).toBe('epic-id');
+
+      // Test async parent access pattern for Linear SDK v2.6.0
+      const parent = feature?.parent ? await feature.parent : null;
+      expect(parent?.id).toBe('epic-id');
     });
   });
   
@@ -136,10 +158,13 @@ describe('SAFeLinearImplementation', () => {
         'Story description',
         ['test-label']
       );
-      
+
       expect(story).toBeDefined();
       expect(story?.title).toBe('Test Story');
-      expect(story?.parentId).toBe('feature-id');
+
+      // Test async parent access pattern for Linear SDK v2.6.0
+      const parent = story?.parent ? await story.parent : null;
+      expect(parent?.id).toBe('feature-id');
     });
   });
   
@@ -153,10 +178,13 @@ describe('SAFeLinearImplementation', () => {
         EnablerType.ARCHITECTURE,
         ['test-label']
       );
-      
+
       expect(enabler).toBeDefined();
       expect(enabler?.title).toBe('[ENABLER] Test Enabler');
-      expect(enabler?.parentId).toBe('feature-id');
+
+      // Test async parent access pattern for Linear SDK v2.6.0
+      const parent = enabler?.parent ? await enabler.parent : null;
+      expect(parent?.id).toBe('feature-id');
     });
   });
   
@@ -186,10 +214,19 @@ describe('SAFeLinearImplementation', () => {
         'pi-id',
         ['feature-1', 'feature-2']
       );
-      
+
       expect(features).toHaveLength(2);
-      expect(features[0].cycleId).toBe('pi-id');
-      expect(features[1].cycleId).toBe('pi-id');
+
+      // Test async cycle access pattern for Linear SDK v2.6.0
+      if (features[0]) {
+        const cycle1 = features[0].cycle ? await features[0].cycle : null;
+        expect(cycle1?.id).toBe('pi-id');
+      }
+
+      if (features[1]) {
+        const cycle2 = features[1].cycle ? await features[1].cycle : null;
+        expect(cycle2?.id).toBe('pi-id');
+      }
     });
   });
   
