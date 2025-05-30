@@ -7,6 +7,7 @@ import { handleWebhook } from './webhooks/handler';
 import { initializeDatabase } from './db/models';
 import * as logger from './utils/logger';
 import planningRoutes from './api/planning';
+import healthRoutes from './api/health';
 import apiRoutes from './routes';
 
 // Load environment variables
@@ -80,6 +81,9 @@ app.post('/webhook', handleWebhook);
 
 // Planning API routes
 app.use('/api/planning', planningRoutes);
+
+// Health API routes
+app.use('/api/health', healthRoutes);
 
 // API routes
 app.use('/api', apiRoutes);
