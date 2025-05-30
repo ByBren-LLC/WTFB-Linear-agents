@@ -12,6 +12,7 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 ## Agent Assignments
 
 ### Agent #1: Jest Mock Type Infrastructure (LIN-39)
+
 - **Branch:** `fix/jest-mock-type-infrastructure`
 - **Priority:** CRITICAL - Blocking all tests
 - **Scope:** Fix Jest mock type inference issues
@@ -19,6 +20,7 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 - **Key Issue:** Jest mock functions being inferred as `never` type
 
 ### Agent #2: Linear SDK v2.6.0 Compatibility (LIN-40)
+
 - **Branch:** `fix/linear-sdk-v2-6-0-compatibility`
 - **Priority:** HIGH - SDK compatibility
 - **Scope:** Update Linear SDK property access patterns
@@ -26,6 +28,7 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 - **Key Issue:** `parentId` vs `parent`, `cycleId` vs `cycle` property access
 
 ### Agent #3: SAFe Model Type Completeness (LIN-41)
+
 - **Branch:** `fix/safe-model-type-completeness`
 - **Priority:** HIGH - Type safety
 - **Scope:** Fix SAFe model type definitions and enum mismatches
@@ -33,6 +36,7 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 - **Key Issue:** Missing required properties, enum mismatches
 
 ### Agent #4: Source Code Property Access (LIN-42)
+
 - **Branch:** `fix/source-code-property-access`
 - **Priority:** MEDIUM - Property definitions
 - **Scope:** Fix missing property definitions in core source files
@@ -42,18 +46,21 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 ## Coordination Strategy
 
 ### Phase 1: Parallel Development
+
 - All 4 agents work simultaneously on isolated scopes
 - No file conflicts expected due to different focus areas
 - Each agent creates their own feature branch
 - Independent testing and validation
 
 ### Phase 2: Integration (ARCHitect-in-the-IDE)
+
 1. **Agent #1 (Jest)** - Merge first (highest priority, blocks testing)
 2. **Agent #4 (Properties)** - Merge second (simple, low conflict risk)
 3. **Agent #3 (SAFe Models)** - Merge third (type definitions)
 4. **Agent #2 (Linear SDK)** - Merge last (most complex, may need adjustments)
 
 ### Phase 3: Final Validation
+
 - Full test suite execution
 - Build verification
 - Integration testing
@@ -62,12 +69,14 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 ## Success Criteria
 
 ### Individual Agent Success
+
 - [ ] All TypeScript compilation errors resolved in scope
 - [ ] Tests pass for affected files
 - [ ] No new errors introduced
 - [ ] Clean PR with focused changes
 
 ### Overall Success
+
 - [ ] All tests pass with TypeScript strict mode
 - [ ] Build completes successfully
 - [ ] No regression in functionality
@@ -76,16 +85,19 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 ## Risk Mitigation
 
 ### Conflict Prevention
+
 - Isolated file scopes minimize merge conflicts
 - Clear boundaries between agent responsibilities
 - Sequential integration reduces integration risk
 
 ### Failure Recovery
+
 - If any agent fails, others continue independently
 - ARCHitect-in-the-IDE can take over failed assignments
 - Partial success still provides value
 
 ### Quality Assurance
+
 - Each PR reviewed before merge
 - Integration testing after each merge
 - Rollback capability if issues arise
@@ -93,11 +105,13 @@ This document coordinates a 4-agent parallel effort to resolve TypeScript strict
 ## Communication Protocol
 
 ### Agent Reporting
+
 - Create PR when work is complete
 - Include test results in PR description
 - Tag ARCHitect-in-the-IDE for review
 
 ### Coordination Updates
+
 - ARCHitect-in-the-IDE monitors all PRs
 - Integration order may adjust based on completion timing
 - Status updates in Linear issues
