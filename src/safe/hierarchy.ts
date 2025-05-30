@@ -148,7 +148,7 @@ export class SAFeHierarchy {
     parentId: string | null,
     title: string,
     description: string,
-    enablerType: 'Architecture' | 'Infrastructure' | 'Technical Debt' | 'Research',
+    enablerType: 'architecture' | 'infrastructure' | 'technical_debt' | 'research',
     labels: string[] = []
   ): Promise<Issue | null> {
     try {

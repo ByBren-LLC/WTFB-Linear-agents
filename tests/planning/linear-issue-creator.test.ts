@@ -3,6 +3,7 @@ import { LinearIssueCreatorFromPlanning } from '../../src/planning/linear-issue-
 import { PlanningIssueMapper } from '../../src/linear/planning-issue-mapper';
 import { ConfluenceClient } from '../../src/confluence/client';
 import { PlanningExtractor } from '../../src/planning/extractor';
+import { PlanningDocument, Epic } from '../../src/planning/models';
 
 // Mock dependencies
 jest.mock('../../src/linear/planning-issue-mapper');
@@ -24,13 +25,13 @@ describe('LinearIssueCreatorFromPlanning', () => {
     confluencePageIdOrUrl: 'page-id'
   };
 
-  const mockPlanningDocument = {
+  const mockPlanningDocument: PlanningDocument = {
     id: 'doc-id',
     title: 'Planning Document',
     epics: [
       {
         id: 'epic-1',
-        type: 'epic',
+        type: 'epic' as const,
         title: 'Epic 1',
         description: 'Epic 1 description',
         features: [],
