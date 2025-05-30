@@ -28,8 +28,8 @@ describe('ChangeDetector', () => {
 
     // Setup mock implementations
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      parsePageByUrl: jest.fn().mockResolvedValue({}),
-      parsePage: jest.fn().mockResolvedValue({})
+      parsePageByUrl: jest.fn().mockResolvedValue({} as any),
+      parsePage: jest.fn().mockResolvedValue({} as any)
     }));
 
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({
@@ -52,11 +52,11 @@ describe('ChangeDetector', () => {
             labels: { nodes: [{ name: 'Feature' }] }
           }
         ]
-      })
+      } as any)
     }));
 
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      getLastSyncTimestamp: jest.fn().mockResolvedValue(lastSyncTimestamp)
+      getLastSyncTimestamp: jest.fn().mockResolvedValue(lastSyncTimestamp as any)
     }));
 
     (PlanningExtractor as jest.Mock).mockImplementation(() => ({
@@ -168,7 +168,7 @@ describe('ChangeDetector', () => {
 
     it('should detect Confluence changes on first sync', async () => {
       // Arrange
-      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockResolvedValue(null);
+      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockResolvedValue(null as any);
 
       // Act
       const changes = await changeDetector.detectChanges(
@@ -207,7 +207,7 @@ describe('ChangeDetector', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockLinearClient.executeQuery as jest.Mock).mockRejectedValue(error);
+      (mockLinearClient.executeQuery as jest.Mock).mockRejectedValue(error as any);
 
       // Act & Assert
       await expect(changeDetector.detectChanges(
