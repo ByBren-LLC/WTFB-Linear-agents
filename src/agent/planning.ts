@@ -5,6 +5,7 @@ import { SAFeLinearImplementation } from '../safe/safe_linear_implementation';
 import { PIManager } from '../safe/pi-planning';
 import { PIExtractor, ParsedElement, DocumentSection } from '../planning/pi-extractor';
 import { ProgramIncrement, PIFeature, PIObjective, PIRisk } from '../safe/pi-model';
+import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
 
 /**
  * Planning Agent implementation
@@ -17,6 +18,7 @@ export class PlanningAgent {
   private confluenceApi: ConfluenceAPI;
   private safeImplementation: SAFeLinearImplementation;
   private piManager: PIManager;
+  private notificationCoordinator: OperationalNotificationCoordinator;
 
   /**
    * Creates a new PlanningAgent instance
@@ -28,6 +30,12 @@ export class PlanningAgent {
     this.confluenceApi = new ConfluenceAPI();
     this.safeImplementation = new SAFeLinearImplementation(accessToken);
     this.piManager = new PIManager(accessToken);
+
+    // Initialize operational notification coordinator
+    const coordinatorConfig = OperationalNotificationCoordinator.createDefaultConfig(
+      (process.env.NODE_ENV as 'development' | 'staging' | 'production') || 'development'
+    );
+    this.notificationCoordinator = OperationalNotificationCoordinator.getInstance(coordinatorConfig);
   }
 
   /**
@@ -38,6 +46,8 @@ export class PlanningAgent {
    * @returns Result of the planning process
    */
   async planFromConfluence(confluencePageUrl: string, planningTitle: string) {
+    const startTime = Date.now();
+
     try {
       logger.info('Starting planning process', { confluencePageUrl, planningTitle });
 
@@ -81,6 +91,19 @@ export class PlanningAgent {
       const issue = await epic.issue;
       logger.info('Created Epic', { epicId: issue.id, title: planningTitle });
 
+      // Send planning completion notification
+      const duration = Date.now() - startTime;
+      await this.notificationCoordinator.notifyPlanningCompletion(
+        planningTitle,
+        1, // epicCount
+        0, // featureCount - placeholder for now
+        0, // storyCount - placeholder for now
+        0, // enablerCount - placeholder for now
+        duration / (1000 * 60), // convert to minutes
+        confluencePage.title,
+        confluencePageUrl
+      );
+
       return {
         success: true,
         epicId: issue.id,
@@ -88,6 +111,16 @@ export class PlanningAgent {
       };
     } catch (error) {
       logger.error('Error in planning process', { error, confluencePageUrl });
+
+      // Send workflow notification for planning failure
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'build',
+        `Planning Failed: ${planningTitle}`,
+        `Planning process failed: ${(error as Error).message}`,
+        'failure',
+        confluencePageUrl
+      );
+
       throw error;
     }
   }
