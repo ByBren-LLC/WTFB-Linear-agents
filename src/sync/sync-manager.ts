@@ -9,6 +9,7 @@ import { LinearIssueCreatorFromPlanning } from '../planning/linear-issue-creator
 import { ChangeDetector } from './change-detector';
 import { ConflictResolver } from './conflict-resolver';
 import { SyncStore } from './sync-store';
+import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
 import * as logger from '../utils/logger';
 
 /**
@@ -67,6 +68,7 @@ export class SyncManager {
   private conflictResolver: ConflictResolver;
   private syncStore: SyncStore;
   private syncIntervalId?: NodeJS.Timeout;
+  private notificationCoordinator: OperationalNotificationCoordinator;
 
   /**
    * Creates a new synchronization manager
@@ -106,6 +108,12 @@ export class SyncManager {
       this.syncStore,
       options.autoResolveConflicts || false
     );
+
+    // Initialize operational notification coordinator
+    const coordinatorConfig = OperationalNotificationCoordinator.createDefaultConfig(
+      (process.env.NODE_ENV as 'development' | 'staging' | 'production') || 'development'
+    );
+    this.notificationCoordinator = OperationalNotificationCoordinator.getInstance(coordinatorConfig);
   }
 
   /**
@@ -323,10 +331,24 @@ export class SyncManager {
 
       result.success = true;
       logger.info('Synchronization completed successfully', result);
+
+      // Send sync completion notification
+      await this.notificationCoordinator.notifySyncStatus({
+        syncType: 'bidirectional',
+        linearUpdates: result.updatedIssues,
+        confluenceUpdates: result.confluenceChanges,
+        conflictsDetected: result.conflictsDetected,
+        conflictsResolved: result.conflictsResolved,
+        conflictsPending: result.conflictsDetected - result.conflictsResolved,
+        nextSyncMinutes: Math.round((this.options.syncIntervalMs || 5 * 60 * 1000) / (60 * 1000)),
+        errors: result.error ? [result.error] : undefined
+      });
+
       return result;
     } catch (error) {
       logger.error('Error during synchronization', { error });
-      return {
+
+      const errorResult = {
         success: false,
         error: `Unexpected error during synchronization: ${(error as Error).message}`,
         createdIssues: 0,
@@ -336,6 +358,20 @@ export class SyncManager {
         conflictsResolved: 0,
         timestamp: Date.now()
       };
+
+      // Send sync failure notification
+      await this.notificationCoordinator.notifySyncStatus({
+        syncType: 'bidirectional',
+        linearUpdates: 0,
+        confluenceUpdates: 0,
+        conflictsDetected: 0,
+        conflictsResolved: 0,
+        conflictsPending: 0,
+        nextSyncMinutes: Math.round((this.options.syncIntervalMs || 5 * 60 * 1000) / (60 * 1000)),
+        errors: [(error as Error).message]
+      });
+
+      return errorResult;
     }
   }
 

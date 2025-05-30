@@ -77,6 +77,8 @@ export interface Enabler extends PlanningItem {
   featureId?: string;
   /** Type of enabler */
   enablerType: 'architecture' | 'infrastructure' | 'technical_debt' | 'research';
+  /** Acceptance criteria for the enabler */
+  acceptanceCriteria?: string[];
 }
 
 /**

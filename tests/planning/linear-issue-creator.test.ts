@@ -3,6 +3,8 @@ import { LinearIssueCreatorFromPlanning } from '../../src/planning/linear-issue-
 import { PlanningIssueMapper } from '../../src/linear/planning-issue-mapper';
 import { ConfluenceClient } from '../../src/confluence/client';
 import { PlanningExtractor } from '../../src/planning/extractor';
+import { mockResolvedValue, mockRejectedValue, mockReturnValue } from '../types/mock-types';
+import { PlanningDocument, Epic } from '../../src/planning/models';
 
 // Mock dependencies
 jest.mock('../../src/linear/planning-issue-mapper');
@@ -24,13 +26,13 @@ describe('LinearIssueCreatorFromPlanning', () => {
     confluencePageIdOrUrl: 'page-id'
   };
 
-  const mockPlanningDocument = {
+  const mockPlanningDocument: PlanningDocument = {
     id: 'doc-id',
     title: 'Planning Document',
     epics: [
       {
         id: 'epic-1',
-        type: 'epic',
+        type: 'epic' as const,
         title: 'Epic 1',
         description: 'Epic 1 description',
         features: [],
@@ -59,16 +61,16 @@ describe('LinearIssueCreatorFromPlanning', () => {
 
     // Setup mock implementations
     (PlanningIssueMapper as jest.Mock).mockImplementation(() => ({
-      mapToLinear: jest.fn().mockResolvedValue(mockMappingResult)
+      mapToLinear: mockResolvedValue(mockMappingResult)
     }));
 
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      parsePage: jest.fn().mockResolvedValue({}),
-      parsePageByUrl: jest.fn().mockResolvedValue({})
+      parsePage: mockResolvedValue({}),
+      parsePageByUrl: mockResolvedValue({})
     }));
 
     (PlanningExtractor as jest.Mock).mockImplementation(() => ({
-      getPlanningDocument: jest.fn().mockReturnValue(mockPlanningDocument)
+      getPlanningDocument: mockReturnValue(mockPlanningDocument)
     }));
 
     // Create instance with mocked dependencies
@@ -140,7 +142,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
 
       // Act
-      const result = await issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument);
+      const result = await issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any);
 
       // Assert
       expect(mockPlanningIssueMapper.mapToLinear).toHaveBeenCalledWith(mockPlanningDocument);
@@ -156,7 +158,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
       (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
-      await expect(issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument)).rejects.toThrow(error);
+      await expect(issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any)).rejects.toThrow(error);
     });
   });
 });

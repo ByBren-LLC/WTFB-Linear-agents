@@ -5,6 +5,34 @@ import { SAFeLinearImplementation } from '../safe/safe_linear_implementation';
 import { PIManager } from '../safe/pi-planning';
 import { PIExtractor, ParsedElement, DocumentSection } from '../planning/pi-extractor';
 import { ProgramIncrement, PIFeature, PIObjective, PIRisk } from '../safe/pi-model';
+import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
+
+/**
+ * Planning statistics interface for tracking planning operations
+ */
+export interface PlanningStatistics {
+  planningTitle: string;
+  confluencePageUrl: string;
+  duration: number;
+  epicCount: number;
+  featureCount: number;
+  storyCount: number;
+  enablerCount: number;
+  sourceDocument: string;
+}
+
+/**
+ * PI creation statistics interface for tracking PI planning operations
+ */
+export interface PICreationStatistics {
+  piName: string;
+  confluencePageUrl: string;
+  duration: number;
+  featureCount: number;
+  objectiveCount: number;
+  riskCount: number;
+  sourceDocument: string;
+}
 
 /**
  * Planning Agent implementation
@@ -17,6 +45,7 @@ export class PlanningAgent {
   private confluenceApi: ConfluenceAPI;
   private safeImplementation: SAFeLinearImplementation;
   private piManager: PIManager;
+  private notificationCoordinator: OperationalNotificationCoordinator;
 
   /**
    * Creates a new PlanningAgent instance
@@ -28,6 +57,12 @@ export class PlanningAgent {
     this.confluenceApi = new ConfluenceAPI();
     this.safeImplementation = new SAFeLinearImplementation(accessToken);
     this.piManager = new PIManager(accessToken);
+
+    // Initialize operational notification coordinator
+    const coordinatorConfig = OperationalNotificationCoordinator.createDefaultConfig(
+      (process.env.NODE_ENV as 'development' | 'staging' | 'production') || 'development'
+    );
+    this.notificationCoordinator = OperationalNotificationCoordinator.getInstance(coordinatorConfig);
   }
 
   /**
@@ -38,8 +73,13 @@ export class PlanningAgent {
    * @returns Result of the planning process
    */
   async planFromConfluence(confluencePageUrl: string, planningTitle: string) {
+    const startTime = Date.now();
+
     try {
       logger.info('Starting planning process', { confluencePageUrl, planningTitle });
+
+      // Send planning start notification
+      await this.sendPlanningStartNotification(planningTitle, confluencePageUrl);
 
       // Fetch the Confluence page
       const confluencePage = await this.confluenceApi.getPageByUrl(confluencePageUrl);
@@ -81,6 +121,21 @@ export class PlanningAgent {
       const issue = await epic.issue;
       logger.info('Created Epic', { epicId: issue.id, title: planningTitle });
 
+      // Collect planning statistics
+      const statistics = this.collectPlanningStatistics(
+        planningTitle,
+        confluencePageUrl,
+        startTime,
+        confluencePage.title,
+        1, // epicCount
+        0, // featureCount - placeholder for now
+        0, // storyCount - placeholder for now
+        0  // enablerCount - placeholder for now
+      );
+
+      // Send planning completion notification
+      await this.sendPlanningCompletionNotification(statistics);
+
       return {
         success: true,
         epicId: issue.id,
@@ -88,6 +143,14 @@ export class PlanningAgent {
       };
     } catch (error) {
       logger.error('Error in planning process', { error, confluencePageUrl });
+
+      // Send planning failure notification
+      await this.sendPlanningFailureNotification(
+        error as Error,
+        planningTitle,
+        confluencePageUrl
+      );
+
       throw error;
     }
   }
@@ -100,8 +163,13 @@ export class PlanningAgent {
    * @returns The created Program Increment
    */
   async createProgramIncrementFromConfluence(confluencePageUrl: string, teamId: string): Promise<ProgramIncrement> {
+    const startTime = Date.now();
+
     try {
       logger.info('Starting PI creation process', { confluencePageUrl, teamId });
+
+      // Send PI planning start notification
+      await this.sendPIPlanningStartNotification(confluencePageUrl);
 
       // Fetch the Confluence page
       const confluencePage = await this.confluenceApi.getPageByUrl(confluencePageUrl);
@@ -236,9 +304,30 @@ export class PlanningAgent {
         }
       }
 
+      // Collect PI creation statistics
+      const piStatistics = this.collectPICreationStatistics(
+        pi.name,
+        confluencePageUrl,
+        startTime,
+        confluencePage.title,
+        features.length,
+        objectives.length,
+        risks.length
+      );
+
+      // Send PI creation completion notification
+      await this.sendPICreationCompletionNotification(piStatistics);
+
       return pi;
     } catch (error) {
       logger.error('Error creating Program Increment from Confluence', { error, confluencePageUrl });
+
+      // Send PI creation failure notification
+      await this.sendPICreationFailureNotification(
+        error as Error,
+        confluencePageUrl
+      );
+
       throw error;
     }
   }
@@ -263,5 +352,180 @@ export class PlanningAgent {
       logger.error('Error getting default team', { error });
       throw error;
     }
+  }
+
+  /**
+   * Sends planning start notification
+   */
+  private async sendPlanningStartNotification(planningTitle: string, confluencePageUrl: string): Promise<void> {
+    try {
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'build',
+        `Planning Started: ${planningTitle}`,
+        `Planning process initiated for "${planningTitle}"`,
+        'in-progress',
+        confluencePageUrl
+      );
+    } catch (error) {
+      logger.warn('Failed to send planning start notification', { error, planningTitle });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Sends planning completion notification with comprehensive statistics
+   */
+  private async sendPlanningCompletionNotification(statistics: PlanningStatistics): Promise<void> {
+    try {
+      await this.notificationCoordinator.notifyPlanningCompletion(
+        statistics.planningTitle,
+        statistics.epicCount,
+        statistics.featureCount,
+        statistics.storyCount,
+        statistics.enablerCount,
+        statistics.duration,
+        statistics.sourceDocument,
+        statistics.confluencePageUrl
+      );
+    } catch (error) {
+      logger.warn('Failed to send planning completion notification', { error, statistics });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Sends planning failure notification with actionable guidance
+   */
+  private async sendPlanningFailureNotification(
+    error: Error,
+    planningTitle: string,
+    confluencePageUrl: string
+  ): Promise<void> {
+    try {
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'build',
+        `Planning Failed: ${planningTitle}`,
+        `Planning process failed: ${error.message}`,
+        'failure',
+        confluencePageUrl
+      );
+    } catch (notificationError) {
+      logger.warn('Failed to send planning failure notification', {
+        notificationError,
+        originalError: error,
+        planningTitle
+      });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Sends PI planning start notification
+   */
+  private async sendPIPlanningStartNotification(confluencePageUrl: string): Promise<void> {
+    try {
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'build',
+        'PI Planning Started',
+        'Program Increment planning process initiated',
+        'in-progress',
+        confluencePageUrl
+      );
+    } catch (error) {
+      logger.warn('Failed to send PI planning start notification', { error, confluencePageUrl });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Sends PI creation completion notification with comprehensive statistics
+   */
+  private async sendPICreationCompletionNotification(statistics: PICreationStatistics): Promise<void> {
+    try {
+      // Use workflow notification for PI creation completion
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'deployment',
+        `PI Created: ${statistics.piName}`,
+        `Program Increment "${statistics.piName}" created successfully with ${statistics.featureCount} features, ${statistics.objectiveCount} objectives, and ${statistics.riskCount} risks. Duration: ${statistics.duration.toFixed(1)} minutes.`,
+        'success',
+        statistics.confluencePageUrl
+      );
+    } catch (error) {
+      logger.warn('Failed to send PI creation completion notification', { error, statistics });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Sends PI creation failure notification
+   */
+  private async sendPICreationFailureNotification(
+    error: Error,
+    confluencePageUrl: string
+  ): Promise<void> {
+    try {
+      await this.notificationCoordinator.notifyWorkflowUpdate(
+        'deployment',
+        'PI Creation Failed',
+        `Program Increment creation failed: ${error.message}`,
+        'failure',
+        confluencePageUrl
+      );
+    } catch (notificationError) {
+      logger.warn('Failed to send PI creation failure notification', {
+        notificationError,
+        originalError: error,
+        confluencePageUrl
+      });
+      // Don't throw - notification failures shouldn't affect planning operations
+    }
+  }
+
+  /**
+   * Collects planning statistics for notification
+   */
+  private collectPlanningStatistics(
+    planningTitle: string,
+    confluencePageUrl: string,
+    startTime: number,
+    sourceDocument: string,
+    epicCount: number,
+    featureCount: number,
+    storyCount: number,
+    enablerCount: number
+  ): PlanningStatistics {
+    return {
+      planningTitle,
+      confluencePageUrl,
+      duration: (Date.now() - startTime) / (1000 * 60), // Convert to minutes
+      epicCount,
+      featureCount,
+      storyCount,
+      enablerCount,
+      sourceDocument
+    };
+  }
+
+  /**
+   * Collects PI creation statistics for notification
+   */
+  private collectPICreationStatistics(
+    piName: string,
+    confluencePageUrl: string,
+    startTime: number,
+    sourceDocument: string,
+    featureCount: number,
+    objectiveCount: number,
+    riskCount: number
+  ): PICreationStatistics {
+    return {
+      piName,
+      confluencePageUrl,
+      duration: (Date.now() - startTime) / (1000 * 60), // Convert to minutes
+      featureCount,
+      objectiveCount,
+      riskCount,
+      sourceDocument
+    };
   }
 }

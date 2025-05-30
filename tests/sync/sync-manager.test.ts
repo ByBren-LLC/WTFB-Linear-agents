@@ -41,38 +41,38 @@ describe('SyncManager', () => {
 
     // Setup mock implementations
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      parsePageByUrl: jest.fn().mockResolvedValue({}),
-      parsePage: jest.fn().mockResolvedValue({})
+      parsePageByUrl: jest.fn().mockImplementation(() => Promise.resolve({})),
+      parsePage: jest.fn().mockImplementation(() => Promise.resolve({}))
     }));
 
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({
-      executeQuery: jest.fn().mockResolvedValue({ nodes: [] })
+      executeQuery: jest.fn().mockImplementation(() => Promise.resolve({ nodes: [] }))
     }));
 
     (ChangeDetector as jest.Mock).mockImplementation(() => ({
-      detectChanges: jest.fn().mockResolvedValue({
+      detectChanges: jest.fn().mockImplementation(() => Promise.resolve({
         linearChanges: [],
         confluenceChanges: []
-      }),
-      detectConflicts: jest.fn().mockReturnValue([])
+      })),
+      detectConflicts: jest.fn().mockImplementation(() => [])
     }));
 
     (ConflictResolver as jest.Mock).mockImplementation(() => ({
-      resolveConflicts: jest.fn().mockResolvedValue([])
+      resolveConflicts: jest.fn().mockImplementation(() => Promise.resolve([]))
     }));
 
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      getLastSyncTimestamp: jest.fn().mockResolvedValue(null),
-      updateLastSyncTimestamp: jest.fn().mockResolvedValue(undefined)
+      getLastSyncTimestamp: jest.fn().mockImplementation(() => Promise.resolve(null)),
+      updateLastSyncTimestamp: jest.fn().mockImplementation(() => Promise.resolve(undefined))
     }));
 
     (LinearIssueCreatorFromPlanning as jest.Mock).mockImplementation(() => ({
-      createIssuesFromConfluence: jest.fn().mockResolvedValue({
+      createIssuesFromConfluence: jest.fn().mockImplementation(() => Promise.resolve({
         createdCount: 0,
         updatedCount: 0,
         errorCount: 0,
         errors: []
-      })
+      }))
     }));
 
     // Create instance with mocked dependencies
@@ -138,25 +138,25 @@ describe('SyncManager', () => {
   describe('sync', () => {
     it('should perform synchronization', async () => {
       // Arrange
-      (mockChangeDetector.detectChanges as jest.Mock).mockResolvedValue({
+      (mockChangeDetector.detectChanges as jest.Mock).mockImplementation(() => Promise.resolve({
         linearChanges: [{ id: 'linear-1', itemId: 'item-1' }],
         confluenceChanges: [{ id: 'confluence-1', itemId: 'item-2' }]
-      });
+      }));
 
       (mockChangeDetector.detectConflicts as jest.Mock).mockReturnValue([
         { id: 'conflict-1', linearChange: { id: 'linear-1', itemId: 'item-1' }, confluenceChange: { id: 'confluence-1', itemId: 'item-1' }, isResolved: false }
       ]);
 
-      (mockConflictResolver.resolveConflicts as jest.Mock).mockResolvedValue([
+      (mockConflictResolver.resolveConflicts as jest.Mock).mockImplementation(() => Promise.resolve([
         { id: 'conflict-1', linearChange: { id: 'linear-1', itemId: 'item-1' }, confluenceChange: { id: 'confluence-1', itemId: 'item-1' }, resolvedChange: { id: 'resolved-1', itemId: 'item-1' }, isResolved: true, resolutionStrategy: 'linear' }
-      ]);
+      ]));
 
-      (mockIssueCreator.createIssuesFromConfluence as jest.Mock).mockResolvedValue({
+      (mockIssueCreator.createIssuesFromConfluence as jest.Mock).mockImplementation(() => Promise.resolve({
         createdCount: 1,
         updatedCount: 0,
         errorCount: 0,
         errors: []
-      });
+      }));
 
       // Act
       const result = await syncManager.sync();
@@ -184,7 +184,7 @@ describe('SyncManager', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockChangeDetector.detectChanges as jest.Mock).mockRejectedValue(error);
+      (mockChangeDetector.detectChanges as jest.Mock).mockImplementation(() => Promise.reject(error));
 
       // Act
       const result = await syncManager.sync();
@@ -207,7 +207,7 @@ describe('SyncManager', () => {
     it('should get synchronization status', async () => {
       // Arrange
       const timestamp = Date.now();
-      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockResolvedValue(timestamp);
+      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockImplementation(() => Promise.resolve(timestamp));
 
       // Act
       const status = await syncManager.getStatus();
