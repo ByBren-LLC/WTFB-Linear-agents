@@ -8,8 +8,15 @@ jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 // Mock rate limiter
-jest.mock('../../src/confluence/rate-limiter');
-const MockedRateLimiter = RateLimiter as jest.MockedClass<typeof RateLimiter>;
+const mockRateLimiterInstance = {
+  acquire: jest.fn().mockImplementation(() => Promise.resolve())
+};
+
+const MockedRateLimiter = jest.fn().mockImplementation(() => mockRateLimiterInstance);
+
+jest.mock('../../src/confluence/rate-limiter', () => ({
+  RateLimiter: MockedRateLimiter
+}));
 
 describe('ConfluenceClient', () => {
   const baseUrl = 'https://example.atlassian.net';
@@ -23,8 +30,7 @@ describe('ConfluenceClient', () => {
     // Setup axios create mock
     mockedAxios.create.mockReturnValue(mockedAxios as any);
     
-    // Setup RateLimiter mock
-    MockedRateLimiter.prototype.acquire = jest.fn().mockResolvedValue(undefined);
+    // Setup RateLimiter mock - already configured in mockRateLimiterInstance
     
     // Create client instance
     client = new ConfluenceClient(baseUrl, accessToken);

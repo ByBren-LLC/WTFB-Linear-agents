@@ -23,10 +23,14 @@ jest.mock('../../src/linear/error-handler', () => ({
   handleLinearError: jest.fn()
 }));
 
+const mockRateLimiterInstance = {
+  throttle: jest.fn().mockResolvedValue(undefined)
+};
+
+const MockRateLimiter = jest.fn().mockImplementation(() => mockRateLimiterInstance);
+
 jest.mock('../../src/linear/rate-limiter', () => ({
-  RateLimiter: jest.fn().mockImplementation(() => ({
-    throttle: jest.fn().mockResolvedValue(undefined)
-  }))
+  RateLimiter: MockRateLimiter
 }));
 
 jest.mock('../../src/linear/retry', () => ({
@@ -63,7 +67,7 @@ describe('Linear Client Wrapper', () => {
       const result = await linearClientWrapper.executeQuery(mockQueryFn, 'testEndpoint');
 
       // Should throttle the request
-      expect(RateLimiter.mock.instances[0].throttle).toHaveBeenCalledWith('testEndpoint');
+      expect(mockRateLimiterInstance.throttle).toHaveBeenCalledWith('testEndpoint');
 
       // Should execute the query
       expect(mockQueryFn).toHaveBeenCalled();
@@ -88,7 +92,7 @@ describe('Linear Client Wrapper', () => {
       await expect(linearClientWrapper.executeQuery(mockQueryFn, 'testEndpoint')).rejects.toThrow('Handled error');
 
       // Should throttle the request
-      expect(RateLimiter.mock.instances[0].throttle).toHaveBeenCalledWith('testEndpoint');
+      expect(mockRateLimiterInstance.throttle).toHaveBeenCalledWith('testEndpoint');
 
       // Should execute the query
       expect(mockQueryFn).toHaveBeenCalled();

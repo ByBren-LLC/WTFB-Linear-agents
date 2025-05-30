@@ -8,10 +8,24 @@ import { jest } from '@jest/globals';
 // Generic mock function type that accepts any return value
 export type MockFunction<T = any> = jest.MockedFunction<(...args: any[]) => T>;
 
-// Mock return value helpers
-export const mockResolvedValue = <T>(value: T) => jest.fn().mockResolvedValue(value) as MockFunction<Promise<T>>;
-export const mockRejectedValue = (error: Error) => jest.fn().mockRejectedValue(error) as MockFunction<Promise<never>>;
-export const mockReturnValue = <T>(value: T) => jest.fn().mockReturnValue(value) as MockFunction<T>;
+// Mock return value helpers that properly type the return values
+export const mockResolvedValue = <T>(value: T) => {
+  const mockFn = jest.fn() as jest.MockedFunction<(...args: any[]) => Promise<T>>;
+  mockFn.mockResolvedValue(value);
+  return mockFn;
+};
+
+export const mockRejectedValue = (error: Error) => {
+  const mockFn = jest.fn() as jest.MockedFunction<(...args: any[]) => Promise<any>>;
+  mockFn.mockRejectedValue(error);
+  return mockFn;
+};
+
+export const mockReturnValue = <T>(value: T) => {
+  const mockFn = jest.fn() as jest.MockedFunction<(...args: any[]) => T>;
+  mockFn.mockReturnValue(value);
+  return mockFn;
+};
 
 // Common mock return types
 export type MockPromise<T> = Promise<T>;
