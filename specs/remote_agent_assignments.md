@@ -26,6 +26,7 @@ Please let me know if you have any questions or need clarification on any aspect
 ```
 
 **KICKOFF NOTE NEEDED:**
+
 - Create: `specs/kickoff_notes/typescript_linear_sdk_fixes_kickoff.md`
 - Reference: Implementation document with detailed TypeScript patterns
 
@@ -63,7 +64,9 @@ This explains how your work fits with 3 other agents working in parallel on diff
 
 **Current Error Pattern:**
 ```
+
 error TS2322: Type 'Mock<Promise<never>, [], any>' is not assignable to type 'Mock<Promise<any>, [any, any?], any>'
+
 ```
 
 ## Specific Technical Issues to Fix
@@ -83,8 +86,10 @@ mockFunction: jest.fn<Promise<ExpectedType>, [ParamType]>().mockResolvedValue(ex
 ```
 
 ### Issue 2: Mock Implementation Type Safety
+
 **Problem:** Mock implementations not properly typed
 **Solution Pattern:**
+
 ```typescript
 // BEFORE:
 (SomeClass as jest.Mock).mockImplementation(() => ({
@@ -98,6 +103,7 @@ mockFunction: jest.fn<Promise<ExpectedType>, [ParamType]>().mockResolvedValue(ex
 ```
 
 ## Key Files to Fix (Priority Order)
+
 1. **tests/sync/change-detector.test.ts** - Primary test file with multiple mock issues
 2. **tests/safe/safe_linear_implementation.test.ts** - SAFe implementation mocks
 3. **tests/safe/hierarchy-manager.test.ts** - Hierarchy management mocks
@@ -105,6 +111,7 @@ mockFunction: jest.fn<Promise<ExpectedType>, [ParamType]>().mockResolvedValue(ex
 5. **tests/safe/pi-planning.test.ts** - PI planning mocks
 
 ## Success Criteria
+
 - [ ] All test files compile without TypeScript errors
 - [ ] `npm test` runs without compilation failures
 - [ ] Mock functions properly typed with return values
@@ -112,6 +119,7 @@ mockFunction: jest.fn<Promise<ExpectedType>, [ParamType]>().mockResolvedValue(ex
 - [ ] Tests still pass functionally (not just compile)
 
 ## Testing Your Work
+
 ```bash
 # Verify TypeScript compilation
 npm run build
@@ -124,12 +132,14 @@ npm test
 ```
 
 ## Integration Notes
+
 - Your work is isolated to test files only
 - No conflicts expected with other agents (they work on source code)
 - Submit PR when complete - I'll coordinate integration
 - Include test results in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+
 ```
 
 ### Agent #2: Linear SDK v2.6.0 Compatibility (LIN-40)
@@ -170,8 +180,10 @@ error TS2339: Property 'cycleCreate' does not exist on type 'Mocked<LinearClient
 ## Specific Technical Issues to Fix
 
 ### Issue 1: Property Access Pattern Changes
+
 **Problem:** Direct property access changed to getter methods
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 expect(feature?.parentId).toBe('epic-id');
@@ -183,8 +195,10 @@ expect(features[0].cycle?.id).toBe('pi-id');
 ```
 
 ### Issue 2: Missing Linear Client Methods
+
 **Problem:** Test mocks reference methods that don't exist in current SDK
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 mockLinearClient.cycleCreate = jest.fn().mockResolvedValue({...});
@@ -201,8 +215,10 @@ mockLinearClient.issues = {
 ```
 
 ### Issue 3: Type Assertion for Complex Objects
+
 **Problem:** Mock objects don't match Linear SDK types
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 const mockCycle = { id: 'cycle-123', name: 'Test' } as Cycle;
@@ -216,11 +232,13 @@ const mockCycle = {
 ```
 
 ## Key Files to Fix (Priority Order)
+
 1. **src/safe/safe_linear_implementation.test.ts** - Main Linear SDK usage
 2. **src/safe/pi-planning.test.ts** - PI planning with cycles
 3. **Any source files** with Linear SDK property access errors
 
 ## Success Criteria
+
 - [ ] All Linear SDK property access errors resolved
 - [ ] Mock Linear client methods properly implemented
 - [ ] Tests compile without Linear SDK type errors
@@ -228,6 +246,7 @@ const mockCycle = {
 - [ ] No breaking changes to actual Linear SDK integration
 
 ## Testing Your Work
+
 ```bash
 # Check specific Linear SDK errors
 npm test -- src/safe/safe_linear_implementation.test.ts
@@ -240,12 +259,14 @@ npm test
 ```
 
 ## Integration Notes
+
 - Your work focuses on Linear SDK compatibility only
 - No conflicts expected with other agents (different scopes)
 - Submit PR when complete - I'll coordinate integration
 - Include before/after examples in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+
 ```
 
 ### Agent #3: SAFe Model Type Completeness (LIN-41)
@@ -286,8 +307,10 @@ error TS2322: Type 'string' is not assignable to type 'Feature'
 ## Specific Technical Issues to Fix
 
 ### Issue 1: Missing Required Properties
+
 **Problem:** Test objects don't include all required properties from type definitions
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 const epic: Epic = { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' };
@@ -304,8 +327,10 @@ const epic: Epic = {
 ```
 
 ### Issue 2: Enum Value Mismatches
+
 **Problem:** Enum values use wrong case (Architecture vs architecture)
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 enablerType: 'Architecture'
@@ -315,8 +340,10 @@ enablerType: 'architecture'
 ```
 
 ### Issue 3: Array Type Relationships
+
 **Problem:** Arrays contain strings instead of proper object types
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 const epic: Epic = { features: ['feature1'] };
@@ -333,11 +360,13 @@ const epic: Epic = {
 ```
 
 ## Key Files to Fix (Priority Order)
+
 1. **src/planning/models.ts** - Core SAFe type definitions
 2. **tests/safe/hierarchy-manager.test.ts** - Hierarchy management tests
 3. **tests/safe/hierarchy-synchronizer.test.ts** - Synchronization tests
 
 ## Success Criteria
+
 - [ ] All SAFe model types have complete required properties
 - [ ] Enum values match expected patterns (lowercase)
 - [ ] Array relationships use proper object types
@@ -345,6 +374,7 @@ const epic: Epic = {
 - [ ] No SAFe model type errors in any test file
 
 ## Testing Your Work
+
 ```bash
 # Check specific SAFe model errors
 npm test -- tests/safe/hierarchy-manager.test.ts
@@ -357,12 +387,14 @@ npm test
 ```
 
 ## Integration Notes
+
 - Your work focuses on SAFe model types only
 - No conflicts expected with other agents (different scopes)
 - Submit PR when complete - I'll coordinate integration
 - Include type definition improvements in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+
 ```
 
 ### Agent #4: Source Code Property Access (LIN-42)
@@ -401,9 +433,11 @@ error TS2339: Property 'intervalMinutes' does not exist on type 'SyncOptions'
 ## Specific Technical Issues to Fix
 
 ### Issue 1: Missing SyncOptions Properties
+
 **Problem:** SyncOptions interface missing intervalMinutes property
 **File:** src/sync/sync-manager.ts
 **Solution Pattern:**
+
 ```typescript
 // Find the SyncOptions interface and add missing properties:
 interface SyncOptions {
@@ -413,8 +447,10 @@ interface SyncOptions {
 ```
 
 ### Issue 2: Property Access Validation
+
 **Problem:** Code accessing properties that aren't defined in interfaces
 **Solution Pattern:**
+
 ```typescript
 // BEFORE (broken):
 this.options.intervalMinutes || 60
@@ -427,10 +463,12 @@ this.options.intervalMinutes || 60  // After adding to interface
 ```
 
 ## Key Files to Fix (Priority Order)
+
 1. **src/sync/sync-manager.ts** - Primary file with intervalMinutes issue
 2. **Any other source files** with property access errors (check test output)
 
 ## Success Criteria
+
 - [ ] All property access errors in source code resolved
 - [ ] Type interfaces include all accessed properties
 - [ ] Source code compiles without TypeScript errors
@@ -438,6 +476,7 @@ this.options.intervalMinutes || 60  // After adding to interface
 - [ ] Property access patterns are type-safe
 
 ## Testing Your Work
+
 ```bash
 # Check specific property access errors
 npm run build
@@ -450,12 +489,14 @@ npm test
 ```
 
 ## Integration Notes
+
 - Your work focuses on source code property definitions only
 - Smallest scope of all 4 agents (likely quickest to complete)
 - No conflicts expected with other agents (different scopes)
 - Submit PR when complete - I'll coordinate integration
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
+
 ```
 - Linear Issue: LIN-27 (already created)
 
