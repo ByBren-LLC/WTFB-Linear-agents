@@ -340,7 +340,7 @@ export class SyncManager {
         conflictsDetected: result.conflictsDetected,
         conflictsResolved: result.conflictsResolved,
         conflictsPending: result.conflictsDetected - result.conflictsResolved,
-        nextSyncMinutes: this.options.intervalMinutes || 60,
+        nextSyncMinutes: Math.round((this.options.syncIntervalMs || 5 * 60 * 1000) / (60 * 1000)),
         errors: result.error ? [result.error] : undefined
       });
 
@@ -367,7 +367,7 @@ export class SyncManager {
         conflictsDetected: 0,
         conflictsResolved: 0,
         conflictsPending: 0,
-        nextSyncMinutes: this.options.intervalMinutes || 60,
+        nextSyncMinutes: Math.round((this.options.syncIntervalMs || 5 * 60 * 1000) / (60 * 1000)),
         errors: [(error as Error).message]
       });
 
