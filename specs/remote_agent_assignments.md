@@ -46,25 +46,88 @@ I'm assigning you to fix Jest Mock Type Infrastructure issues as part of a coord
 **Branch:** fix/jest-mock-type-infrastructure
 **Priority:** CRITICAL - Blocking all tests
 
-Please:
+## Context & Coordination
+**REQUIRED READING:** Please read the coordination document first:
+`specs/implementation_docs/typescript_strict_mode_coordination.md`
+
+This explains how your work fits with 3 other agents working in parallel on different TypeScript issues.
+
+## Setup Instructions
 1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
 2. Create branch: fix/jest-mock-type-infrastructure
-3. Fix all Jest mock type inference issues in test files
-4. Focus on resolving `never` type errors in mock functions
-5. Ensure all test files pass TypeScript strict mode
-6. Submit PR when complete
+3. Run `npm test` to see the current failures (expect 25+ TypeScript errors)
+4. Focus ONLY on Jest mock type issues (your isolated scope)
 
-**Key Files to Fix:**
-- tests/sync/change-detector.test.ts
-- tests/safe/safe_linear_implementation.test.ts
-- tests/safe/hierarchy-manager.test.ts
-- tests/safe/hierarchy-synchronizer.test.ts
-- tests/safe/pi-planning.test.ts
+## Problem Analysis
+**Root Cause:** Jest configuration now enforces TypeScript strict mode, exposing mock type inference issues that were previously ignored.
 
-**Specific Issues:**
-- Jest mock functions being inferred as `never` type
-- `mockResolvedValue({})` causing type errors
-- Need proper type annotations for mock return values
+**Current Error Pattern:**
+```
+error TS2322: Type 'Mock<Promise<never>, [], any>' is not assignable to type 'Mock<Promise<any>, [any, any?], any>'
+```
+
+## Specific Technical Issues to Fix
+
+### Issue 1: Mock Return Type Inference
+**Problem:** `jest.fn().mockResolvedValue({})` inferred as `never` type
+**Files:** All test files with mock functions
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+mockFunction: jest.fn().mockResolvedValue({})
+
+// AFTER (fixed):
+mockFunction: jest.fn().mockResolvedValue({} as any)
+// OR with proper typing:
+mockFunction: jest.fn<Promise<ExpectedType>, [ParamType]>().mockResolvedValue(expectedValue)
+```
+
+### Issue 2: Mock Implementation Type Safety
+**Problem:** Mock implementations not properly typed
+**Solution Pattern:**
+```typescript
+// BEFORE:
+(SomeClass as jest.Mock).mockImplementation(() => ({
+  method: jest.fn().mockResolvedValue({})
+}));
+
+// AFTER:
+(SomeClass as jest.Mock).mockImplementation(() => ({
+  method: jest.fn().mockResolvedValue({} as any)
+}));
+```
+
+## Key Files to Fix (Priority Order)
+1. **tests/sync/change-detector.test.ts** - Primary test file with multiple mock issues
+2. **tests/safe/safe_linear_implementation.test.ts** - SAFe implementation mocks
+3. **tests/safe/hierarchy-manager.test.ts** - Hierarchy management mocks
+4. **tests/safe/hierarchy-synchronizer.test.ts** - Synchronization mocks
+5. **tests/safe/pi-planning.test.ts** - PI planning mocks
+
+## Success Criteria
+- [ ] All test files compile without TypeScript errors
+- [ ] `npm test` runs without compilation failures
+- [ ] Mock functions properly typed with return values
+- [ ] No `never` type errors in any test file
+- [ ] Tests still pass functionally (not just compile)
+
+## Testing Your Work
+```bash
+# Verify TypeScript compilation
+npm run build
+
+# Run specific test to verify fixes
+npm test -- tests/sync/change-detector.test.ts
+
+# Run all tests to ensure no regressions
+npm test
+```
+
+## Integration Notes
+- Your work is isolated to test files only
+- No conflicts expected with other agents (they work on source code)
+- Submit PR when complete - I'll coordinate integration
+- Include test results in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
 ```
@@ -82,23 +145,105 @@ I'm assigning you to fix Linear SDK v2.6.0 compatibility issues as part of a coo
 **Branch:** fix/linear-sdk-v2-6-0-compatibility
 **Priority:** HIGH - SDK compatibility
 
-Please:
+## Context & Coordination
+**REQUIRED READING:** Please read the coordination document first:
+`specs/implementation_docs/typescript_strict_mode_coordination.md`
+
+This explains how your work fits with 3 other agents working in parallel on different TypeScript issues.
+
+## Setup Instructions
 1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
 2. Create branch: fix/linear-sdk-v2-6-0-compatibility
-3. Fix all Linear SDK property access patterns
-4. Update missing method implementations
-5. Submit PR when complete
+3. Run `npm test` to see current failures (expect Linear SDK property errors)
+4. Focus ONLY on Linear SDK compatibility issues (your isolated scope)
 
-**Key Issues:**
-- `parentId` should be `parent` property access
-- `cycleId` should be `cycle` property access
-- Missing methods like `cycleCreate`, `issueUpdate`
-- Linear SDK v2.6.0 interface changes
+## Problem Analysis
+**Root Cause:** Linear SDK v2.6.0 changed property access patterns from direct properties to getter methods, breaking existing code.
 
-**Files to Fix:**
-- src/safe/safe_linear_implementation.test.ts
-- src/safe/pi-planning.test.ts
-- Any source files with Linear SDK usage
+**Current Error Patterns:**
+```typescript
+error TS2551: Property 'parentId' does not exist on type 'Issue'. Did you mean 'parent'?
+error TS2551: Property 'cycleId' does not exist on type 'Issue'. Did you mean 'cycle'?
+error TS2339: Property 'cycleCreate' does not exist on type 'Mocked<LinearClient>'
+```
+
+## Specific Technical Issues to Fix
+
+### Issue 1: Property Access Pattern Changes
+**Problem:** Direct property access changed to getter methods
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+expect(feature?.parentId).toBe('epic-id');
+expect(features[0].cycleId).toBe('pi-id');
+
+// AFTER (fixed):
+expect(feature?.parent?.id).toBe('epic-id');
+expect(features[0].cycle?.id).toBe('pi-id');
+```
+
+### Issue 2: Missing Linear Client Methods
+**Problem:** Test mocks reference methods that don't exist in current SDK
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+mockLinearClient.cycleCreate = jest.fn().mockResolvedValue({...});
+mockLinearClient.issueUpdate = jest.fn().mockResolvedValue({...});
+
+// AFTER (fixed):
+// Use actual SDK methods or create proper mock interfaces
+mockLinearClient.cycles = {
+  create: jest.fn().mockResolvedValue({...})
+};
+mockLinearClient.issues = {
+  update: jest.fn().mockResolvedValue({...})
+};
+```
+
+### Issue 3: Type Assertion for Complex Objects
+**Problem:** Mock objects don't match Linear SDK types
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+const mockCycle = { id: 'cycle-123', name: 'Test' } as Cycle;
+
+// AFTER (fixed):
+const mockCycle = {
+  id: 'cycle-123',
+  name: 'Test',
+  // Add required properties or use partial type
+} as Partial<Cycle> | unknown as Cycle;
+```
+
+## Key Files to Fix (Priority Order)
+1. **src/safe/safe_linear_implementation.test.ts** - Main Linear SDK usage
+2. **src/safe/pi-planning.test.ts** - PI planning with cycles
+3. **Any source files** with Linear SDK property access errors
+
+## Success Criteria
+- [ ] All Linear SDK property access errors resolved
+- [ ] Mock Linear client methods properly implemented
+- [ ] Tests compile without Linear SDK type errors
+- [ ] Tests still pass functionally
+- [ ] No breaking changes to actual Linear SDK integration
+
+## Testing Your Work
+```bash
+# Check specific Linear SDK errors
+npm test -- src/safe/safe_linear_implementation.test.ts
+
+# Verify PI planning functionality
+npm test -- src/safe/pi-planning.test.ts
+
+# Full test suite
+npm test
+```
+
+## Integration Notes
+- Your work focuses on Linear SDK compatibility only
+- No conflicts expected with other agents (different scopes)
+- Submit PR when complete - I'll coordinate integration
+- Include before/after examples in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
 ```
@@ -116,23 +261,106 @@ I'm assigning you to fix SAFe Model Type Completeness issues as part of a coordi
 **Branch:** fix/safe-model-type-completeness
 **Priority:** HIGH - Type safety
 
-Please:
+## Context & Coordination
+**REQUIRED READING:** Please read the coordination document first:
+`specs/implementation_docs/typescript_strict_mode_coordination.md`
+
+This explains how your work fits with 3 other agents working in parallel on different TypeScript issues.
+
+## Setup Instructions
 1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
 2. Create branch: fix/safe-model-type-completeness
-3. Fix all SAFe model type definitions and enum mismatches
-4. Ensure complete type coverage for Epic, Feature, Story, Enabler
-5. Submit PR when complete
+3. Run `npm test` to see current failures (expect SAFe model type errors)
+4. Focus ONLY on SAFe model type definitions (your isolated scope)
 
-**Key Issues:**
-- Missing required properties in Epic, Feature, Story, Enabler types
-- Enum mismatches: "Architecture" vs "architecture"
-- Array relationships: features should be Feature[] not string[]
-- Type completeness for test and production usage
+## Problem Analysis
+**Root Cause:** SAFe model types (Epic, Feature, Story, Enabler) are incomplete, causing TypeScript strict mode to reject test objects that don't match the full type definitions.
 
-**Files to Fix:**
-- src/planning/models.ts
-- tests/safe/hierarchy-manager.test.ts
-- tests/safe/hierarchy-synchronizer.test.ts
+**Current Error Patterns:**
+```typescript
+error TS2739: Type '{ id: string; title: string; description: string; }' is missing the following properties from type 'Epic': type, features, attributes
+error TS2820: Type '"Architecture"' is not assignable to type '"architecture" | "infrastructure" | "technical_debt" | "research"'
+error TS2322: Type 'string' is not assignable to type 'Feature'
+```
+
+## Specific Technical Issues to Fix
+
+### Issue 1: Missing Required Properties
+**Problem:** Test objects don't include all required properties from type definitions
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+const epic: Epic = { id: 'epic1', title: 'Epic 1', description: 'Epic 1 description' };
+
+// AFTER (fixed):
+const epic: Epic = {
+  id: 'epic1',
+  title: 'Epic 1',
+  description: 'Epic 1 description',
+  type: 'epic',
+  features: [],
+  attributes: {}
+};
+```
+
+### Issue 2: Enum Value Mismatches
+**Problem:** Enum values use wrong case (Architecture vs architecture)
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+enablerType: 'Architecture'
+
+// AFTER (fixed):
+enablerType: 'architecture'
+```
+
+### Issue 3: Array Type Relationships
+**Problem:** Arrays contain strings instead of proper object types
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+const epic: Epic = { features: ['feature1'] };
+
+// AFTER (fixed):
+const epic: Epic = {
+  features: [{
+    id: 'feature1',
+    title: 'Feature 1',
+    type: 'feature',
+    // ... other required properties
+  }]
+};
+```
+
+## Key Files to Fix (Priority Order)
+1. **src/planning/models.ts** - Core SAFe type definitions
+2. **tests/safe/hierarchy-manager.test.ts** - Hierarchy management tests
+3. **tests/safe/hierarchy-synchronizer.test.ts** - Synchronization tests
+
+## Success Criteria
+- [ ] All SAFe model types have complete required properties
+- [ ] Enum values match expected patterns (lowercase)
+- [ ] Array relationships use proper object types
+- [ ] Test objects conform to type definitions
+- [ ] No SAFe model type errors in any test file
+
+## Testing Your Work
+```bash
+# Check specific SAFe model errors
+npm test -- tests/safe/hierarchy-manager.test.ts
+
+# Verify synchronization functionality
+npm test -- tests/safe/hierarchy-synchronizer.test.ts
+
+# Full test suite
+npm test
+```
+
+## Integration Notes
+- Your work focuses on SAFe model types only
+- No conflicts expected with other agents (different scopes)
+- Submit PR when complete - I'll coordinate integration
+- Include type definition improvements in PR description
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
 ```
@@ -150,21 +378,82 @@ I'm assigning you to fix Source Code Property Access issues as part of a coordin
 **Branch:** fix/source-code-property-access
 **Priority:** MEDIUM - Property definitions
 
-Please:
+## Context & Coordination
+**REQUIRED READING:** Please read the coordination document first:
+`specs/implementation_docs/typescript_strict_mode_coordination.md`
+
+This explains how your work fits with 3 other agents working in parallel on different TypeScript issues.
+
+## Setup Instructions
 1. Pull latest from dev branch: https://github.com/ByBren-LLC/WTFB-Linear-agents
 2. Create branch: fix/source-code-property-access
-3. Fix missing property definitions in core source files
-4. Ensure all property access patterns work correctly
-5. Submit PR when complete
+3. Run `npm test` to see current failures (expect property access errors)
+4. Focus ONLY on source code property access issues (your isolated scope)
 
-**Key Issues:**
-- SyncOptions.intervalMinutes property missing
-- Property access errors in source code
-- Type definitions need missing properties
+## Problem Analysis
+**Root Cause:** TypeScript strict mode now enforces that all property access must be defined in type interfaces, exposing missing property definitions in core source files.
 
-**Files to Fix:**
-- src/sync/sync-manager.ts
-- Any other source files with property access errors
+**Current Error Patterns:**
+```typescript
+error TS2339: Property 'intervalMinutes' does not exist on type 'SyncOptions'
+```
+
+## Specific Technical Issues to Fix
+
+### Issue 1: Missing SyncOptions Properties
+**Problem:** SyncOptions interface missing intervalMinutes property
+**File:** src/sync/sync-manager.ts
+**Solution Pattern:**
+```typescript
+// Find the SyncOptions interface and add missing properties:
+interface SyncOptions {
+  // existing properties...
+  intervalMinutes?: number; // Add this property
+}
+```
+
+### Issue 2: Property Access Validation
+**Problem:** Code accessing properties that aren't defined in interfaces
+**Solution Pattern:**
+```typescript
+// BEFORE (broken):
+this.options.intervalMinutes || 60
+
+// AFTER (fixed - if property should exist):
+this.options.intervalMinutes || 60  // After adding to interface
+
+// OR (if property is optional):
+(this.options as any).intervalMinutes || 60  // Temporary fix
+```
+
+## Key Files to Fix (Priority Order)
+1. **src/sync/sync-manager.ts** - Primary file with intervalMinutes issue
+2. **Any other source files** with property access errors (check test output)
+
+## Success Criteria
+- [ ] All property access errors in source code resolved
+- [ ] Type interfaces include all accessed properties
+- [ ] Source code compiles without TypeScript errors
+- [ ] No breaking changes to existing functionality
+- [ ] Property access patterns are type-safe
+
+## Testing Your Work
+```bash
+# Check specific property access errors
+npm run build
+
+# Verify sync manager functionality
+npm test -- src/sync/
+
+# Full test suite
+npm test
+```
+
+## Integration Notes
+- Your work focuses on source code property definitions only
+- Smallest scope of all 4 agents (likely quickest to complete)
+- No conflicts expected with other agents (different scopes)
+- Submit PR when complete - I'll coordinate integration
 
 This is part of a 4-agent parallel effort. Your work is independent and won't conflict with other agents.
 ```
