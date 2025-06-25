@@ -145,3 +145,55 @@ This is a Linear Planning Agent that integrates Linear with Confluence following
 - Features contain Stories and/or Enablers
 - Maintain parent-child relationships in Linear
 - Use consistent labeling and issue types
+
+## Linear Workflow Integration
+
+### CRITICAL: Always Update Linear Issues
+
+When completing implementation work, ALWAYS update the corresponding Linear issue status:
+
+1. **During Development**:
+   - Move issue to "In Progress" when starting work
+   - Use `mcp__linear-mcp__update_issue` with appropriate `stateId`
+
+2. **During PR Creation**:
+   - Move issue to "In Review" when PR is submitted
+   - Reference PR number in issue comments if needed
+
+3. **Upon Completion**:
+   - Move issue to "Done" when work is complete and merged
+   - This completes the development lifecycle
+
+### Linear Status Flow
+
+```
+Backlog → Todo → In Progress → In Review → Done
+```
+
+### Getting Linear Status IDs
+
+Use `mcp__linear-mcp__list_issue_statuses` with the team ID to get available statuses and their IDs.
+
+### Example Linear Update Commands
+
+```typescript
+// Move to In Progress
+mcp__linear-mcp__update_issue({
+  id: "issue-id",
+  stateId: "in-progress-state-id"
+});
+
+// Move to Done  
+mcp__linear-mcp__update_issue({
+  id: "issue-id", 
+  stateId: "done-state-id"
+});
+```
+
+### Best Practice: Dual Updates
+
+**ALWAYS update BOTH systems:**
+- ✅ GitHub PR status (create, update, comment)
+- ✅ Linear issue status (backlog → in progress → in review → done)
+
+This ensures complete traceability and proper SAFe Agile workflow compliance.
