@@ -102,3 +102,7 @@ public
 *.swp
 *.swo
 .DS_Store
+
+# Test coverage
+coverage/
+*.lcov
