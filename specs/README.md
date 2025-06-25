@@ -24,7 +24,7 @@ Work items currently being implemented by remote agents.
 
 Successfully implemented and merged specifications.
 
-- **0 completed implementations**
+- **4 completed implementations**
 - Reference materials for completed features
 - Historical record of delivered work
 
@@ -164,7 +164,7 @@ git mv specs/blocked/[filename] specs/todo/[filename]
 
 - **Todo**: 5 files ready for assignment
 - **Doing**: 0 files (ready for active work)
-- **Done**: 0 completed implementations
+- **Done**: 4 completed implementations
 - **Blocked**: 0 blocked files
 - **Templates**: 5 reusable templates
 - **Kickoff Notes**: 26 detailed agent instructions

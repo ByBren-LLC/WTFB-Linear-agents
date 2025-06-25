@@ -22,14 +22,19 @@ This folder contains implementation specifications and user stories that are **r
 
 ### User Stories
 
-- `enhanced-slack-notifier-story.md` - Slack notification enhancements
-- `planning-agent-slack-integration-story.md` - Planning agent Slack integration
-- `system-health-monitoring-story.md` - System monitoring capabilities
+- `system-health-monitoring-story.md` - System monitoring capabilities (LIN-45, 5 points)
+- `agile-release-train-planning-story.md` - ART planning parent story (LIN-46, 16 points - DECOMPOSED)
+- `story-decomposition-engine-story.md` - Story decomposition engine (LIN-47, 3 points)
+- `dependency-mapping-system-story.md` - Dependency mapping system (LIN-48, 5 points)
 
-### Technical Enablers
+### Additional Stories (From ART Planning Decomposition)
 
-- `agent-operations-slack-integration-enabler.md` - Agent operations integration
-- `agent_operations_slack_integration_assignments.md` - Assignment documentation
+- `story-scoring-prioritization-story.md` - WSJF prioritization and scoring (LIN-50, 3 points) - **NEEDS IMPLEMENTATION DOC**
+- `art-iteration-planning-story.md` - ART iteration planning (LIN-49, 5 points) - **NEEDS IMPLEMENTATION DOC**
+
+### Separate Projects
+
+- `agent-workflow-planner-confluence-planning.md` - OSS project planning (LIN-43) - **SEPARATE PROJECT**
 
 ## Assignment Process
 
