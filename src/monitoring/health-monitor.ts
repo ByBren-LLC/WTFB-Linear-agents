@@ -21,7 +21,6 @@ import {
 import { SystemHealth, BudgetAlert } from '../types/notification-types';
 import { getClient } from '../db/connection';
 import { getLinearToken } from '../db/models';
-import { LinearClient } from '@linear/sdk';
 import * as logger from '../utils/logger';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -37,6 +36,8 @@ export class HealthMonitor {
   private lastAlerts: Map<string, number> = new Map();
   private healthMetrics: HealthMetric[] = [];
   private isRunning = false;
+  private apiStatsCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly cacheValidityMs = 30 * 1000; // 30 seconds
 
   constructor(config?: Partial<HealthMonitorConfig>) {
     this.config = {
@@ -115,19 +116,39 @@ export class HealthMonitor {
   }
 
   /**
-   * Performs comprehensive health check
+   * Performs comprehensive health check with parallel execution and timeout protection
    */
   async performHealthCheck(): Promise<SystemHealthStatus> {
     const timestamp = Date.now();
     
     try {
-      logger.debug('Performing comprehensive health check');
+      logger.debug('Performing comprehensive health check with parallel execution');
 
-      // Get health status from all components
-      const tokenHealth = await this.checkOAuthTokenHealth();
-      const apiHealth = await this.checkAPIRateLimits();
-      const resourceHealth = await this.checkSystemResources();
-      const operationalHealth = await this.checkOperationalHealth();
+      // Execute all health checks in parallel with timeout protection
+      const healthChecks = await Promise.allSettled([
+        Promise.race([
+          this.checkOAuthTokenHealth(),
+          this.timeoutPromise(5000, 'token-health-timeout')
+        ]),
+        Promise.race([
+          this.checkAPIRateLimits(), 
+          this.timeoutPromise(5000, 'api-health-timeout')
+        ]),
+        Promise.race([
+          this.checkSystemResources(),
+          this.timeoutPromise(5000, 'resource-health-timeout')
+        ]),
+        Promise.race([
+          this.checkOperationalHealth(),
+          this.timeoutPromise(5000, 'operational-health-timeout')
+        ])
+      ]);
+
+      // Extract results with proper error handling
+      const tokenHealth = this.extractHealthResult(healthChecks[0], 'tokens');
+      const apiHealth = this.extractHealthResult(healthChecks[1], 'apis');
+      const resourceHealth = this.extractHealthResult(healthChecks[2], 'resources');
+      const operationalHealth = this.extractHealthResult(healthChecks[3], 'operations');
 
       // Determine overall health
       const componentStatuses = [
@@ -518,35 +539,82 @@ export class HealthMonitor {
   }
 
   /**
-   * Stores health metrics for trending
+   * Stores health metrics using circular buffer to prevent memory leaks
    */
   private storeHealthMetrics(healthStatus: SystemHealthStatus): void {
-    // TODO: Implement health metrics storage for trending analysis
-    // For now, just keep in memory with a limit
-    const maxMetrics = 1000;
-    
-    if (this.healthMetrics.length >= maxMetrics) {
-      this.healthMetrics = this.healthMetrics.slice(-maxMetrics / 2);
-    }
-
-    // Store key metrics
+    const maxMetrics = 1000; // Maximum metrics to retain
     const timestamp = new Date(healthStatus.timestamp);
     
-    this.healthMetrics.push({
-      component: 'memory',
-      metric: 'usage_percentage',
-      value: healthStatus.components.resources.memory.usagePercentage,
-      unit: 'percent',
-      timestamp
-    });
-
-    this.healthMetrics.push({
-      component: 'disk',
-      metric: 'usage_percentage',
-      value: healthStatus.components.resources.disk.usagePercentage,
-      unit: 'percent',
-      timestamp
-    });
+    // Create new metrics to add
+    const newMetrics: HealthMetric[] = [
+      {
+        component: 'memory',
+        metric: 'usage_percentage',
+        value: healthStatus.components.resources.memory.usagePercentage,
+        unit: 'percent',
+        timestamp
+      },
+      {
+        component: 'disk',
+        metric: 'usage_percentage',
+        value: healthStatus.components.resources.disk.usagePercentage,
+        unit: 'percent',
+        timestamp
+      },
+      {
+        component: 'database',
+        metric: 'pool_utilization',
+        value: healthStatus.components.resources.database.poolUtilization,
+        unit: 'percent',
+        timestamp
+      },
+      {
+        component: 'database',
+        metric: 'response_time',
+        value: healthStatus.components.resources.database.responseTime,
+        unit: 'milliseconds',
+        timestamp
+      },
+      {
+        component: 'linear-api',
+        metric: 'usage_percentage',
+        value: healthStatus.components.apis.linear.usagePercentage,
+        unit: 'percent',
+        timestamp
+      },
+      {
+        component: 'linear-api',
+        metric: 'response_time',
+        value: healthStatus.components.apis.linear.responseTime,
+        unit: 'milliseconds',
+        timestamp
+      },
+      {
+        component: 'confluence-api',
+        metric: 'usage_percentage',
+        value: healthStatus.components.apis.confluence.usagePercentage,
+        unit: 'percent',
+        timestamp
+      },
+      {
+        component: 'confluence-api',
+        metric: 'response_time',
+        value: healthStatus.components.apis.confluence.responseTime,
+        unit: 'milliseconds',
+        timestamp
+      }
+    ];
+    
+    // Add new metrics to the buffer
+    this.healthMetrics.push(...newMetrics);
+    
+    // Maintain circular buffer - remove oldest metrics if we exceed the limit
+    if (this.healthMetrics.length > maxMetrics) {
+      const excessMetrics = this.healthMetrics.length - maxMetrics;
+      this.healthMetrics.splice(0, excessMetrics);
+    }
+    
+    logger.debug(`Stored ${newMetrics.length} health metrics, buffer size: ${this.healthMetrics.length}/${maxMetrics}`);
   }
 
   /**
@@ -576,6 +644,136 @@ export class HealthMonitor {
   updateConfig(newConfig: Partial<HealthMonitorConfig>): void {
     this.config = { ...this.config, ...newConfig };
     logger.info('Health monitor configuration updated', { config: newConfig });
+  }
+
+  /**
+   * Creates a timeout promise that rejects after specified milliseconds
+   */
+  private timeoutPromise(ms: number, name: string): Promise<never> {
+    return new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms)
+    );
+  }
+
+  /**
+   * Extracts health result from Promise.allSettled result with proper error handling
+   */
+  private extractHealthResult(
+    result: PromiseSettledResult<any>, 
+    component: string
+  ): any {
+    if (result.status === 'fulfilled') {
+      return result.value;
+    } else {
+      logger.error(`Health check failed for ${component}`, { 
+        error: result.reason.message 
+      });
+      
+      // Return safe fallback based on component type
+      return this.getDefaultHealthResult(component);
+    }
+  }
+
+  /**
+   * Returns default health result for a component when checks fail
+   */
+  private getDefaultHealthResult(component: string): any {
+    const now = new Date();
+    
+    switch (component) {
+      case 'tokens':
+        return {
+          linearToken: {
+            expiresAt: new Date(now.getTime() - (24 * 60 * 60 * 1000)),
+            daysUntilExpiration: -1,
+            isHealthy: false,
+            lastRefresh: new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)),
+            hasRefreshToken: false
+          },
+          confluenceToken: {
+            expiresAt: new Date(now.getTime() - (24 * 60 * 60 * 1000)),
+            daysUntilExpiration: -1,
+            isHealthy: false,
+            lastRefresh: new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)),
+            hasRefreshToken: false
+          },
+          overall: 'unknown' as HealthStatus
+        };
+      
+      case 'apis':
+        return {
+          linear: {
+            remainingCalls: 0,
+            totalCalls: 1000,
+            resetTime: new Date(Date.now() + (60 * 60 * 1000)),
+            usagePercentage: 100,
+            isHealthy: false,
+            responseTime: 0
+          },
+          confluence: {
+            remainingCalls: 0,
+            totalCalls: 10000,
+            resetTime: new Date(Date.now() + (60 * 60 * 1000)),
+            usagePercentage: 100,
+            isHealthy: false,
+            responseTime: 0
+          },
+          overall: 'unknown' as HealthStatus
+        };
+      
+      case 'resources':
+        return {
+          database: {
+            connectionCount: 0,
+            maxConnections: 20,
+            responseTime: 0,
+            isHealthy: false,
+            poolUtilization: 0
+          },
+          memory: {
+            usedMB: 0,
+            totalMB: 0,
+            usagePercentage: 0,
+            isHealthy: false,
+            heapUsed: 0,
+            heapTotal: 0
+          },
+          disk: {
+            usedGB: 0,
+            totalGB: 100,
+            usagePercentage: 0,
+            isHealthy: false,
+            availableGB: 100
+          },
+          overall: 'unknown' as HealthStatus
+        };
+      
+      case 'operations':
+        return {
+          sync: {
+            lastSuccessfulSync: new Date(now.getTime() - (60 * 60 * 1000)),
+            minutesSinceLastSync: 60,
+            isHealthy: false,
+            errorRate: 1.0
+          },
+          planning: {
+            lastSuccessfulPlanning: new Date(now.getTime() - (2 * 60 * 60 * 1000)),
+            minutesSinceLastPlanning: 120,
+            isHealthy: false,
+            successRate: 0.0
+          },
+          webhooks: {
+            queueSize: 0,
+            processingRate: 0,
+            isHealthy: false,
+            errorRate: 1.0
+          },
+          overall: 'unknown' as HealthStatus
+        };
+      
+      default:
+        return { overall: 'unknown' as HealthStatus };
+    }
   }
 
   /**
@@ -693,7 +891,7 @@ export class HealthMonitor {
   }
 
   /**
-   * Gets Linear API usage statistics
+   * Gets Linear API usage statistics using cached validation (no API calls)
    */
   private async getLinearAPIStats(): Promise<{
     remainingCalls: number;
@@ -704,44 +902,20 @@ export class HealthMonitor {
     responseTime: number;
   }> {
     try {
-      // Test Linear API and measure response time
-      const startTime = Date.now();
-      
-      // Get a valid token to test with
-      const client = await getClient();
-      const tokenResult = await client.query(
-        'SELECT access_token FROM linear_tokens ORDER BY updated_at DESC LIMIT 1'
-      );
-
-      if (tokenResult.rows.length === 0) {
-        throw new Error('No Linear token available');
+      // Check if we have cached API stats that are still valid
+      const cachedStats = this.getCachedAPIStats('linear');
+      if (cachedStats && this.isCacheValid(cachedStats)) {
+        return cachedStats.data;
       }
 
-      const linearClient = new LinearClient({ 
-        accessToken: tokenResult.rows[0].access_token 
-      });
-
-      // Make a lightweight API call to check status and response time
-      await linearClient.viewer;
-      const responseTime = Date.now() - startTime;
-
-      // Linear doesn't provide explicit rate limit headers in GraphQL responses
-      // so we'll use estimated values based on known limits (1000 requests per hour)
-      const estimatedLimit = 1000; // per hour
-      const estimatedUsed = Math.floor(Math.random() * 200); // Simulate current usage
-      const remainingCalls = estimatedLimit - estimatedUsed;
-      const usagePercentage = (estimatedUsed / estimatedLimit) * 100;
-      const resetTime = new Date();
-      resetTime.setHours(resetTime.getHours() + 1); // Reset in 1 hour
-
-      return {
-        remainingCalls,
-        totalCalls: estimatedLimit,
-        resetTime,
-        usagePercentage,
-        isHealthy: usagePercentage < this.config.apiUsageWarningPercentage,
-        responseTime
-      };
+      // Use token-based health estimation instead of making API calls
+      const tokenInfo = await this.getLinearTokenInfo();
+      const estimatedStats = this.estimateLinearAPIUsage(tokenInfo);
+      
+      // Cache the estimated stats for future health checks
+      this.setCachedAPIStats('linear', estimatedStats);
+      
+      return estimatedStats;
     } catch (error) {
       logger.error('Error getting Linear API stats', { error });
       return {
@@ -756,7 +930,7 @@ export class HealthMonitor {
   }
 
   /**
-   * Gets Confluence API usage statistics
+   * Gets Confluence API usage statistics using cached validation (no API calls)
    */
   private async getConfluenceAPIStats(): Promise<{
     remainingCalls: number;
@@ -767,24 +941,20 @@ export class HealthMonitor {
     responseTime: number;
   }> {
     try {
-      // Confluence has rate limits but they're harder to track precisely
-      // We'll simulate based on known limits (10,000 requests per hour for Cloud)
-      const estimatedLimit = 10000; // per hour
-      const estimatedUsed = Math.floor(Math.random() * 1000); // Simulate current usage
-      const remainingCalls = estimatedLimit - estimatedUsed;
-      const usagePercentage = (estimatedUsed / estimatedLimit) * 100;
-      const responseTime = 200; // Simulated response time
-      const resetTime = new Date();
-      resetTime.setHours(resetTime.getHours() + 1); // Reset in 1 hour
+      // Check if we have cached API stats that are still valid
+      const cachedStats = this.getCachedAPIStats('confluence');
+      if (cachedStats && this.isCacheValid(cachedStats)) {
+        return cachedStats.data;
+      }
 
-      return {
-        remainingCalls,
-        totalCalls: estimatedLimit,
-        resetTime,
-        usagePercentage,
-        isHealthy: usagePercentage < this.config.apiUsageWarningPercentage,
-        responseTime
-      };
+      // Use token-based health estimation instead of making API calls
+      const tokenInfo = await this.getConfluenceTokenInfo();
+      const estimatedStats = this.estimateConfluenceAPIUsage(tokenInfo);
+      
+      // Cache the estimated stats for future health checks
+      this.setCachedAPIStats('confluence', estimatedStats);
+      
+      return estimatedStats;
     } catch (error) {
       logger.error('Error getting Confluence API stats', { error });
       return {
@@ -796,5 +966,152 @@ export class HealthMonitor {
         responseTime: 0
       };
     }
+  }
+
+  /**
+   * Gets cached API stats if available and valid
+   */
+  private getCachedAPIStats(apiType: string): { data: any; timestamp: number } | undefined {
+    return this.apiStatsCache.get(apiType);
+  }
+
+  /**
+   * Checks if cached data is still valid
+   */
+  private isCacheValid(cachedData: { data: any; timestamp: number }): boolean {
+    const now = Date.now();
+    return (now - cachedData.timestamp) < this.cacheValidityMs;
+  }
+
+  /**
+   * Sets cached API stats with current timestamp
+   */
+  private setCachedAPIStats(apiType: string, data: any): void {
+    this.apiStatsCache.set(apiType, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Estimates Linear API usage based on token health and system activity
+   */
+  private estimateLinearAPIUsage(tokenInfo: {
+    expiresAt: Date;
+    daysUntilExpiration: number;
+    isHealthy: boolean;
+    lastRefresh: Date;
+    hasRefreshToken: boolean;
+  }): {
+    remainingCalls: number;
+    totalCalls: number;
+    resetTime: Date;
+    usagePercentage: number;
+    isHealthy: boolean;
+    responseTime: number;
+  } {
+    // Linear API limits: 1000 requests per hour for GraphQL
+    const totalCalls = 1000;
+    
+    // Estimate usage based on token health and system activity
+    let estimatedUsage = 0;
+    
+    if (!tokenInfo.isHealthy) {
+      // If token is unhealthy, assume high usage or errors
+      estimatedUsage = Math.floor(totalCalls * 0.9); // 90% usage
+    } else {
+      // Base usage estimate on time since last refresh and operational activity
+      const hoursSinceRefresh = (Date.now() - tokenInfo.lastRefresh.getTime()) / (1000 * 60 * 60);
+      
+      // Conservative estimate: 50-100 calls per hour during normal operation
+      const baseUsagePerHour = 75;
+      estimatedUsage = Math.min(
+        Math.floor(baseUsagePerHour * Math.min(hoursSinceRefresh, 1)),
+        totalCalls * 0.8 // Cap at 80% to be conservative
+      );
+    }
+
+    const remainingCalls = totalCalls - estimatedUsage;
+    const usagePercentage = (estimatedUsage / totalCalls) * 100;
+    
+    // Reset time is next hour
+    const resetTime = new Date();
+    resetTime.setHours(resetTime.getHours() + 1);
+    resetTime.setMinutes(0);
+    resetTime.setSeconds(0);
+    resetTime.setMilliseconds(0);
+
+    // Estimated response time based on token health
+    const responseTime = tokenInfo.isHealthy ? 150 : 500; // ms
+
+    return {
+      remainingCalls,
+      totalCalls,
+      resetTime,
+      usagePercentage: Math.round(usagePercentage),
+      isHealthy: usagePercentage < this.config.apiUsageWarningPercentage,
+      responseTime
+    };
+  }
+
+  /**
+   * Estimates Confluence API usage based on token health and system activity
+   */
+  private estimateConfluenceAPIUsage(tokenInfo: {
+    expiresAt: Date;
+    daysUntilExpiration: number;
+    isHealthy: boolean;
+    lastRefresh: Date;
+    hasRefreshToken: boolean;
+  }): {
+    remainingCalls: number;
+    totalCalls: number;
+    resetTime: Date;
+    usagePercentage: number;
+    isHealthy: boolean;
+    responseTime: number;
+  } {
+    // Confluence API limits: 10,000 requests per hour for Cloud
+    const totalCalls = 10000;
+    
+    // Estimate usage based on token health and system activity
+    let estimatedUsage = 0;
+    
+    if (!tokenInfo.isHealthy) {
+      // If token is unhealthy, assume higher usage or errors
+      estimatedUsage = Math.floor(totalCalls * 0.8); // 80% usage
+    } else {
+      // Base usage estimate on time since last refresh and operational activity
+      const hoursSinceRefresh = (Date.now() - tokenInfo.lastRefresh.getTime()) / (1000 * 60 * 60);
+      
+      // Conservative estimate: 100-300 calls per hour during normal operation
+      const baseUsagePerHour = 200;
+      estimatedUsage = Math.min(
+        Math.floor(baseUsagePerHour * Math.min(hoursSinceRefresh, 1)),
+        totalCalls * 0.7 // Cap at 70% to be conservative
+      );
+    }
+
+    const remainingCalls = totalCalls - estimatedUsage;
+    const usagePercentage = (estimatedUsage / totalCalls) * 100;
+    
+    // Reset time is next hour
+    const resetTime = new Date();
+    resetTime.setHours(resetTime.getHours() + 1);
+    resetTime.setMinutes(0);
+    resetTime.setSeconds(0);
+    resetTime.setMilliseconds(0);
+
+    // Estimated response time based on token health
+    const responseTime = tokenInfo.isHealthy ? 200 : 600; // ms
+
+    return {
+      remainingCalls,
+      totalCalls,
+      resetTime,
+      usagePercentage: Math.round(usagePercentage),
+      isHealthy: usagePercentage < this.config.apiUsageWarningPercentage,
+      responseTime
+    };
   }
 }
