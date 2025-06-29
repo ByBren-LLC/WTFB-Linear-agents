@@ -64,6 +64,8 @@ export interface Story extends PlanningItem {
   acceptanceCriteria: string[];
   /** Story points (effort estimate) for the story */
   storyPoints?: number;
+  /** Priority level (1-4, where 1 is highest) */
+  priority?: number;
 }
 
 /**
