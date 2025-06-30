@@ -173,6 +173,132 @@ describe('Webhook Handler Integration', () => {
     });
   });
 
+  describe('Assignment Processing', () => {
+    it('should process issue assignment with new processor', async () => {
+      mockReq.body = {
+        type: 'AppUserNotification',
+        action: 'issueAssignedToYou',
+        notification: {
+          id: 'notif-assign',
+          type: 'issueAssignedToYou',
+          createdAt: '2024-01-01T00:00:00Z',
+          actor: {
+            id: 'user-assign',
+            name: 'Assigning Manager'
+          },
+          issue: {
+            id: 'issue-assign',
+            identifier: 'LIN-ASSIGN',
+            title: 'New Assignment',
+            url: 'https://linear.app/team/issue/LIN-ASSIGN',
+            state: {
+              id: 'state-backlog',
+              name: 'Backlog',
+              color: '#888888',
+              type: 'backlog'
+            },
+            team: {
+              id: 'team-123',
+              key: 'TEAM',
+              name: 'Test Team'
+            }
+          }
+        }
+      };
+
+      // Mock team for status update
+      const mockTeam = {
+        states: jest.fn().mockResolvedValue({
+          nodes: [
+            { id: 'state-progress', name: 'In Progress', type: 'started' }
+          ]
+        })
+      };
+      mockLinearClient.getTeam = jest.fn().mockResolvedValue(mockTeam);
+      mockLinearClient.updateIssue = jest.fn().mockResolvedValue(undefined);
+
+      await handleWebhook(mockReq as Request, mockRes as Response);
+
+      // Verify webhook was processed successfully
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({ success: true });
+
+      // Verify Linear comment was created
+      expect(mockLinearClient.createComment).toHaveBeenCalledWith(
+        'issue-assign',
+        expect.stringContaining('Hello @Assigning Manager!')
+      );
+
+      // Verify status update was attempted
+      expect(mockLinearClient.updateIssue).toHaveBeenCalledWith({
+        id: 'issue-assign',
+        stateId: 'state-progress'
+      });
+
+      // Verify Slack notification
+      expect(mockNotificationCoordinator.notifyAgentUpdate).toHaveBeenCalledWith(
+        'linear-agent',
+        'remote',
+        'assigned',
+        'Issue Assigned: LIN-ASSIGN',
+        'New Assignment assigned to SAFe PULSE by Assigning Manager',
+        'https://linear.app/team/issue/LIN-ASSIGN',
+        'Assigning Manager'
+      );
+    });
+
+    it('should process issue unassignment with new processor', async () => {
+      mockReq.body = {
+        type: 'AppUserNotification',
+        action: 'issueUnassignedFromYou',
+        notification: {
+          id: 'notif-unassign',
+          type: 'issueUnassignedFromYou',
+          createdAt: '2024-01-01T00:00:00Z',
+          actor: {
+            id: 'user-unassign',
+            name: 'Unassigning Manager'
+          },
+          issue: {
+            id: 'issue-unassign',
+            identifier: 'LIN-UNASSIGN',
+            title: 'Reassigned Task',
+            url: 'https://linear.app/team/issue/LIN-UNASSIGN',
+            state: {
+              id: 'state-progress',
+              name: 'In Progress',
+              color: '#00FF00',
+              type: 'started'
+            }
+          }
+        }
+      };
+
+      await handleWebhook(mockReq as Request, mockRes as Response);
+
+      // Verify webhook was processed successfully
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({ success: true });
+
+      // Verify Linear comment was created
+      expect(mockLinearClient.createComment).toHaveBeenCalledWith(
+        'issue-unassign',
+        expect.stringContaining('Hi @Unassigning Manager')
+      );
+
+      // Verify Slack notification
+      expect(mockNotificationCoordinator.notifyAgentUpdate).toHaveBeenCalledWith(
+        'linear-agent',
+        'remote',
+        'assigned',
+        'Issue Unassigned: LIN-UNASSIGN',
+        'Reassigned Task unassigned from SAFe PULSE by Unassigning Manager',
+        'https://linear.app/team/issue/LIN-UNASSIGN',
+        'Unassigning Manager'
+      );
+    });
+  });
+
   describe('Comment Mention Processing', () => {
     it('should process comment mentions with new processor', async () => {
       mockReq.body = {

@@ -345,6 +345,7 @@ export class LinearClientWrapper {
     title?: string;
     description?: string;
     priority?: number;
+    stateId?: string;
   }): Promise<any> {
     return this.executeQuery(
       () => this.linearClient.updateIssue(input.id, {
@@ -354,7 +355,8 @@ export class LinearClientWrapper {
         labelIds: input.labelIds,
         title: input.title,
         description: input.description,
-        priority: input.priority
+        priority: input.priority,
+        stateId: input.stateId
       }),
       'updateIssue'
     );
