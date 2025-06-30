@@ -25,6 +25,9 @@ import { ProgramIncrement } from './pi-model';
 import { IterationAllocator } from './iteration-allocator';
 import { CapacityManager } from './capacity-manager';
 import { ARTValidator } from './art-validator';
+import { ValueDeliveryAnalyzer } from './value-delivery-analyzer';
+import { WorkingSoftwareValidator } from './working-software-validator';
+import { ARTReadinessOptimizer } from './art-readiness-optimizer';
 import * as logger from '../utils/logger';
 
 /**
@@ -48,12 +51,18 @@ export class ARTPlanner {
   private iterationAllocator: IterationAllocator;
   private capacityManager: CapacityManager;
   private artValidator: ARTValidator;
+  private valueDeliveryAnalyzer: ValueDeliveryAnalyzer;
+  private workingSoftwareValidator: WorkingSoftwareValidator;
+  private artReadinessOptimizer: ARTReadinessOptimizer;
 
   constructor(config: Partial<ARTPlanningConfig> = {}) {
     this.config = { ...DEFAULT_ART_CONFIG, ...config };
     this.iterationAllocator = new IterationAllocator(this.config);
     this.capacityManager = new CapacityManager(this.config);
     this.artValidator = new ARTValidator(this.config);
+    this.valueDeliveryAnalyzer = new ValueDeliveryAnalyzer();
+    this.workingSoftwareValidator = new WorkingSoftwareValidator();
+    this.artReadinessOptimizer = new ARTReadinessOptimizer();
     
     logger.info('ARTPlanner initialized', {
       iterationLength: this.config.defaultIterationLength,
@@ -94,13 +103,40 @@ export class ARTPlanner {
       // Phase 3: Validate ART readiness
       const artReadiness = await this.validateARTReadiness(iterationPlans, dependencies);
       
+      // Phase 3.5: Optimize ART plan if enabled
+      let optimizedIterationPlans = iterationPlans;
+      if (this.config.enableValueOptimization && artReadiness.readinessScore < 0.85) {
+        logger.info('Optimizing ART plan for improved readiness', {
+          currentReadiness: artReadiness.readinessScore
+        });
+        
+        // Create temporary ART plan for optimization
+        const tempPlan: ARTPlan = {
+          programIncrement,
+          iterations: iterationPlans,
+          workItems,
+          dependencies,
+          artReadiness,
+          summary: {} as ARTPlanSummary,
+          metadata: {} as ARTPlanMetadata
+        };
+        
+        const optimizedPlan = await this.artReadinessOptimizer.optimizeARTReadiness(tempPlan);
+        optimizedIterationPlans = optimizedPlan.optimizedIterations;
+        
+        logger.info('ART optimization completed', {
+          readinessImprovement: optimizedPlan.readinessScoreImprovement,
+          valueImprovement: optimizedPlan.valueDeliveryImprovement
+        });
+      }
+      
       // Phase 4: Generate summary and metadata
-      const summary = this.generatePlanSummary(iterationPlans, workItems, dependencies);
+      const summary = this.generatePlanSummary(optimizedIterationPlans, workItems, dependencies);
       const metadata = this.generatePlanMetadata();
 
       const artPlan: ARTPlan = {
         programIncrement,
-        iterations: iterationPlans,
+        iterations: optimizedIterationPlans,
         workItems,
         dependencies,
         artReadiness,
@@ -110,7 +146,7 @@ export class ARTPlanner {
 
       const processingTime = Date.now() - startTime;
       logger.info('ART planning completed', {
-        iterations: iterationPlans.length,
+        iterations: optimizedIterationPlans.length,
         readinessScore: artReadiness.readinessScore,
         processingTime: `${processingTime}ms`
       });
@@ -393,11 +429,36 @@ export class ARTPlanner {
       capacityCalculation.teamCapacities
     );
 
-    // Validate deliverable value
+    // Phase 2: Enhanced value delivery analysis
     const deliverableValue = await this.artValidator.validateDeliverableValue(
       allocatedWork,
       dependencies
     );
+
+    // Create initial iteration plan for value analysis
+    const preliminaryPlan: IterationPlan = {
+      iteration,
+      allocatedWork,
+      totalPoints: allocatedWork.reduce((sum, work) => sum + work.allocatedPoints, 0),
+      totalCapacity: capacityCalculation.totalCapacity,
+      capacityUtilization: await this.capacityManager.calculateCapacityUtilization(
+        allocatedWork,
+        capacityCalculation.teamCapacities
+      ),
+      deliverableValue,
+      prerequisites: [],
+      enables: [],
+      validation: { isValid: true, errors: [], warnings: [], info: [], validationScore: 1.0 },
+      metadata: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        algorithmVersion: '1.0.0',
+        planningConfidence: 0.8
+      }
+    };
+
+    // Phase 2: Value delivery analysis
+    const valueAnalysis = await this.valueDeliveryAnalyzer.analyzeIterationValue(preliminaryPlan);
 
     // Determine prerequisites and enables
     const prerequisites = this.calculatePrerequisites(allocatedWork, dependencies);
@@ -414,20 +475,34 @@ export class ARTPlanner {
     // Calculate total points
     const totalPoints = allocatedWork.reduce((sum, work) => sum + work.allocatedPoints, 0);
 
+    // Enhanced iteration plan with Phase 2 value analysis
     const iterationPlan: IterationPlan = {
       iteration,
       allocatedWork,
       totalPoints,
+      totalCapacity: capacityCalculation.totalCapacity,
       capacityUtilization,
-      deliverableValue,
+      deliverableValue: {
+        ...deliverableValue,
+        // Enhance with Phase 2 analysis
+        valueConfidence: valueAnalysis.confidenceScore,
+        valueDeliveryStories: valueAnalysis.workingSoftwareComponents.map(comp => comp.name),
+        valueRisks: valueAnalysis.deliveryRisks
+      },
       prerequisites,
       enables,
       validation,
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        algorithmVersion: '1.0.0',
-        planningConfidence: validation.validationScore
+        algorithmVersion: '1.0.0-phase2',
+        planningConfidence: Math.min(validation.validationScore, valueAnalysis.confidenceScore),
+        valueAnalysis: {
+          valueDeliveryScore: valueAnalysis.valueDeliveryScore,
+          workingSoftwareCount: valueAnalysis.workingSoftwareComponents.length,
+          userImpactScore: valueAnalysis.userImpactAssessment.impactedUserCount,
+          businessValue: valueAnalysis.businessValueRealization.estimatedRevenue
+        }
       }
     };
 
