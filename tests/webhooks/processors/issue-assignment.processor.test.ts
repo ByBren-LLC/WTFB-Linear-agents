@@ -298,6 +298,89 @@ describe('IssueAssignmentProcessor', () => {
       expect(mockNotificationCoordinator.notifyAgentUpdate).not.toHaveBeenCalled();
     });
 
+    it('should handle missing team gracefully', async () => {
+      const notification: AppUserNotification = {
+        action: 'issueAssignedToYou',
+        type: 'AppUserNotification',
+        notification: {
+          id: 'notif-no-team',
+          type: 'issueAssignedToYou',
+          createdAt: '2024-01-01T00:00:00Z',
+          actor: {
+            id: 'user-123',
+            name: 'No Team User'
+          },
+          issue: {
+            id: 'issue-no-team',
+            identifier: 'LIN-NOTEAM',
+            title: 'Issue without team',
+            url: 'https://linear.app/team/issue/LIN-NOTEAM',
+            state: {
+              id: 'state-backlog',
+              name: 'Backlog',
+              color: '#000000',
+              type: 'backlog'
+            }
+            // Note: no team property
+          }
+        }
+      };
+
+      await processor.process(notification);
+
+      // Verify comment was created but no status update attempted
+      expect(mockLinearClient.createComment).toHaveBeenCalled();
+      expect(mockLinearClient.getTeam).not.toHaveBeenCalled();
+      expect(mockLinearClient.updateIssue).not.toHaveBeenCalled();
+    });
+
+    it('should notify user when status update fails', async () => {
+      const notification: AppUserNotification = {
+        action: 'issueAssignedToYou',
+        type: 'AppUserNotification',
+        notification: {
+          id: 'notif-status-fail',
+          type: 'issueAssignedToYou',
+          createdAt: '2024-01-01T00:00:00Z',
+          actor: {
+            id: 'user-123',
+            name: 'Status Fail User'
+          },
+          issue: {
+            id: 'issue-status-fail',
+            identifier: 'LIN-STATUSFAIL',
+            title: 'Status update will fail',
+            url: 'https://linear.app/team/issue/LIN-STATUSFAIL',
+            state: {
+              id: 'state-backlog',
+              name: 'Backlog',
+              color: '#000000',
+              type: 'backlog'
+            },
+            team: {
+              id: 'team-123',
+              key: 'TEAM',
+              name: 'Test Team'
+            }
+          }
+        }
+      };
+
+      // Mock updateIssue to fail
+      mockLinearClient.updateIssue.mockRejectedValue(new Error('Status update failed'));
+
+      await processor.process(notification);
+
+      // Verify initial comment was created
+      expect(mockLinearClient.createComment).toHaveBeenCalledTimes(2);
+      
+      // Verify error notification comment was created
+      expect(mockLinearClient.createComment).toHaveBeenLastCalledWith(
+        'issue-status-fail',
+        expect.stringContaining('Auto-Status Update Failed')
+      );
+    });
+
     it('should handle errors and send error notification', async () => {
       const notification: AppUserNotification = {
         action: 'issueAssignedToYou',

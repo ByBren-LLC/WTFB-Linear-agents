@@ -105,16 +105,27 @@ export class IssueAssignmentProcessor extends BaseWebhookProcessor {
    * @param issue The Linear issue object
    */
   private async updateIssueStatus(issue: any): Promise<void> {
+    // Validate team information exists
+    if (!issue.team?.id) {
+      logger.warn('Cannot update status: issue missing team information', { 
+        issueId: issue.id,
+        issueIdentifier: issue.identifier 
+      });
+      return;
+    }
+    
     try {
       // Get team's workflow states to find "In Progress" state
-      const team = await this.linearClient.getTeam(issue.team?.id);
+      const team = await this.linearClient.getTeam(issue.team.id);
+      if (!team) {
+        logger.warn('Team not found', { teamId: issue.team.id, issueId: issue.id });
+        return;
+      }
+      
       const workflowStates = await team.states();
       
-      // Find the appropriate "started" state
-      const inProgressState = workflowStates.nodes.find(
-        (state: any) => state.type === 'started' && 
-        (state.name.toLowerCase().includes('progress') || state.name.toLowerCase().includes('doing'))
-      );
+      // Find the appropriate "started" state using robust strategy
+      const inProgressState = await this.findInProgressState(workflowStates);
 
       if (inProgressState) {
         await this.linearClient.updateIssue({
@@ -129,16 +140,76 @@ export class IssueAssignmentProcessor extends BaseWebhookProcessor {
         });
       } else {
         logger.warn('Could not find In Progress state for team', {
-          teamId: issue.team?.id
+          teamId: issue.team.id,
+          availableStates: workflowStates.nodes.map((s: any) => ({ 
+            name: s.name, 
+            type: s.type 
+          }))
         });
       }
     } catch (error) {
       logger.error('Failed to update issue status', {
         error: (error as Error).message,
-        issueId: issue.id
+        issueId: issue.id,
+        teamId: issue.team?.id
       });
-      // Don't throw - status update is not critical
+      
+      // Notify user of status update failure
+      try {
+        await this.createLinearComment(issue.id, 
+          `⚠️ **Auto-Status Update Failed**\n\n` +
+          `I couldn't automatically update the status to "In Progress". ` +
+          `Please update the status manually if needed.\n\n` +
+          `_Error: ${(error as Error).message}_`
+        );
+      } catch (commentError) {
+        logger.error('Failed to notify user of status update failure', {
+          originalError: (error as Error).message,
+          commentError: (commentError as Error).message,
+          issueId: issue.id
+        });
+      }
     }
+  }
+
+  /**
+   * Finds an appropriate "started" state using multiple strategies
+   * 
+   * @param workflowStates The workflow states from the team
+   * @returns The in-progress state or null if not found
+   */
+  private async findInProgressState(workflowStates: any): Promise<any> {
+    // Try multiple strategies for finding "started" state
+    const strategies = [
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('progress'),
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('doing'),
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('active'),
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('work'),
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('development'),
+      (state: any) => state.type === 'started' && state.name.toLowerCase().includes('implementation'),
+      (state: any) => state.type === 'started' // Fallback to any started state
+    ];
+    
+    for (const strategy of strategies) {
+      const state = workflowStates.nodes.find(strategy);
+      if (state) {
+        logger.info('Found in-progress state using strategy', { 
+          stateName: state.name, 
+          stateId: state.id,
+          stateType: state.type
+        });
+        return state;
+      }
+    }
+    
+    logger.warn('No suitable in-progress state found', { 
+      availableStates: workflowStates.nodes.map((s: any) => ({ 
+        name: s.name, 
+        type: s.type,
+        id: s.id
+      }))
+    });
+    return null;
   }
 
   /**
