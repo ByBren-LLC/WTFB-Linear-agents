@@ -225,4 +225,30 @@ export class LinearClientWrapper {
       'getUser'
     );
   }
+
+  /**
+   * Creates an issue relation between two issues
+   * Note: Linear SDK doesn't support direct issue relations
+   * This method provides a comment-based alternative following SAFe best practices
+   *
+   * @param input The issue relation input
+   * @returns The created relation (as a comment)
+   */
+  async createIssueRelation(input: {
+    issueId: string;
+    relatedIssueId: string;
+    type: string;
+  }): Promise<any> {
+    // Linear SDK doesn't have direct issue relation support
+    // Use comment-based approach for dependency tracking (SAFe best practice)
+    const relationComment = `🔗 **${input.type.toUpperCase()} RELATIONSHIP**: This issue ${input.type} issue ${input.relatedIssueId}`;
+    
+    return this.executeQuery(
+      () => this.linearClient.createComment({
+        issueId: input.issueId,
+        body: relationComment
+      }),
+      'createIssueRelation'
+    );
+  }
 }

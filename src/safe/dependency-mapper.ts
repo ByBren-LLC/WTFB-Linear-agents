@@ -652,14 +652,16 @@ export class DependencyMapper {
       inDegree.set(item.id, 0);
     }
 
-    // Build adjacency list and calculate in-degrees
+    // Build adjacency list and calculate in-degrees - CONSISTENT DIRECTION
     for (const dep of dependencies) {
       if (dep.type === DependencyType.REQUIRES || dep.type === DependencyType.BLOCKS) {
-        const neighbors = graph.get(dep.targetId) || [];
-        neighbors.push(dep.sourceId);
-        graph.set(dep.targetId, neighbors);
+        // sourceId depends on targetId, so edge goes from source to target
+        const neighbors = graph.get(dep.sourceId) || [];
+        neighbors.push(dep.targetId);
+        graph.set(dep.sourceId, neighbors);
         
-        inDegree.set(dep.sourceId, (inDegree.get(dep.sourceId) || 0) + 1);
+        // targetId has incoming edge from sourceId
+        inDegree.set(dep.targetId, (inDegree.get(dep.targetId) || 0) + 1);
       }
     }
 
