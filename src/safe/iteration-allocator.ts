@@ -70,15 +70,15 @@ export class IterationAllocator {
           allocated
         );
 
-        if (allocationResult.success) {
+        if (allocationResult.success && allocationResult.allocation) {
           allocated.push(allocationResult.allocation);
           this.updateAllocationContext(allocationContext, allocationResult.allocation);
         } else {
           unallocated.push({
             workItem,
-            reason: allocationResult.reason,
-            blockers: allocationResult.blockers,
-            solutions: allocationResult.solutions
+            reason: allocationResult.reason || 'Unknown allocation failure',
+            blockers: allocationResult.blockers || [],
+            solutions: allocationResult.solutions || []
           });
         }
       }
@@ -129,7 +129,7 @@ export class IterationAllocator {
     iterations: Iteration[],
     teams: ARTTeam[],
     dependencies: DependencyGraph
-  ) {
+  ): AllocationContext {
     const context = {
       iterations: new Map<string, IterationAllocationState>(),
       teamCapacities: new Map<string, number>(),
@@ -213,7 +213,7 @@ export class IterationAllocator {
    */
   private async allocateWorkItem(
     workItem: PlanningWorkItem,
-    allocationContext: any,
+    allocationContext: AllocationContext,
     dependencies: DependencyGraph,
     existingAllocations: AllocatedWorkItem[]
   ): Promise<{ success: boolean; allocation?: AllocatedWorkItem; reason?: string; blockers?: string[]; solutions?: string[] }> {
@@ -307,8 +307,8 @@ export class IterationAllocator {
   private findEarliestFeasibleIteration(
     prerequisites: string[],
     existingAllocations: AllocatedWorkItem[],
-    allocationContext: any
-  ) {
+    allocationContext: AllocationContext
+  ): IterationAllocationState | null {
     if (prerequisites.length === 0) {
       // No prerequisites, can start in first iteration
       return Array.from(allocationContext.iterations.values())[0];
@@ -338,7 +338,7 @@ export class IterationAllocator {
   /**
    * Find the best team for a work item considering specializations and capacity
    */
-  private findBestTeamForWorkItem(workItem: PlanningWorkItem, iteration: any, allocationContext: any): string | null {
+  private findBestTeamForWorkItem(workItem: PlanningWorkItem, iteration: IterationAllocationState, allocationContext: AllocationContext): string | null {
     const workItemPoints = this.getWorkItemPoints(workItem);
     const availableTeams = iteration.iteration.teams;
     
@@ -370,7 +370,7 @@ export class IterationAllocator {
     workItem: PlanningWorkItem,
     iteration: Iteration,
     teamId: string,
-    allocationContext: any
+    allocationContext: AllocationContext
   ): boolean {
     const iterationState = allocationContext.iterations.get(iteration.id);
     if (!iterationState) return true;
@@ -392,7 +392,7 @@ export class IterationAllocator {
   /**
    * Update allocation context after successful allocation
    */
-  private updateAllocationContext(allocationContext: any, allocation: AllocatedWorkItem): void {
+  private updateAllocationContext(allocationContext: AllocationContext, allocation: AllocatedWorkItem): void {
     // Find the iteration for this allocation
     for (const [iterationId, iterationState] of allocationContext.iterations.entries()) {
       // TODO: Determine which iteration this allocation belongs to
@@ -488,7 +488,7 @@ export class IterationAllocator {
     return Array.from(teamCapacities.values()).reduce((sum, capacity) => sum + capacity, 0);
   }
 
-  private getIterationIndex(allocation: AllocatedWorkItem, allocationContext: any): number {
+  private getIterationIndex(allocation: AllocatedWorkItem, allocationContext: AllocationContext): number {
     // TODO: Implement based on how we track which iteration an allocation belongs to
     return 0;
   }
@@ -559,4 +559,10 @@ interface IterationAllocationState {
   allocatedWork: AllocatedWorkItem[];
   remainingCapacity: number;
   utilizationRate: number;
+}
+
+interface AllocationContext {
+  iterations: Map<string, IterationAllocationState>;
+  teamCapacities: Map<string, number>;
+  dependencyConstraints: Map<string, string[]>;
 }
