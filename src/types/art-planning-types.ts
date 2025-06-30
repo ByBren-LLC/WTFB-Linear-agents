@@ -68,6 +68,8 @@ export interface IterationPlan {
   allocatedWork: AllocatedWorkItem[];
   /** Total story points allocated */
   totalPoints: number;
+  /** Total capacity available for this iteration */
+  totalCapacity: number;
   /** Capacity utilization by team */
   capacityUtilization: CapacityUtilization[];
   /** Deliverable value for this iteration */
@@ -234,6 +236,13 @@ export interface IterationPlanMetadata {
   algorithmVersion: string;
   /** Planning confidence score (0-1) */
   planningConfidence: number;
+  /** Value delivery analysis results */
+  valueAnalysis?: {
+    valueDeliveryScore: number;
+    workingSoftwareCount: number;
+    userImpactScore: number;
+    businessValue: number;
+  };
   /** Planning notes */
   notes?: string;
 }
@@ -268,6 +277,8 @@ export interface ARTReadinessResult {
   readinessScore: number;
   /** Readiness assessment by category */
   assessments: ARTReadinessAssessment[];
+  /** Category scores for optimization */
+  categoryScores: { category: string; score: number; assessment: ARTReadinessAssessment; }[];
   /** Critical blockers that prevent execution */
   criticalBlockers: string[];
   /** Recommendations for improving readiness */
@@ -481,18 +492,8 @@ export interface CapacityCalculationResult {
 }
 
 /**
- * Value delivery analysis result
+ * Value delivery analysis result - MOVED TO PHASE 2 TYPES BELOW
  */
-export interface ValueDeliveryAnalysis {
-  /** Analysis by iteration */
-  iterationAnalysis: IterationValueAnalysis[];
-  /** Overall value delivery assessment */
-  overallAssessment: ValueDeliveryAssessment;
-  /** Value delivery recommendations */
-  recommendations: string[];
-  /** Value delivery risks */
-  risks: ValueDeliveryRisk[];
-}
 
 /**
  * Value analysis for a single iteration

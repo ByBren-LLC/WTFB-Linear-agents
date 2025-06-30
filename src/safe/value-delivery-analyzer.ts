@@ -106,7 +106,7 @@ export class ValueDeliveryAnalyzer {
     );
     
     // Generate improvement recommendations
-    const improvementRecommendations = this.generateValueImprovementRecommendations({
+    const improvementRecommendations = await this.generateValueImprovementRecommendations({
       iterationId: iteration.iteration.id,
       primaryValueStreams: valueStreams,
       workingSoftwareComponents,
@@ -730,7 +730,7 @@ export class ValueDeliveryAnalyzer {
       
       // Check for acceptance criteria
       if ('acceptanceCriteria' in item.workItem && 
-          item.workItem.acceptanceCriteria?.length > 0) {
+          item.workItem.acceptanceCriteria && item.workItem.acceptanceCriteria.length > 0) {
         itemScore += 0.2;
       }
       
@@ -1139,7 +1139,7 @@ export class ValueDeliveryAnalyzer {
     
     // Boost for clear acceptance criteria
     if ('acceptanceCriteria' in item.workItem && 
-        item.workItem.acceptanceCriteria?.length > 3) {
+        item.workItem.acceptanceCriteria && item.workItem.acceptanceCriteria.length > 3) {
       readiness *= 1.1;
     }
     
@@ -1153,7 +1153,7 @@ export class ValueDeliveryAnalyzer {
     if (this.isUserFacing(workItem)) value += 50;
     
     // Additional value for high priority
-    if ('priority' in workItem && workItem.priority <= 2) value += 30;
+    if ('priority' in workItem && workItem.priority && workItem.priority <= 2) value += 30;
     
     return value;
   }

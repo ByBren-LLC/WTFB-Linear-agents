@@ -6,7 +6,6 @@
  */
 
 import {
-  Story,
   AllocatedWorkItem,
   PlanningWorkItem,
   IterationPlan,
@@ -18,6 +17,7 @@ import {
   DeploymentBlocker,
   WorkingSoftwareComponent
 } from '../types/art-planning-types';
+import { Story } from '../planning/models';
 import * as logger from '../utils/logger';
 
 /**
@@ -253,7 +253,7 @@ export class WorkingSoftwareValidator {
     }
 
     // Check story points
-    if (story.storyPoints > 5) {
+    if (story.storyPoints && story.storyPoints > 5) {
       blockers.push('Story exceeds 5 point limit - needs decomposition');
     }
 
@@ -277,8 +277,8 @@ export class WorkingSoftwareValidator {
   private meetsDefinitionOfDone(story: Story): boolean {
     // Simplified DoD check
     const hasAcceptanceCriteria = story.acceptanceCriteria && story.acceptanceCriteria.length > 0;
-    const hasReasonableSize = story.storyPoints <= 5;
-    const hasDescription = story.description && story.description.length > 20;
+    const hasReasonableSize = story.storyPoints ? story.storyPoints <= 5 : true;
+    const hasDescription = !!(story.description && story.description.length > 20);
 
     return hasAcceptanceCriteria && hasReasonableSize && hasDescription;
   }
@@ -348,7 +348,7 @@ export class WorkingSoftwareValidator {
     }
 
     // Risk: High complexity stories
-    const highComplexityCount = stories.filter(s => s.storyPoints >= 5).length;
+    const highComplexityCount = stories.filter(s => s.storyPoints && s.storyPoints >= 5).length;
     if (highComplexityCount > 0) {
       risks.push(`${highComplexityCount} high-complexity stories may impact deployment`);
     }
@@ -518,7 +518,7 @@ export class WorkingSoftwareValidator {
     userSegment: string;
   }> {
     let valueScore = 0.5; // Base score
-    let valuePoints = story.storyPoints * 10; // Base points
+    let valuePoints = (story.storyPoints || 1) * 10; // Base points
 
     // Increase value for user-facing stories
     const content = `${story.title} ${story.description}`.toLowerCase();
@@ -529,7 +529,7 @@ export class WorkingSoftwareValidator {
     }
 
     // Increase value for high priority
-    if (story.priority <= 2) {
+    if (story.priority && story.priority <= 2) {
       valueScore += 0.2;
       valuePoints *= 1.2;
     }
@@ -656,7 +656,7 @@ export class WorkingSoftwareValidator {
 
     // Reduce for high complexity items
     const highComplexityCount = iteration.allocatedWork.filter(
-      item => 'storyPoints' in item.workItem && item.workItem.storyPoints >= 5
+      item => 'storyPoints' in item.workItem && item.workItem.storyPoints && item.workItem.storyPoints >= 5
     ).length;
 
     if (highComplexityCount > 0) {

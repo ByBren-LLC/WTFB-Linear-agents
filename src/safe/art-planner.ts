@@ -273,6 +273,11 @@ export class ARTPlanner {
       isReady,
       readinessScore,
       assessments,
+      categoryScores: assessments.map(assessment => ({
+        category: assessment.category.toString(),
+        score: assessment.score,
+        assessment
+      })),
       criticalBlockers,
       recommendations,
       validatedAt: new Date()

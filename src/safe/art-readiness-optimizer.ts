@@ -319,7 +319,7 @@ export class ARTReadinessOptimizer {
     }
 
     // Strategy: Optimize capacity utilization
-    const overUtilized = analysis.capacityUtilization.filter(u => u > 0.85).length;
+    const overUtilized = analysis.capacityUtilization.filter((u: number) => u > 0.85).length;
     if (overUtilized > 0) {
       strategies.push({
         id: 'optimize-capacity',
@@ -525,7 +525,7 @@ export class ARTReadinessOptimizer {
             // Defer low-priority items with no enables
             return item.enables.length === 0 && 
                    'priority' in item.workItem && 
-                   item.workItem.priority > 3;
+                   item.workItem.priority && item.workItem.priority > 3;
           })
           .slice(0, Math.min(2, this.config.maxIterationChanges));
         
