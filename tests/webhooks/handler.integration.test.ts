@@ -173,8 +173,8 @@ describe('Webhook Handler Integration', () => {
     });
   });
 
-  describe('Legacy Webhook Processing', () => {
-    it('should still handle comment mentions with old processor', async () => {
+  describe('Comment Mention Processing', () => {
+    it('should process comment mentions with new processor', async () => {
       mockReq.body = {
         type: 'AppUserNotification',
         action: 'issueCommentMention',
@@ -206,19 +206,22 @@ describe('Webhook Handler Integration', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({ success: true });
 
-      // Verify Slack notification was sent (using old handler)
+      // Verify Slack notification was sent with new processor format
       expect(mockNotificationCoordinator.notifyAgentUpdate).toHaveBeenCalledWith(
         'linear-agent',
         'remote',
         'assigned',
-        'Comment Mention: Comment Issue',
-        'Agent mentioned in comment by Comment User',
+        'Comment Mention: LIN-456',
+        '@saafepulse mentioned in comment on "Comment Issue" by Comment User',
         'https://linear.app/team/issue/LIN-456',
         'Comment User'
       );
 
-      // No Linear comment should be created (old handler doesn't do this)
-      expect(mockLinearClient.createComment).not.toHaveBeenCalled();
+      // Verify Linear comment was created with new processor
+      expect(mockLinearClient.createComment).toHaveBeenCalledWith(
+        'issue-456',
+        expect.stringContaining('Hi @Comment User!')
+      );
     });
   });
 });
