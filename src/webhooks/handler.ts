@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { verifyWebhookSignature } from './verification';
 import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
+import { LinearClientWrapper } from '../linear/client';
+import { IssueMentionProcessor } from './processors';
 import * as logger from '../utils/logger';
 
 /**
@@ -77,51 +79,69 @@ const processAppUserNotification = async (payload: any, notificationCoordinator:
 
   logger.info(`Processing notification: ${action}`, { action, notification });
 
-  // Handle different notification types
-  switch (action) {
-    case 'issueMention':
-      // Handle when the agent is mentioned in an issue
-      logger.info('Agent mentioned in issue:', notification);
-      await notificationCoordinator.notifyAgentUpdate(
-        'linear-agent',
-        'remote',
-        'assigned',
-        `Issue Mention: ${notification?.issue?.title || 'Unknown Issue'}`,
-        `Agent mentioned in issue by ${notification?.actor?.name || 'Unknown User'}`,
-        notification?.issue?.url,
-        notification?.actor?.name
-      );
-      break;
+  // Get Linear client from environment
+  const accessToken = process.env.LINEAR_ACCESS_TOKEN;
+  const organizationId = process.env.LINEAR_ORGANIZATION_ID;
 
-    case 'issueCommentMention':
-      // Handle when the agent is mentioned in a comment
-      logger.info('Agent mentioned in comment:', notification);
-      await notificationCoordinator.notifyAgentUpdate(
-        'linear-agent',
-        'remote',
-        'assigned',
-        `Comment Mention: ${notification?.issue?.title || 'Unknown Issue'}`,
-        `Agent mentioned in comment by ${notification?.actor?.name || 'Unknown User'}`,
-        notification?.issue?.url,
-        notification?.actor?.name
-      );
-      break;
+  if (!accessToken || !organizationId) {
+    logger.error('Missing Linear credentials in environment');
+    throw new Error('Linear credentials not configured');
+  }
 
-    case 'issueAssignedToYou':
-      // Handle when an issue is assigned to the agent
-      logger.info('Issue assigned to agent:', notification);
-      await notificationCoordinator.notifyAgentUpdate(
-        'linear-agent',
-        'remote',
-        'assigned',
-        `Issue Assigned: ${notification?.issue?.title || 'Unknown Issue'}`,
-        `Issue assigned to agent by ${notification?.actor?.name || 'Unknown User'}`,
-        notification?.issue?.url,
-        notification?.actor?.name
-      );
-      break;
+  // Create Linear client wrapper
+  const linearClient = new LinearClientWrapper(accessToken, organizationId);
 
-    default:
-      logger.info(`Unhandled notification action: ${action}`, { action });
+  // Handle different notification types with processors
+  try {
+    switch (action) {
+      case 'issueMention':
+        // Use the IssueMentionProcessor for issue mentions
+        const issueMentionProcessor = new IssueMentionProcessor(
+          linearClient,
+          notificationCoordinator
+        );
+        await issueMentionProcessor.process(payload);
+        break;
+
+      case 'issueCommentMention':
+        // Handle when the agent is mentioned in a comment
+        logger.info('Agent mentioned in comment:', notification);
+        // TODO: Implement IssueCommentMentionProcessor
+        await notificationCoordinator.notifyAgentUpdate(
+          'linear-agent',
+          'remote',
+          'assigned',
+          `Comment Mention: ${notification?.issue?.title || 'Unknown Issue'}`,
+          `Agent mentioned in comment by ${notification?.actor?.name || 'Unknown User'}`,
+          notification?.issue?.url,
+          notification?.actor?.name
+        );
+        break;
+
+      case 'issueAssignedToYou':
+        // Handle when an issue is assigned to the agent
+        logger.info('Issue assigned to agent:', notification);
+        // TODO: Implement IssueAssignmentProcessor
+        await notificationCoordinator.notifyAgentUpdate(
+          'linear-agent',
+          'remote',
+          'assigned',
+          `Issue Assigned: ${notification?.issue?.title || 'Unknown Issue'}`,
+          `Issue assigned to agent by ${notification?.actor?.name || 'Unknown User'}`,
+          notification?.issue?.url,
+          notification?.actor?.name
+        );
+        break;
+
+      default:
+        logger.info(`Unhandled notification action: ${action}`, { action });
+    }
+  } catch (error) {
+    logger.error('Error processing notification with processor', {
+      error: (error as Error).message,
+      action,
+      issueId: notification?.issue?.id
+    });
+    throw error;
   }
 };
