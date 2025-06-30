@@ -287,7 +287,7 @@ export class LinearWorkAssignmentManager {
       });
 
       // Find exact match
-      const exactMatch = issues.nodes?.find(issue => 
+      const exactMatch = issues.nodes?.find((issue: any) => 
         issue.title === workItem.title || issue.identifier === workItem.id
       );
 
@@ -592,7 +592,7 @@ export class LinearWorkAssignmentManager {
     try {
       const linearUsers = await this.linearClient.getTeamMembers(teamId);
       
-      return linearUsers.nodes?.map(user => ({
+      return linearUsers.nodes?.map((user: any) => ({
         userId: user.id,
         userName: user.name || user.displayName || 'Unknown',
         email: user.email || '',

@@ -417,7 +417,7 @@ export class LinearCycleManager {
       });
 
       const existingLabel = existingLabels.nodes?.find(
-        label => label.name.toLowerCase() === labelName.toLowerCase()
+        (label: any) => label.name.toLowerCase() === labelName.toLowerCase()
       );
 
       if (existingLabel) {

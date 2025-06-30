@@ -372,7 +372,7 @@ export class ARTPlanner {
     const result: PlanningWorkItem[] = [];
 
     // Find items with no dependencies
-    for (const [itemId, degree] of inDegree.entries()) {
+    for (const [itemId, degree] of Array.from(inDegree.entries())) {
       if (degree === 0) {
         queue.push(itemId);
       }

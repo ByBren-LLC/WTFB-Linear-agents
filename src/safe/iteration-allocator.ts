@@ -394,7 +394,7 @@ export class IterationAllocator {
    */
   private updateAllocationContext(allocationContext: AllocationContext, allocation: AllocatedWorkItem): void {
     // Find the iteration for this allocation
-    for (const [iterationId, iterationState] of allocationContext.iterations.entries()) {
+    for (const [iterationId, iterationState] of Array.from(allocationContext.iterations.entries())) {
       // TODO: Determine which iteration this allocation belongs to
       // For now, we'll need to track this in the allocation
     }

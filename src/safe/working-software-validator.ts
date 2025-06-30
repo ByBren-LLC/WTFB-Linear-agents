@@ -295,7 +295,7 @@ export class WorkingSoftwareValidator {
     }
 
     // Create deployment blockers for common issues
-    for (const [blockerType, count] of blockerCounts) {
+    for (const [blockerType, count] of Array.from(blockerCounts)) {
       if (count >= 3) { // 3+ stories with same blocker is critical
         blockers.push({
           id: `blocker-${blockerType.toLowerCase().replace(/\s+/g, '-')}`,

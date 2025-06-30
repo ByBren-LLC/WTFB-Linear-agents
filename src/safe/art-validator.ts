@@ -381,7 +381,7 @@ export class ARTValidator {
       secondaryValues: this.identifySecondaryValues(allocatedWork),
       valueConfidence,
       valueDeliveryStories,
-      valuePrerequisites: [...new Set(valuePrerequisites)],
+      valuePrerequisites: Array.from(new Set(valuePrerequisites)),
       valueRisks
     };
 
@@ -511,7 +511,7 @@ export class ARTValidator {
       }
     }
 
-    return [...new Set(externalDependencies)];
+    return Array.from(new Set(externalDependencies));
   }
 
   private canStoryDeliverValue(workItem: any, allocation: AllocatedWorkItem): boolean {

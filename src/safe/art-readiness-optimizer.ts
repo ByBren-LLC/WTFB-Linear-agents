@@ -958,7 +958,7 @@ export class ARTReadinessOptimizer {
     }
 
     // Items with 3+ dependents are bottlenecks
-    for (const [itemId, count] of dependentCounts) {
+    for (const [itemId, count] of Array.from(dependentCounts)) {
       if (count >= 3) {
         bottlenecks.push({
           itemId,

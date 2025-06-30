@@ -396,7 +396,7 @@ export class ValueDeliveryAnalyzer {
     }
 
     // Calculate delivery confidence for each stream
-    for (const stream of valueStreamMap.values()) {
+    for (const stream of Array.from(valueStreamMap.values())) {
       stream.deliveryConfidence = this.calculateStreamConfidence(stream, workItems);
     }
 
@@ -673,7 +673,7 @@ export class ValueDeliveryAnalyzer {
       }
     }
     
-    return [...new Set(drivers)];
+    return Array.from(new Set(drivers));
   }
 
   private documentAssumptions(iteration: IterationPlan): string[] {
