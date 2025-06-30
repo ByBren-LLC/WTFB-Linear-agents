@@ -573,3 +573,226 @@ export class ValueDeliveryError extends ARTPlanningError {
     this.name = 'ValueDeliveryError';
   }
 }
+
+// Phase 2: Value Delivery Types
+
+export interface ValueDeliveryAnalysis {
+  iterationId: string;
+  primaryValueStreams: ValueStream[];
+  workingSoftwareComponents: WorkingSoftwareComponent[];
+  valueDeliveryScore: number;
+  userImpactAssessment: UserImpact;
+  businessValueRealization: BusinessValueRealization;
+  deliveryRisks: ValueDeliveryRisk[];
+  improvementRecommendations: string[];
+  confidenceScore: number;
+}
+
+export interface ValueStream {
+  id: string;
+  name: string;
+  type: 'customer-facing' | 'revenue-generating' | 'efficiency-improving' | 'technical-debt' | 'infrastructure';
+  workItems: string[];
+  totalValue: number;
+  deliveryConfidence: number;
+}
+
+export interface WorkingSoftwareComponent {
+  id: string;
+  name: string;
+  type: 'feature' | 'api' | 'ui' | 'service';
+  workItems: string[];
+  deploymentReadiness: number;
+  userValue: number;
+  dependencies: string[];
+}
+
+export interface UserImpact {
+  impactedUserCount: number;
+  impactTypes: string[];
+  userSegments: string[];
+  estimatedAdoptionRate: number;
+  valuePerUser: number;
+}
+
+export interface BusinessValueRealization {
+  estimatedRevenue: number;
+  costSavings: number;
+  timeToValue: number;
+  confidenceLevel: number;
+  valueDrivers: string[];
+  assumptions: string[];
+}
+
+export interface WorkingSoftwareValidation {
+  canDeployToProduction: boolean;
+  deploymentReadinessScore: number;
+  criticalBlockers: DeploymentBlocker[];
+  integrationStatus: IntegrationStatus;
+  userValueDelivered: UserValueMetrics;
+  rollbackCapability: RollbackAssessment;
+  qualityGates: QualityGateStatus[];
+}
+
+export interface DeploymentBlocker {
+  id: string;
+  type: 'technical' | 'requirements' | 'dependency' | 'capacity';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  affectedWorkItems: string[];
+  resolution: string;
+  owner?: string;
+}
+
+export interface IntegrationStatus {
+  totalIntegrationPoints: number;
+  completedIntegrations: number;
+  pendingIntegrations: number;
+  integrationReadiness: number;
+  criticalIntegrations: string[];
+}
+
+export interface UserValueMetrics {
+  userStoriesCompleted: number;
+  estimatedUserSatisfaction: number;
+  featureAdoptionPotential: number;
+  valueDeliveryVelocity: number;
+}
+
+export interface RollbackAssessment {
+  canRollback: boolean;
+  rollbackComplexity: 'low' | 'medium' | 'high';
+  estimatedRollbackTime: number;
+  rollbackRisks: string[];
+  rollbackPlan: string;
+}
+
+export interface QualityGateStatus {
+  gateName: string;
+  status: 'passed' | 'failed' | 'pending';
+  criteria: string;
+  currentState: string;
+}
+
+export interface OptimizedIterationPlan {
+  originalPlan: IterationPlan;
+  optimizedAllocation: AllocatedWorkItem[];
+  valueImprovementPotential: number;
+  riskReduction: number;
+  confidenceImprovement: number;
+  implementationEffort: 'low' | 'medium' | 'high';
+}
+
+// Phase 2: Readiness and Validation Types
+
+export interface DeploymentReadinessResult {
+  canDeploy: boolean;
+  readinessScore: number;
+  readyStories: string[];
+  blockedStories: {
+    storyId: string;
+    blockers: string[];
+  }[];
+  criticalBlockers: DeploymentBlocker[];
+  deploymentRisks: string[];
+  estimatedDeploymentDuration: number;
+  rollbackStrategy: string;
+}
+
+export interface IntegrationValidation {
+  isComplete: boolean;
+  integrationPoints: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    dependencies: string[];
+  }[];
+  validatedIntegrations: string[];
+  pendingIntegrations: string[];
+  integrationRisks: string[];
+  completenessScore: number;
+  recommendations: string[];
+}
+
+export interface UserValueValidation {
+  deliversUserValue: boolean;
+  userValueScore: number;
+  valueDeliveryConfidence: number;
+  impactedUserSegments: string[];
+  valueMetrics: {
+    totalValuePoints: number;
+    averageValuePerStory: number;
+    highValueStoryCount: number;
+    valueDistribution: {
+      high: number;
+      medium: number;
+      low: number;
+    };
+  };
+  recommendations: string[];
+}
+
+export interface DeliveryConfidenceScore {
+  overallConfidence: number;
+  confidenceBreakdown: {
+    teamReadiness: number;
+    technicalReadiness: number;
+    dependencyResolution: number;
+    capacityAlignment: number;
+  };
+  riskFactors: string[];
+  confidenceLevel: 'high' | 'medium' | 'low';
+  recommendations: string[];
+}
+
+// Phase 2: Optimization Types
+
+export interface OptimizedARTPlan {
+  originalPlan: ARTPlan;
+  optimizedIterations: IterationPlan[];
+  improvementActions: ImprovementAction[];
+  readinessScoreImprovement: number;
+  valueDeliveryImprovement: number;
+  riskReduction: RiskReductionAnalysis;
+  implementationComplexity: 'low' | 'medium' | 'high';
+}
+
+export interface ImprovementPlan {
+  currentReadinessScore: number;
+  targetReadinessScore: number;
+  prioritizedActions: ImprovementAction[];
+  quickWins: ImprovementAction[];
+  strategicImprovements: ImprovementAction[];
+  estimatedImprovement: number;
+  implementationTimeline: {
+    phase: string;
+    duration: number;
+    actions: string[];
+  }[];
+  resourceRequirements: {
+    developers: number;
+    productOwners: number;
+    scrumMasters: number;
+    totalEffortDays: number;
+  };
+  riskMitigation: string[];
+}
+
+export interface ImprovementAction {
+  id: string;
+  category: string;
+  action: string;
+  priority: 'high' | 'medium' | 'low';
+  estimatedImpact: number;
+  effortRequired: 'low' | 'medium' | 'high';
+  dependencies: string[];
+  risks: string[];
+}
+
+export interface RiskReductionAnalysis {
+  risksEliminated: number;
+  riskReductionPercentage: number;
+  remainingHighRisks: number;
+  mitigationStrategies: string[];
+}
