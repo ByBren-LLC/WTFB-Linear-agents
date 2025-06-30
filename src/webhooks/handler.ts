@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { verifyWebhookSignature } from './verification';
 import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
 import { LinearClientWrapper } from '../linear/client';
-import { IssueMentionProcessor } from './processors';
+import { IssueMentionProcessor, IssueCommentMentionProcessor } from './processors';
 import * as logger from '../utils/logger';
 
 /**
@@ -104,18 +104,12 @@ const processAppUserNotification = async (payload: any, notificationCoordinator:
         break;
 
       case 'issueCommentMention':
-        // Handle when the agent is mentioned in a comment
-        logger.info('Agent mentioned in comment:', notification);
-        // TODO: Implement IssueCommentMentionProcessor
-        await notificationCoordinator.notifyAgentUpdate(
-          'linear-agent',
-          'remote',
-          'assigned',
-          `Comment Mention: ${notification?.issue?.title || 'Unknown Issue'}`,
-          `Agent mentioned in comment by ${notification?.actor?.name || 'Unknown User'}`,
-          notification?.issue?.url,
-          notification?.actor?.name
+        // Use the IssueCommentMentionProcessor for comment mentions
+        const commentMentionProcessor = new IssueCommentMentionProcessor(
+          linearClient,
+          notificationCoordinator
         );
+        await commentMentionProcessor.process(payload);
         break;
 
       case 'issueAssignedToYou':

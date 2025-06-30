@@ -50,6 +50,14 @@ export interface AppUserNotification {
         key: string;
         name: string;
       };
+      priority?: {
+        value: number;
+        name: string;
+      };
+      estimate?: {
+        value: number;
+        name: string;
+      };
     };
     comment?: {
       id: string;
