@@ -1,16 +1,17 @@
 # Agent Command Understanding - Story Specification
 
-**Story ID**: TBD (to be created in Linear)  
-**Epic**: Linear Agent Interactive Capabilities  
-**Story Points**: 8  
-**Priority**: High (1)  
+**Story ID**: LIN-58 (created in Linear)
+**Epic**: LIN-56 Linear Agent Interactive Capabilities
+**Story Points**: 8 (MUST be decomposed into sub-stories ≤5 points each)
+**Priority**: High (1)
 **Type**: Feature
+**⚠️ DECOMPOSITION REQUIRED**: Use story decomposition system before implementation
 
 ## 📋 **USER STORY**
 
-**As a** Linear workspace user  
-**I want** to execute ART planning operations through natural language commands to the SAFe PULSE agent  
-**So that** I can access sophisticated planning capabilities without leaving Linear or learning CLI syntax
+**As a** Linear workspace user
+**I want** to execute ART planning operations through natural language commands to the SAFe PULSE agent in both Linear and Slack
+**So that** I can access sophisticated planning capabilities without leaving my workflow or learning CLI syntax
 
 ## 🎯 **PROBLEM STATEMENT**
 
@@ -19,9 +20,12 @@ The SAFe PULSE agent has sophisticated ART planning capabilities (6,649+ lines) 
 - Learn complex CLI syntax and parameters
 - Context-switch between Linear issues and terminal commands
 - Manually correlate CLI results with Linear issues
+- Miss real-time notifications and team coordination
 
-**Current State**: ART planning requires CLI expertise and context switching  
-**Desired State**: Natural language commands execute ART planning directly in Linear
+**Current State**: ART planning requires CLI expertise and context switching
+**Desired State**: Natural language commands execute ART planning in Linear with Slack notifications
+
+**⚠️ IMPLEMENTATION REQUIREMENT**: This 8-point story MUST be decomposed into sub-stories ≤5 points each before implementation. Use the existing story decomposition system.
 
 ## ✅ **ACCEPTANCE CRITERIA**
 
@@ -56,11 +60,14 @@ The SAFe PULSE agent has sophisticated ART planning capabilities (6,649+ lines) 
 - [ ] **Error Handling**: Provide helpful suggestions for unrecognized commands
 
 ### **Response Requirements**
-- [ ] **Rich Formatting**: Use Linear markdown for formatted responses
-- [ ] **Progress Updates**: Show progress for long-running operations
+- [ ] **Linear Response**: Rich markdown comment in the issue with detailed results
+- [ ] **Slack Notification**: Summary notification via existing OperationalNotificationCoordinator
+- [ ] **Progress Updates**: Show progress for long-running operations in both channels
 - [ ] **Result Summaries**: Provide actionable summaries of planning results
 - [ ] **Error Messages**: Clear, actionable error messages with suggestions
 - [ ] **Follow-up Actions**: Suggest next steps after command completion
+- [ ] **Cross-Platform Links**: Slack notifications include Linear issue links
+- [ ] **Conditional Alerts**: Slack alerts for important conditions (ART health <85%, etc.)
 
 ## 🔧 **TECHNICAL IMPLEMENTATION**
 

@@ -324,10 +324,13 @@ Implement core Linear agent functionality to enable users to interact with sophi
 ### **Phase 2: Intelligence (Week 2)**
 **[LIN-58](https://linear.app/wordstofilmby/issue/LIN-58/implement-natural-language-command-parser)**: Natural Language Command Parser (8 points)
 - **Priority**: High (1) - Unlocks ART planning access
-- **Purpose**: Enable ART planning through @saafepulse commands
+- **⚠️ MANDATORY DECOMPOSITION**: This 8-point story MUST be decomposed into sub-stories ≤5 points each
+- **Use Your Own System**: Apply your story decomposition logic to break this down properly
+- **Dual-Channel Implementation**: Commands work in BOTH Linear and Slack
+- **Purpose**: Enable ART planning through @saafepulse commands in Linear + Slack notifications
 - **Spec**: `specs/todo/agent-command-understanding.md`
-- **Commands**: plan PI, analyze value delivery, decompose story, map dependencies
-- **Outcome**: Full ART planning accessible through Linear mentions
+- **Commands**: plan PI, analyze value delivery, decompose story, map dependencies, status, help
+- **Outcome**: Full ART planning accessible through Linear mentions + Slack integration
 
 ### **Phase 3: Autonomy (Week 3)**
 **[LIN-59](https://linear.app/wordstofilmby/issue/LIN-59/implement-proactive-agent-actions)**: Proactive Agent Actions (5 points)
@@ -347,6 +350,25 @@ Implement core Linear agent functionality to enable users to interact with sophi
    - Linear agent docs: https://linear.app/developers/agents
    - Existing infrastructure: `src/webhooks/handler.ts`
 
+### **⚠️ MANDATORY: LIN-58 Story Decomposition**
+**BEFORE implementing LIN-58, you MUST decompose it:**
+1. **Apply SAFe Rule**: Stories >5 points must be decomposed
+2. **Use Your Own System**: Execute `npm run cli story-decompose --story-id="LIN-58"`
+3. **Create Sub-Issues**: Break into 2-3 sub-stories ≤5 points each
+4. **Suggested Breakdown**:
+   - Command Intent Recognition & Parsing (3 points)
+   - Parameter Extraction & Context Awareness (3 points)
+   - ART Planning Integration & Response Formatting (2 points)
+5. **Update Linear**: Create sub-issues and link to LIN-58 parent
+
+### **🔄 Dual-Channel Architecture (Best Practice)**
+**All agent commands must work in BOTH Linear and Slack:**
+1. **Linear Response**: Rich markdown comment in the issue
+2. **Slack Notification**: Summary + alerts via existing `OperationalNotificationCoordinator`
+3. **Cross-Platform Links**: Slack notifications include Linear issue links
+4. **Conditional Alerts**: Slack alerts for important conditions (ART health <85%, etc.)
+5. **Existing Infrastructure**: Use `EnhancedSlackNotifier` and operational intelligence system
+
 ### **Integration with Existing Systems**
 - **ART Planning Backend**: `src/safe/art-planner.ts` (6,649 lines) - your previous work!
 - **Webhook Infrastructure**: `src/webhooks/handler.ts` - extend existing
@@ -354,19 +376,26 @@ Implement core Linear agent functionality to enable users to interact with sophi
 - **Slack Integration**: Existing operational notification system
 
 ### **Success Criteria**
-- ✅ 100% of @saafepulse mentions receive responses
+- ✅ 100% of @saafepulse mentions receive responses (Linear + Slack)
 - ✅ >95% command recognition accuracy
 - ✅ <2 second response time for mentions
-- ✅ ART planning accessible through natural language
-- ✅ Integration with existing Slack notifications
+- ✅ ART planning accessible through natural language in Linear
+- ✅ Slack notifications for all agent actions with Linear links
+- ✅ LIN-58 properly decomposed into sub-stories ≤5 points each
+- ✅ Dual-channel architecture working seamlessly
 
 ## Business Impact
 
 **Current State**: Sophisticated ART planning hidden behind CLI commands
-**Future State**: Interactive Linear agent with enterprise ART planning
-**Value**: $100K+ ART planning investment accessible to all team members
+**Future State**: Dual-channel interactive agent (Linear + Slack) with enterprise ART planning
+**Value**: $100K+ ART planning investment accessible to all team members across platforms
 
-**This transforms SAFe PULSE into a leading enterprise Linear agent platform!** 🚀
+**Dual-Channel Benefits**:
+- **Linear**: Rich, contextual responses within issues for detailed planning
+- **Slack**: Real-time notifications, alerts, and team coordination
+- **Cross-Platform**: Seamless workflow between Linear planning and Slack collaboration
+
+**This transforms SAFe PULSE into a leading enterprise multi-platform agent!** 🚀
 
 ---
 
