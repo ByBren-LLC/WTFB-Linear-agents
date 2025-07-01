@@ -161,19 +161,13 @@ export class ParameterValidator {
     for (const required of requirements.required) {
       const value = (params as any)[required];
       
-      // Check if parameter exists
+      // Check if parameter exists (either explicit or inferred)
       if (!value) {
-        // Check if it can be inferred from context
-        const canBeInferred = requirements.contextual.includes(required);
-        
-        if (!canBeInferred) {
-          // Required and cannot be inferred
-          errors.push({
-            parameter: required,
-            message: `Missing required parameter: ${required}`,
-            code: ValidationErrorCode.MISSING_REQUIRED
-          });
-        }
+        errors.push({
+          parameter: required,
+          message: `Missing required parameter: ${required}`,
+          code: ValidationErrorCode.MISSING_REQUIRED
+        });
       }
     }
   }
@@ -419,20 +413,21 @@ export class ParameterValidator {
     params: CommandParameters,
     warnings: string[]
   ): void {
-    // Warn about inferred parameters
+    // Check for specific defaults first (more specific warnings)
+    if (params.targetSize === 5 && params.explicit.targetSize === false) {
+      warnings.push('Using default target size of 5 points for decomposition');
+    }
+    
+    // Then warn about general inferred parameters
     const inferred = Object.keys(params.explicit)
-      .filter(key => params.explicit[key] === false && (params as any)[key]);
+      .filter(key => params.explicit[key] === false && (params as any)[key])
+      .sort(); // Sort for deterministic ordering
     
     if (inferred.length > 0) {
       warnings.push(
         `Using inferred values: ${inferred.join(', ')}. ` +
         `Specify explicitly to override.`
       );
-    }
-    
-    // Warn about defaults
-    if (params.targetSize === 5 && params.explicit.targetSize === false) {
-      warnings.push('Using default target size of 5 points for decomposition');
     }
   }
 

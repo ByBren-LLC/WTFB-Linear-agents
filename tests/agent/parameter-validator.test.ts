@@ -383,9 +383,10 @@ describe('ParameterValidator', () => {
 
       expect(result.valid).toBe(true);
       expect(result.warnings).toBeDefined();
-      // Should have both warnings
       expect(result.warnings).toHaveLength(2);
-      expect(result.warnings!.some(w => w.includes('default target size'))).toBe(true);
+      // Specific warning should come first
+      expect(result.warnings![0]).toContain('default target size');
+      expect(result.warnings![1]).toContain('inferred values');
     });
   });
 
