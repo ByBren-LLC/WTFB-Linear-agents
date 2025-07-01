@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import { verifyWebhookSignature } from './verification';
 import { OperationalNotificationCoordinator } from '../utils/operational-notification-coordinator';
 import { LinearClientWrapper } from '../linear/client';
-import { IssueMentionProcessor, IssueCommentMentionProcessor } from './processors';
+import { 
+  IssueMentionProcessor, 
+  IssueCommentMentionProcessor,
+  IssueAssignmentProcessor 
+} from './processors';
 import * as logger from '../utils/logger';
 
 /**
@@ -113,18 +117,13 @@ const processAppUserNotification = async (payload: any, notificationCoordinator:
         break;
 
       case 'issueAssignedToYou':
-        // Handle when an issue is assigned to the agent
-        logger.info('Issue assigned to agent:', notification);
-        // TODO: Implement IssueAssignmentProcessor
-        await notificationCoordinator.notifyAgentUpdate(
-          'linear-agent',
-          'remote',
-          'assigned',
-          `Issue Assigned: ${notification?.issue?.title || 'Unknown Issue'}`,
-          `Issue assigned to agent by ${notification?.actor?.name || 'Unknown User'}`,
-          notification?.issue?.url,
-          notification?.actor?.name
+      case 'issueUnassignedFromYou':
+        // Use the IssueAssignmentProcessor for both assignment types
+        const assignmentProcessor = new IssueAssignmentProcessor(
+          linearClient,
+          notificationCoordinator
         );
+        await assignmentProcessor.process(payload);
         break;
 
       default:
