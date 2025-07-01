@@ -5,7 +5,10 @@ import { LinearClientWrapper } from '../linear/client';
 import { 
   IssueMentionProcessor, 
   IssueCommentMentionProcessor,
-  IssueAssignmentProcessor 
+  IssueAssignmentProcessor,
+  IssueStatusChangeProcessor,
+  IssueReactionProcessor,
+  IssueNewCommentProcessor
 } from './processors';
 import * as logger from '../utils/logger';
 
@@ -124,6 +127,34 @@ const processAppUserNotification = async (payload: any, notificationCoordinator:
           notificationCoordinator
         );
         await assignmentProcessor.process(payload);
+        break;
+
+      case 'issueStatusChanged':
+        // Use the IssueStatusChangeProcessor for status changes
+        const statusProcessor = new IssueStatusChangeProcessor(
+          linearClient,
+          notificationCoordinator
+        );
+        await statusProcessor.process(payload);
+        break;
+
+      case 'issueEmojiReaction':
+      case 'issueCommentReaction':
+        // Use the IssueReactionProcessor for both reaction types
+        const reactionProcessor = new IssueReactionProcessor(
+          linearClient,
+          notificationCoordinator
+        );
+        await reactionProcessor.process(payload);
+        break;
+
+      case 'issueNewComment':
+        // Use the IssueNewCommentProcessor for new comments
+        const newCommentProcessor = new IssueNewCommentProcessor(
+          linearClient,
+          notificationCoordinator
+        );
+        await newCommentProcessor.process(payload);
         break;
 
       default:
