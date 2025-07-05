@@ -162,7 +162,8 @@ export class ParameterValidator {
       const value = (params as any)[required];
       
       // Check if parameter exists (either explicit or inferred)
-      if (!value) {
+      // Need to check both undefined and null to handle missing parameters
+      if (value === undefined || value === null) {
         errors.push({
           parameter: required,
           message: `Missing required parameter: ${required}`,
@@ -420,7 +421,13 @@ export class ParameterValidator {
     
     // Then warn about general inferred parameters
     const inferred = Object.keys(params.explicit)
-      .filter(key => params.explicit[key] === false && (params as any)[key])
+      .filter(key => {
+        // Skip parameters that have specific warnings already
+        if (key === 'targetSize' && params.targetSize === 5 && params.explicit.targetSize === false) {
+          return false; // Already handled with specific warning
+        }
+        return params.explicit[key] === false && (params as any)[key] !== undefined;
+      })
       .sort(); // Sort for deterministic ordering
     
     if (inferred.length > 0) {

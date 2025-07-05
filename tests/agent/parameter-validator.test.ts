@@ -371,9 +371,11 @@ describe('ParameterValidator', () => {
       const params: CommandParameters = {
         storyId: 'LIN-123',
         targetSize: 5,
+        storyPoints: 13,
         explicit: { 
           storyId: true,
-          targetSize: false 
+          targetSize: false,
+          storyPoints: false
         }
       };
 
@@ -387,6 +389,7 @@ describe('ParameterValidator', () => {
       // Specific warning should come first
       expect(result.warnings![0]).toContain('default target size');
       expect(result.warnings![1]).toContain('inferred values');
+      expect(result.warnings![1]).toContain('storyPoints');
     });
   });
 
