@@ -106,3 +106,4 @@ public
 # Test coverage
 coverage/
 *.lcov
+coverage/

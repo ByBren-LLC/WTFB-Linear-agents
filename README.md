@@ -1,18 +1,33 @@
 # Linear Planning Agent
 
-A powerful CLI tool for integrating Linear with Confluence, implementing SAFe methodology, and automating planning workflows.
+A comprehensive enterprise-grade CLI tool for SAFe methodology implementation, ART planning automation, and Linear-Confluence integration.
 
 ## Overview
 
-The Linear Planning Agent is a command-line tool that:
+The Linear Planning Agent is an advanced command-line tool that provides:
 
-1. **Parses Confluence documents** to extract planning information
-2. **Creates Linear issues** following SAFe hierarchy (Epics, Features, Stories, Enablers)
-3. **Maintains SAFe relationships** between issues
-4. **Synchronizes bidirectionally** between Linear and Confluence
-5. **Resolves conflicts** when changes occur in both systems
+### 🎯 **Core Capabilities**
+1. **ART Iteration Planning** - Automated Agile Release Train planning with dependency-aware allocation
+2. **Value Delivery Validation** - Sophisticated value stream analysis and working software validation
+3. **Story Decomposition** - Intelligent breakdown of large stories into implementable sub-stories
+4. **Dependency Mapping** - Automated dependency identification and management
+5. **Linear-Confluence Integration** - Bidirectional synchronization with conflict resolution
 
-This agent is designed for automation and agent-to-agent workflows, making it perfect for integration into larger automated systems.
+### 🏛️ **SAFe Methodology Compliance**
+- **Program Increment Planning** - Complete PI planning automation
+- **Iteration Management** - Capacity-aware work allocation across teams
+- **Value Stream Analysis** - 5-stream taxonomy with business impact quantification
+- **Quality Gates** - 4-gate validation pipeline ensuring deployable software
+- **Dependency Management** - Topological sorting for proper work sequencing
+- **Team Capacity** - Multi-factor realistic capacity modeling
+
+### 🚀 **Enterprise Features**
+- **Optimization Engine** - AI-driven ART readiness improvement recommendations
+- **Performance Analytics** - Comprehensive metrics and business impact tracking
+- **Multi-Team Scaling** - Support for large-scale enterprise ART coordination
+- **Operational Intelligence** - System health monitoring and Slack notifications
+
+This agent is designed for enterprise automation and agent-to-agent workflows, making it perfect for integration into larger SAFe transformation systems.
 
 ## Installation
 
@@ -76,6 +91,52 @@ npm run sync:trigger -- --org-id="your-org-id" --team-id="your-team-id" --conflu
 npm run sync:stop -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
 ```
 
+## 🎯 ART Planning & SAFe Automation
+
+### ART Iteration Planning
+
+The Linear Planning Agent provides sophisticated ART (Agile Release Train) planning capabilities:
+
+```bash
+# Plan a complete ART for a Program Increment
+npm run cli art-plan --pi-id="PI-2025-Q1" --team-id="your-team-id" --org-id="your-org-id"
+
+# Plan with specific configuration
+npm run cli art-plan --pi-id="PI-2025-Q1" --team-id="your-team-id" --iterations=6 --buffer-capacity=0.2
+
+# Validate ART readiness
+npm run cli art-validate --pi-id="PI-2025-Q1" --team-id="your-team-id"
+
+# Optimize ART plan for value delivery
+npm run cli art-optimize --pi-id="PI-2025-Q1" --team-id="your-team-id" --enable-value-optimization
+```
+
+### Story Decomposition & Dependency Mapping
+
+```bash
+# Decompose large stories into implementable sub-stories
+npm run cli story-decompose --story-id="STORY-123" --max-points=5
+
+# Map dependencies between work items
+npm run cli dependency-map --team-id="your-team-id" --scope="current-pi"
+
+# Update story priorities using WSJF
+npm run cli story-score --team-id="your-team-id" --update-priorities
+```
+
+### Value Delivery Analysis
+
+```bash
+# Analyze value delivery for an iteration
+npm run cli value-analyze --iteration-id="IT-2025-01" --team-id="your-team-id"
+
+# Validate working software readiness
+npm run cli working-software-validate --iteration-id="IT-2025-01" --quality-gates
+
+# Generate value delivery report
+npm run cli value-report --pi-id="PI-2025-Q1" --format=json --output=value-report.json
+```
+
 ## Agent-to-Agent Workflow Examples
 
 The CLI design enables powerful agent-to-agent workflows:
@@ -104,6 +165,51 @@ echo $STATUS | report-generator --format=markdown > sync-report.md
 
 # Agent 3: Publish report to Confluence
 confluence-publisher --file=sync-report.md --space=PLAN --parent=123456
+```
+
+### Example 3: Enterprise ART Planning Automation
+
+```bash
+# Agent 1: Decompose large stories and map dependencies
+npm run cli story-decompose --team-id="your-team-id" --max-points=5 --auto-create
+npm run cli dependency-map --team-id="your-team-id" --scope="current-pi" --auto-link
+
+# Agent 2: Execute ART planning with optimization
+npm run cli art-plan --pi-id="PI-2025-Q1" --team-id="your-team-id" --enable-value-optimization --output=json > art-plan.json
+
+# Agent 3: Validate and optimize the plan
+READINESS=$(npm run cli art-validate --pi-id="PI-2025-Q1" --team-id="your-team-id" --output=json)
+if [ $(echo $READINESS | jq '.readinessScore < 0.85') = "true" ]; then
+  npm run cli art-optimize --pi-id="PI-2025-Q1" --team-id="your-team-id" --auto-apply
+fi
+
+# Agent 4: Generate comprehensive reports
+npm run cli value-report --pi-id="PI-2025-Q1" --format=confluence --output=pi-report.md
+npm run cli dependency-report --team-id="your-team-id" --format=json --output=dependencies.json
+
+# Agent 5: Update Linear with optimized plan and sync to Confluence
+npm run cli linear-sync --pi-id="PI-2025-Q1" --team-id="your-team-id" --create-cycles
+npm run sync:start -- --org-id="your-org-id" --team-id="your-team-id" --confluence-url="https://example.atlassian.net/wiki/spaces/PLAN/pages/123456"
+```
+
+### Example 4: Continuous Value Delivery Monitoring
+
+```bash
+# Agent 1: Monitor iteration progress and value delivery
+ITERATION_STATUS=$(npm run cli value-analyze --iteration-id="current" --team-id="your-team-id" --output=json)
+
+# Agent 2: Validate working software readiness
+DEPLOYMENT_READY=$(npm run cli working-software-validate --iteration-id="current" --team-id="your-team-id" --output=json)
+
+# Agent 3: Generate alerts if value delivery is at risk
+if [ $(echo $ITERATION_STATUS | jq '.valueDeliveryScore < 0.8') = "true" ]; then
+  npm run cli alert-send --type="value-risk" --iteration-id="current" --team-id="your-team-id"
+fi
+
+# Agent 4: Auto-optimize if deployment readiness is low
+if [ $(echo $DEPLOYMENT_READY | jq '.readinessScore < 0.85') = "true" ]; then
+  npm run cli working-software-optimize --iteration-id="current" --team-id="your-team-id" --auto-apply
+fi
 ```
 
 ## Docker Deployment
