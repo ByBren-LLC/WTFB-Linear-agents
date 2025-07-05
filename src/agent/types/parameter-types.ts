@@ -90,6 +90,32 @@ export interface CommandParameters {
   /** Include specific fields in output */
   includeFields?: string[];
   
+  // Configuration Parameters
+  /** Default iteration length in days */
+  iterationLength?: number;
+  
+  /** Buffer capacity percentage (0-1) */
+  bufferCapacity?: number;
+  
+  /** Enable value optimization */
+  enableValueOptimization?: boolean;
+  
+  /** Number of iterations */
+  iterations?: number;
+  
+  // Optimization Parameters
+  /** Optimize for value delivery */
+  optimizeForValue?: boolean;
+  
+  /** Optimize for dependency resolution */
+  optimizeForDependencies?: boolean;
+  
+  /** Optimize for capacity balance */
+  optimizeForCapacity?: boolean;
+  
+  /** Update priorities during optimization */
+  updatePriorities?: boolean;
+  
   // Metadata
   /** Track which parameters were explicitly provided */
   explicit: {
