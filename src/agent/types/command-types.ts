@@ -89,6 +89,9 @@ export interface ParsedCommand {
   
   /** Additional metadata */
   metadata: CommandMetadata;
+  
+  /** Extracted parameters (added by parameter extractor) */
+  parameters?: any; // Will be CommandParameters type
 }
 
 /**
