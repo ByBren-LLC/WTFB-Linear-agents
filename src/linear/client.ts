@@ -226,6 +226,32 @@ export class LinearClientWrapper {
     );
   }
 
+  /**
+   * Gets issues with custom filter
+   *
+   * @param filter The issue filter
+   * @returns The issues
+   */
+  async getIssues(filter?: any): Promise<any> {
+    return this.executeQuery(
+      () => this.linearClient.issues(filter),
+      'getIssues'
+    );
+  }
+
+  /**
+   * Gets issue relations
+   *
+   * @param filter The filter for relations
+   * @returns The issue relations
+   */
+  async getIssueRelations(filter?: any): Promise<any> {
+    return this.executeQuery(
+      () => this.linearClient.issueRelations(filter),
+      'getIssueRelations'
+    );
+  }
+
   // Phase 3: Cycle Management Methods
 
   /**
