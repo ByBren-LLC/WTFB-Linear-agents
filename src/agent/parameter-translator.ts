@@ -100,7 +100,7 @@ export class ParameterTranslator {
     context?: any
   ): Partial<ARTPlannerParams> {
     const translated: any = {
-      config: {}
+      ...params  // Preserve original parameters
     };
 
     // Map PI ID
@@ -114,14 +114,11 @@ export class ParameterTranslator {
       translated.teamId = params.teamId;
     }
 
-    // Map iterations (default 6)
-    translated.config.iterations = params.iterations || 6;
-
-    // Map buffer capacity (default 20%)
-    translated.config.bufferCapacity = params.bufferCapacity || 0.2;
-
-    // Map optimization flag (default true)
-    translated.config.enableValueOptimization = 
+    // Apply defaults at top level for compatibility
+    translated.iterations = params.iterations || 6;
+    translated.iterationLength = params.iterationLength || 14;
+    translated.bufferCapacity = params.bufferCapacity || 0.2;
+    translated.enableValueOptimization = 
       params.enableValueOptimization !== false;
 
     // Handle timeframe if no explicit PI
@@ -149,10 +146,10 @@ export class ParameterTranslator {
     // Map target size to maxPoints
     translated.maxPoints = params.targetSize || 5;
 
-    // Infer decomposition strategy
-    if (params.depth === 'technical') {
+    // Infer decomposition strategy from depth
+    if (params.depth === 'detailed') {
       translated.decompositionStrategy = 'technical';
-    } else if (params.depth === 'functional') {
+    } else if (params.depth === 'full') {
       translated.decompositionStrategy = 'functional';
     } else {
       translated.decompositionStrategy = 'mixed';
@@ -217,13 +214,17 @@ export class ParameterTranslator {
     params: CommandParameters,
     context?: any
   ): Partial<DependencyMapperParams> {
-    const translated: any = {};
+    const translated: any = {
+      ...params  // Preserve original parameters
+    };
 
-    // Map starting point
+    // Map starting point (keep both for compatibility)
     if (params.fromId) {
       translated.startingPoint = params.fromId;
+      translated.fromId = params.fromId;
     } else if (params.storyId) {
       translated.startingPoint = params.storyId;
+      translated.storyId = params.storyId;
     }
 
     // Map direction (default both)
