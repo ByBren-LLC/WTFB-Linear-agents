@@ -11,6 +11,8 @@ import {
   IssueNewCommentProcessor
 } from './processors';
 import * as logger from '../utils/logger';
+import { getGlobalRegistry } from '../agent/behavior-registry';
+import { processBehaviorWebhook } from '../agent/webhook-integration';
 
 /**
  * Handles incoming webhook events from Linear
@@ -44,6 +46,25 @@ export const handleWebhook = async (req: Request, res: Response) => {
       case 'AppUserNotification':
         // Process app user notifications
         await processAppUserNotification(req.body, notificationCoordinator);
+        break;
+
+      case 'Issue':
+      case 'Comment':
+      case 'IssueLabel':
+        // Check if behavior registry is initialized
+        const registry = getGlobalRegistry();
+        if (registry) {
+          try {
+            // Process through behavior system
+            await processBehaviorWebhook(req, res);
+            return; // processBehaviorWebhook handles the response
+          } catch (error) {
+            logger.error('Error processing behavior webhook:', error);
+            // Fall through to default response
+          }
+        } else {
+          logger.debug(`Behavior system not initialized, skipping ${type} event`);
+        }
         break;
 
       default:

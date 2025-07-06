@@ -9,6 +9,9 @@ import * as logger from './utils/logger';
 import planningRoutes from './api/planning';
 import healthRoutes from './api/health';
 import apiRoutes from './routes';
+import { LinearClientWrapper } from './linear/client';
+import { initializeGlobalRegistry } from './agent/behavior-registry';
+import { processBehaviorWebhook } from './agent/webhook-integration';
 
 // Load environment variables
 dotenv.config();
@@ -76,8 +79,9 @@ app.get('/auth/confluence/success', (req, res) => {
   `);
 });
 
-// Webhook endpoint
+// Webhook endpoints
 app.post('/webhook', handleWebhook);
+app.post('/webhook/behaviors', processBehaviorWebhook);
 
 // Planning API routes
 app.use('/api/planning', planningRoutes);
@@ -94,6 +98,35 @@ app.use('/api', apiRoutes);
     // Initialize the database
     await initializeDatabase();
     logger.info('Database initialized successfully');
+
+    // Initialize behavior registry if Linear token is available
+    if (process.env.LINEAR_ACCESS_TOKEN) {
+      try {
+        const linearClient = new LinearClientWrapper(
+          process.env.LINEAR_ACCESS_TOKEN,
+          process.env.LINEAR_ORGANIZATION_ID || ''
+        );
+        
+        await initializeGlobalRegistry({
+          linearClient,
+          enabledBehaviors: {
+            storyMonitoring: process.env.ENABLE_STORY_MONITORING !== 'false',
+            artHealthMonitoring: process.env.ENABLE_ART_MONITORING !== 'false',
+            dependencyDetection: process.env.ENABLE_DEPENDENCY_DETECTION !== 'false',
+            workflowAutomation: process.env.ENABLE_WORKFLOW_AUTOMATION !== 'false',
+            periodicReporting: process.env.ENABLE_PERIODIC_REPORTING === 'true',
+            anomalyDetection: process.env.ENABLE_ANOMALY_DETECTION === 'true'
+          }
+        });
+        
+        logger.info('Behavior registry initialized successfully');
+      } catch (error) {
+        logger.error('Failed to initialize behavior registry', { error });
+        // Continue without behavior system - don't crash the app
+      }
+    } else {
+      logger.warn('LINEAR_ACCESS_TOKEN not configured - behavior system disabled');
+    }
 
     // Start the server
     app.listen(port, () => {
