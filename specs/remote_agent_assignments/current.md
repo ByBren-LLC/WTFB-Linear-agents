@@ -29,7 +29,7 @@
 
 **Current Task**: [LIN-66](https://linear.app/wordstofilmby/issue/LIN-66/comprehensive-documentation-overhaul) - Enterprise Documentation System
 **Priority**: High (1) - Critical for enterprise readiness
-**Story Points**: 8 (comprehensive documentation across all app areas)
+**Total Story Points**: 8 (decomposed into 3 manageable sub-issues per SAFe methodology)
 **Timeline**: 5-7 days for enterprise-level documentation
 
 ### **🎯 CURRENT MISSION**
@@ -43,14 +43,20 @@ Create comprehensive enterprise-level documentation across all application areas
 Create comprehensive enterprise-level documentation across all application areas based on recent LIN-60 Enhanced Response System delivery and comprehensive app audit.
 
 ### **� CRITICAL DOCUMENTATION AREAS TO IMPLEMENT**
-- **src/agent/README.md**: Enhanced Response System, Command Parser, Autonomous Behaviors
-- **src/auth/README.md**: OAuth implementation and security documentation
-- **src/api/README.md**: REST API endpoints and usage documentation
-- **src/monitoring/README.md**: Health and resource monitoring systems
-- **src/integrations/README.md**: Slack and third-party integrations
-- **src/types/README.md**: TypeScript type definitions and usage
-- **src/webhooks/README.md**: Webhook handling and verification
-- **src/utils/README.md**: Utility functions and helpers
+#### **LIN-67: Agent System Documentation** (3 points) - HIGHEST PRIORITY
+- **File**: `src/agent/README.md`
+- **Content**: Enhanced Response System (LIN-60), Command Parser (LIN-58), Autonomous Behaviors (LIN-59), Webhook integration (LIN-57)
+- **Focus**: Core agent functionality and architecture
+
+#### **LIN-68: Security & API Documentation** (3 points)
+- **Files**: `src/auth/README.md`, `src/api/README.md`
+- **Content**: OAuth implementation, security best practices, REST API endpoints with examples
+- **Focus**: Authentication, authorization, and API usage
+
+#### **LIN-69: Supporting Systems Documentation** (2 points)
+- **Files**: `src/monitoring/README.md`, `src/integrations/README.md`, `src/types/README.md`, `src/webhooks/README.md`, `src/utils/README.md`
+- **Content**: Health monitoring, Slack integrations, type definitions, webhook handling, utility functions
+- **Focus**: Supporting infrastructure and utilities
 
 ### **PARALLEL ASSIGNMENTS: TECHNICAL DEBT RESOLUTION**
 
