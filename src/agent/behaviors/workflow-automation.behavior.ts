@@ -74,6 +74,7 @@ const DEFAULT_CONFIG: WorkflowAutomationConfig = {
       {
         trigger: 'state_change',
         actions: [
+          { type: 'remove_label', value: 'in-development' },
           { type: 'remove_label', value: 'needs-review' },
           { type: 'remove_label', value: 'blocked' },
           { type: 'add_label', value: 'completed' }
@@ -230,6 +231,13 @@ export class WorkflowAutomationBehavior implements AutonomousBehavior {
           logger.error('Failed to execute workflow action', {
             action,
             error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          actions.push({
+            type: 'update',
+            target: context.issue!.id,
+            description: `Failed to execute ${action.type}: ${action.value}`,
+            result: 'failed',
+            data: { error: error instanceof Error ? error.message : 'Unknown error' }
           });
         }
       }

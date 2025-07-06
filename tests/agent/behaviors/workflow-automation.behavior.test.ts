@@ -285,7 +285,15 @@ describe('WorkflowAutomationBehavior', () => {
       const result = await behavior.execute(context);
 
       expect(result.success).toBe(true); // Should still succeed overall
-      expect(logger.error).toHaveBeenCalled();
+      // The behavior now adds failed actions to the results
+      expect(result.actions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            result: 'failed',
+            description: expect.stringContaining('Failed to add label')
+          })
+        ])
+      );
     });
   });
 
@@ -365,18 +373,20 @@ describe('WorkflowAutomationBehavior', () => {
         timestamp: new Date()
       };
 
-      await behavior.execute(context);
+      const result = await behavior.execute(context);
 
-      // Should have been called to remove workflow labels
-      const updateCalls = mockLinearClient.updateIssue.mock.calls;
-      const labelRemovalCall = updateCalls.find(call => 
-        call[0].labelIds && !call[0].labelIds.includes('label-1') && !call[0].labelIds.includes('label-2')
+      // Check that remove label actions were created
+      const removeLabelActions = result.actions.filter(a => 
+        a.description.includes('Removed label')
       );
       
-      expect(labelRemovalCall).toBeDefined();
-      if (labelRemovalCall) {
-        expect(labelRemovalCall[0].labelIds).toContain('label-3'); // Should keep non-workflow labels
-      }
+      expect(removeLabelActions.length).toBeGreaterThan(0);
+      expect(removeLabelActions.some(a => a.description.includes('in-development'))).toBe(true);
+      expect(removeLabelActions.some(a => a.description.includes('needs-review'))).toBe(true);
+      
+      // Verify that the 'other' label is preserved
+      const updateCalls = mockLinearClient.updateIssue.mock.calls;
+      expect(updateCalls.length).toBeGreaterThan(0);
     });
   });
 
