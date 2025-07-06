@@ -278,6 +278,9 @@ export class LinearStoryDecomposer {
       }
 
       const issue = await issueResponse.issue;
+      if (!issue) {
+        throw new Error('Failed to retrieve created issue');
+      }
 
       return {
         id: issue.id,
@@ -344,6 +347,9 @@ export class LinearStoryDecomposer {
       }
 
       const issue = await issueResponse.issue;
+      if (!issue) {
+        throw new Error('Failed to retrieve created sub-story');
+      }
 
       return {
         id: issue.id,
@@ -490,7 +496,9 @@ export class LinearStoryDecomposer {
 
             if (newLabelResponse.success) {
               const newLabel = await newLabelResponse.issueLabel;
-              labelIds.push(newLabel.id);
+              if (newLabel) {
+                labelIds.push(newLabel.id);
+              }
             }
           } catch (labelError) {
             logger.warn('Failed to create label', { labelName, error: labelError });

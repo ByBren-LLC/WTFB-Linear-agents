@@ -281,23 +281,6 @@ export class LinearClientWrapper {
     );
   }
 
-  /**
-   * Creates a comment on an issue
-   *
-   * @param issueId The issue ID
-   * @param body The comment body
-   * @returns The created comment
-   */
-  async createComment(issueId: string, body: string): Promise<any> {
-    return this.executeQuery(
-      () => this.linearClient.createComment({
-        issueId,
-        body
-      }),
-      'createComment'
-    );
-  }
-
   // Phase 3: Cycle Management Methods
 
   /**

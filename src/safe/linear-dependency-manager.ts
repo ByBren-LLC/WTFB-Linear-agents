@@ -429,10 +429,10 @@ export class LinearDependencyManager {
 
         // Add comment if provided
         if (input.comment) {
-          await this.linearClient.createComment({
-            issueId: input.sourceIssueId,
-            body: input.comment
-          });
+          await this.linearClient.createComment(
+            input.sourceIssueId,
+            input.comment
+          );
         }
 
         return; // Success
