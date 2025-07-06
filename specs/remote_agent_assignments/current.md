@@ -65,10 +65,18 @@ Create comprehensive enterprise-level documentation across all application areas
 **Priority**: Medium - Edge case resolution
 **Focus**: Business logic questions for Progress Tracker edge cases identified during LIN-60
 
+**Implementation Guides**:
+- **Kickoff Notes**: `docs/round-table/lin-64-progress-tracker-kickoff-notes.md`
+- **Implementation Spec**: `specs/todo/lin-64-progress-tracker-implementation.md`
+
 #### **LIN-65: Enhanced Response Integration Test Configuration** (1 point)
 **Assignee**: Claude
 **Priority**: Low - Quick technical fix
 **Focus**: Missing organizationId parameter in test configurations
+
+**Implementation Guides**:
+- **Kickoff Notes**: `docs/round-table/lin-65-test-configuration-kickoff-notes.md`
+- **Implementation Spec**: `specs/todo/lin-65-test-configuration-implementation.md`
 
 ---
 
