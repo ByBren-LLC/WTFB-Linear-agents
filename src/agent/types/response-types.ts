@@ -103,6 +103,8 @@ export interface ResponseMetadata {
   operationId?: string;
   responseType: ResponseType;
   version: string;
+  style?: 'technical' | 'executive' | 'standard';
+  includesPersonality?: boolean;
 }
 
 /**
@@ -214,4 +216,11 @@ export interface FormattedResponse {
   format: 'markdown' | 'plain' | 'html';
   truncated: boolean;
   metadata?: ResponseMetadata;
+  
+  // Additional properties for enhanced responses
+  type?: ResponseType;
+  markdown?: string; // Alias for content when format is markdown
+  sections?: ResponseSection[];
+  title?: string;
+  summary?: string;
 }

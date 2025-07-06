@@ -578,4 +578,164 @@ export class EnhancedResponseFormatter {
       metadata: this.createMetadata(ResponseType.SUCCESS, result)
     };
   }
+
+  /**
+   * Format enhanced response to final output format
+   */
+  formatToOutput(
+    response: EnhancedResponse,
+    format: 'markdown' | 'plain' | 'html' = 'markdown'
+  ): FormattedResponse {
+    let content: string;
+    
+    switch (format) {
+      case 'markdown':
+        content = this.formatToMarkdown(response);
+        break;
+      case 'plain':
+        content = this.formatToPlain(response);
+        break;
+      case 'html':
+        content = this.formatToHTML(response);
+        break;
+      default:
+        content = this.formatToMarkdown(response);
+    }
+
+    // Check if content exceeds limit
+    const truncated = content.length > this.maxResponseLength;
+    if (truncated) {
+      content = content.substring(0, this.maxResponseLength - 100) + 
+        '\n\n... *Response truncated due to length limits*';
+    }
+
+    return {
+      content,
+      format,
+      truncated,
+      metadata: response.metadata,
+      // Additional properties for tests
+      type: response.metadata.responseType,
+      markdown: format === 'markdown' ? content : undefined,
+      sections: response.sections,
+      title: response.title,
+      summary: response.summary
+    };
+  }
+
+  /**
+   * Format to markdown
+   */
+  private formatToMarkdown(response: EnhancedResponse): string {
+    const parts: string[] = [];
+
+    // Title
+    if (response.title) {
+      parts.push(`# ${response.title}`);
+    }
+
+    // Summary
+    if (response.summary) {
+      parts.push(`\n${response.summary}`);
+    }
+
+    // Main content
+    if (response.content) {
+      parts.push(`\n${response.content}`);
+    }
+
+    // Sections
+    if (response.sections && response.sections.length > 0) {
+      for (const section of response.sections) {
+        parts.push(`\n## ${section.heading}`);
+        parts.push(section.content);
+      }
+    }
+
+    // Actions
+    if (response.actions && response.actions.length > 0) {
+      parts.push('\n## 🚀 Quick Actions');
+      for (const action of response.actions) {
+        parts.push(`- **${action.label}**: \`${action.command}\``);
+      }
+    }
+
+    // Links
+    if (response.links && response.links.length > 0) {
+      parts.push('\n## 🔗 Related Links');
+      for (const link of response.links) {
+        parts.push(`- [${link.label}](${link.url})`);
+      }
+    }
+
+    // Footer
+    if (response.footer) {
+      parts.push(`\n---\n${response.footer}`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Format to plain text
+   */
+  private formatToPlain(response: EnhancedResponse): string {
+    const parts: string[] = [];
+
+    if (response.title) {
+      parts.push(response.title);
+      parts.push('='.repeat(response.title.length));
+    }
+
+    if (response.summary) {
+      parts.push(`\n${response.summary}`);
+    }
+
+    if (response.content) {
+      parts.push(`\n${response.content}`);
+    }
+
+    if (response.sections) {
+      for (const section of response.sections) {
+        parts.push(`\n${section.heading}`);
+        parts.push('-'.repeat(section.heading.length));
+        parts.push(section.content);
+      }
+    }
+
+    if (response.footer) {
+      parts.push(`\n${response.footer}`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Format to HTML
+   */
+  private formatToHTML(response: EnhancedResponse): string {
+    // Simple HTML formatting
+    const parts: string[] = [];
+
+    if (response.title) {
+      parts.push(`<h1>${response.title}</h1>`);
+    }
+
+    if (response.summary) {
+      parts.push(`<p>${response.summary}</p>`);
+    }
+
+    if (response.content) {
+      parts.push(`<div>${response.content}</div>`);
+    }
+
+    if (response.sections) {
+      for (const section of response.sections) {
+        parts.push(`<h2>${section.heading}</h2>`);
+        parts.push(`<div>${section.content}</div>`);
+      }
+    }
+
+    return parts.join('\n');
+  }
 }

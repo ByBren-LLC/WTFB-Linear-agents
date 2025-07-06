@@ -10,6 +10,7 @@ import { ResponseTemplateEngine } from './response-template-engine';
 import { ResponseContextAnalyzer } from './context-analyzer';
 import { ProgressTracker } from './progress-tracker';
 import { EnhancedResponseFormatter } from './enhanced-response-formatter';
+import { PersonalityAdapter, SAAFEPULSE_PERSONALITY } from './personality/agent-personality';
 import {
   ResponseContext,
   EnhancedResponse,
@@ -18,7 +19,7 @@ import {
   ResponseType,
   ProgressUpdate
 } from './types/response-types';
-import { ExecutionResult } from '../types/agent-types';
+import { ExecutionResult } from './cli-executor';
 import { BehaviorResult } from './types/autonomous-types';
 import * as logger from '../utils/logger';
 
@@ -58,6 +59,13 @@ export class EnhancedResponseEngine {
   private formatter: EnhancedResponseFormatter;
   private responseCache: Map<string, FormattedResponse> = new Map();
   private config: ResponseEngineConfig;
+  private cacheStats = {
+    hits: 0,
+    misses: 0,
+    totalRequests: 0,
+    totalRenderTime: 0,
+    renderCount: 0
+  };
 
   constructor(
     private linearClient: LinearClientWrapper,
@@ -88,10 +96,15 @@ export class EnhancedResponseEngine {
 
       // Check cache if enabled
       const cacheKey = this.generateCacheKey('command', context, result);
+      this.cacheStats.totalRequests++;
+      
       if (this.config.cacheResponses && this.responseCache.has(cacheKey)) {
         logger.debug('Returning cached response', { cacheKey });
+        this.cacheStats.hits++;
         return this.responseCache.get(cacheKey)!;
       }
+      
+      this.cacheStats.misses++;
 
       // Analyze context
       const analysis = this.contextAnalyzer.analyzeContext(context);
@@ -112,12 +125,15 @@ export class EnhancedResponseEngine {
       );
 
       // Cache if enabled
-      if (this.config.cacheResponses) {
+      if (this.config.cacheResponses && !result.error) {
         this.cacheResponse(cacheKey, formattedResponse);
       }
 
       // Log metrics
       const executionTime = Date.now() - startTime;
+      this.cacheStats.totalRenderTime += executionTime;
+      this.cacheStats.renderCount++;
+      
       logger.info('Generated command response', {
         command: context.command?.intent,
         executionTime,
@@ -153,8 +169,9 @@ export class EnhancedResponseEngine {
       const analysis = this.contextAnalyzer.analyzeContext(context);
 
       // Generate enhanced response
+      const behaviorType = context.operation?.type || 'unknown';
       const enhancedResponse = this.formatter.formatBehaviorSuggestion(
-        result.behaviorId || 'unknown',
+        behaviorType,
         result,
         analysis
       );
@@ -168,7 +185,7 @@ export class EnhancedResponseEngine {
       // Log metrics
       const executionTime = Date.now() - startTime;
       logger.info('Generated behavior response', {
-        behavior: result.behaviorId,
+        behavior: behaviorType,
         executionTime,
         responseLength: formattedResponse.content.length
       });
@@ -177,7 +194,7 @@ export class EnhancedResponseEngine {
     } catch (error) {
       logger.error('Failed to generate behavior response', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        behavior: result.behaviorId
+        behavior: context.operation?.type || 'unknown'
       });
 
       return this.generateFallbackResponse(error);
@@ -219,7 +236,7 @@ export class EnhancedResponseEngine {
 
       // Generate final response
       return this.generateCommandResponse(
-        { ...context, operation: { ...context.operation, type: 'completed' } },
+        { ...context, operation: { ...context.operation!, type: 'completed', complexity: context.operation?.complexity || 'simple' } },
         result,
         options
       );
@@ -230,7 +247,13 @@ export class EnhancedResponseEngine {
       // Type guard to convert to ExecutionResult
       const executionResult: ExecutionResult = this.isExecutionResult(result) 
         ? result 
-        : { success: true, data: result };
+        : { 
+            success: true, 
+            data: result,
+            executionTime: Date.now() - context.operation?.startTime?.getTime() || 0,
+            command: context.command?.intent || 'unknown',
+            parameters: context.command?.parameters || {}
+          };
       
       return this.generateCommandResponse(context, executionResult, options);
     }
@@ -436,7 +459,9 @@ Hi team! I noticed this story has **{{storyPoints}} story points**, which is abo
     if (this.responseCache.size >= this.config.maxCacheSize) {
       // Remove oldest entry
       const firstKey = this.responseCache.keys().next().value;
-      this.responseCache.delete(firstKey);
+      if (firstKey) {
+        this.responseCache.delete(firstKey);
+      }
     }
     this.responseCache.set(key, response);
   }
@@ -463,6 +488,13 @@ Hi team! I noticed this story has **{{storyPoints}} story points**, which is abo
   }
 
   /**
+   * Register a response template
+   */
+  registerTemplate(template: any): void {
+    this.templateEngine.registerTemplate(template);
+  }
+
+  /**
    * Clear response cache
    */
   clearCache(): void {
@@ -473,12 +505,29 @@ Hi team! I noticed this story has **{{storyPoints}} story points**, which is abo
   /**
    * Get cache statistics
    */
-  getCacheStats(): { size: number; maxSize: number; hitRate: number } {
-    // Would track hits/misses for accurate hit rate
+  getCacheStats(): { 
+    size: number; 
+    maxSize: number; 
+    hitRate: number;
+    hits: number;
+    misses: number;
+    avgRenderTime: number;
+  } {
+    const hitRate = this.cacheStats.totalRequests > 0 
+      ? this.cacheStats.hits / this.cacheStats.totalRequests 
+      : 0;
+      
+    const avgRenderTime = this.cacheStats.renderCount > 0
+      ? this.cacheStats.totalRenderTime / this.cacheStats.renderCount
+      : 0;
+    
     return {
       size: this.responseCache.size,
       maxSize: this.config.maxCacheSize,
-      hitRate: 0 // Would be calculated from actual hits/misses
+      hitRate,
+      hits: this.cacheStats.hits,
+      misses: this.cacheStats.misses,
+      avgRenderTime
     };
   }
 }
