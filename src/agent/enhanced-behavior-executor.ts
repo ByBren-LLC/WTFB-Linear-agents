@@ -183,15 +183,18 @@ export class EnhancedBehaviorExecutor {
       parameters: {}
     };
 
-    // Generate response
-    return await this.responseEngine.generateCommandResponse(
+    // Generate response with proper type in metadata
+    const response = await this.responseEngine.generateCommandResponse(
       context,
-      executionResult,
-      {
-        responseType,
-        includePersonality: true
-      }
+      executionResult
     );
+    
+    // Ensure response type is set in metadata
+    if (response.metadata) {
+      response.metadata.responseType = responseType;
+    }
+    
+    return response;
   }
 
   /**
@@ -224,10 +227,10 @@ export class EnhancedBehaviorExecutor {
 
     try {
       // Post the formatted content as a comment
-      await this.linearClient.createComment({
-        issueId: context.issue.id,
-        body: result.formattedResponse.markdown
-      });
+      await this.linearClient.createComment(
+        context.issue.id,
+        result.formattedResponse.markdown || result.formattedResponse.content
+      );
 
       logger.info('Posted formatted behavior response', {
         issueId: context.issue.id,

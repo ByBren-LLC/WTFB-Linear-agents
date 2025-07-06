@@ -37,13 +37,23 @@ export class ResponseContextAnalyzer {
       userExperience: context.user?.experienceLevel
     });
 
+    // Determine additional context properties
+    const userExperience = this.determineUserExperience(context.user, historicalContext);
+    const communicationPreference = this.determineCommunicationPreference(userRole, operationComplexity);
+    const urgencyLevel = this.determineUrgencyLevel(context.issue);
+    const contextualFactors = this.determineContextualFactors(context);
+
     const analysis: ContextAnalysis = {
       issueType,
       userRole,
       operationComplexity,
       teamContext,
       historicalContext,
-      responseStyle
+      responseStyle,
+      userExperience,
+      communicationPreference,
+      urgencyLevel,
+      contextualFactors
     };
 
     logger.debug('Context analysis completed', {
@@ -150,7 +160,7 @@ export class ResponseContextAnalyzer {
    * Analyze team context
    */
   private analyzeTeamContext(
-    team?: ResponseContext['issue']['team']
+    team?: { id: string; name: string }
   ): ContextAnalysis['teamContext'] {
     // Default team context
     const defaultContext = {
@@ -272,12 +282,21 @@ export class ResponseContextAnalyzer {
       tone = 'formal'; // More formal for executives
     }
 
+    // Determine emoji usage
+    const useEmoji = tone === 'friendly' || userExperience === 'new';
+    
+    // Determine technical details inclusion
+    const includeTechnicalDetails = technicalDepth === 'advanced' || 
+                                   (userRole === 'developer' && operationComplexity === 'complex');
+
     return {
       detailLevel,
       technicalDepth,
       includeExamples,
       includeLinks,
-      tone
+      tone,
+      useEmoji,
+      includeTechnicalDetails
     };
   }
 
@@ -294,5 +313,114 @@ export class ResponseContextAnalyzer {
   getUserInteractionCount(userId: string): number {
     const interactions = this.userInteractionHistory.get(userId) || [];
     return interactions.length;
+  }
+
+  /**
+   * Determine user experience level
+   */
+  private determineUserExperience(
+    user?: ResponseContext['user'],
+    historicalContext?: ContextAnalysis['historicalContext']
+  ): ContextAnalysis['userExperience'] {
+    // Use explicit experience level if provided
+    if (user?.experienceLevel) {
+      return user.experienceLevel;
+    }
+    
+    // Infer from interaction history
+    if (historicalContext) {
+      if (historicalContext.previousInteractions > 50) {
+        return 'expert';
+      } else if (historicalContext.previousInteractions > 20) {
+        return 'experienced';
+      } else if (historicalContext.previousInteractions > 5) {
+        return 'intermediate';
+      }
+    }
+    
+    return 'intermediate'; // Default
+  }
+
+  /**
+   * Determine communication preference
+   */
+  private determineCommunicationPreference(
+    userRole: ContextAnalysis['userRole'],
+    complexity: ContextAnalysis['operationComplexity']
+  ): ContextAnalysis['communicationPreference'] {
+    // Managers prefer summaries
+    if (userRole === 'manager') {
+      return 'summary';
+    }
+    
+    // Complex operations need detailed responses
+    if (complexity === 'complex' || complexity === 'long-running') {
+      return 'detailed';
+    }
+    
+    // Developers working on simple tasks prefer concise
+    if (userRole === 'developer' && complexity === 'simple') {
+      return 'concise';
+    }
+    
+    return 'balanced'; // Default
+  }
+
+  /**
+   * Determine urgency level
+   */
+  private determineUrgencyLevel(
+    issue?: ResponseContext['issue']
+  ): ContextAnalysis['urgencyLevel'] {
+    if (!issue) {
+      return 'normal';
+    }
+    
+    // High priority bugs are critical
+    if (issue.type === 'Bug' && issue.priority === 0) {
+      return 'high';
+    }
+    
+    // Urgent priority issues
+    if (issue.priority === 0) {
+      return 'high';
+    }
+    
+    // Low priority issues
+    if (issue.priority >= 3) {
+      return 'low';
+    }
+    
+    return 'normal';
+  }
+
+  /**
+   * Determine contextual factors
+   */
+  private determineContextualFactors(
+    context: ResponseContext
+  ): string[] {
+    const factors: string[] = [];
+    
+    // Issue type factors
+    if (context.issue?.type === 'Story') {
+      factors.push('working_on_story');
+    }
+    
+    if (context.issue?.type === 'Bug' && context.issue.priority === 0) {
+      factors.push('critical_issue');
+    }
+    
+    // Operation factors
+    if (context.operation?.complexity === 'long-running') {
+      factors.push('long_running_operation');
+    }
+    
+    // User factors
+    if (context.user?.role === 'manager') {
+      factors.push('management_oversight');
+    }
+    
+    return factors;
   }
 }

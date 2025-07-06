@@ -254,7 +254,9 @@ export class ProgressTracker {
     try {
       if (operation.commentId) {
         // Update existing comment
-        await this.linearClient.updateComment(operation.commentId, content);
+        // TODO: Linear SDK doesn't have updateComment - need to implement workaround
+        // For now, skip updating existing comments
+        logger.warn('Comment update skipped - method not available', { commentId: operation.commentId });
       } else {
         // Create new comment if needed
         const comment = await this.linearClient.createComment(operation.issueId, content);
@@ -283,10 +285,10 @@ export class ProgressTracker {
 
     try {
       const currentContent = await this.getCommentContent(operation.commentId);
-      await this.linearClient.updateComment(
-        operation.commentId,
-        currentContent + completionNote
-      );
+      // TODO: Linear SDK doesn't have updateComment - need to implement workaround
+      logger.warn('Completion update skipped - updateComment not available', { 
+        commentId: operation.commentId 
+      });
     } catch (error) {
       logger.error('Failed to send completion update', {
         operationId: operation.operationId,
@@ -308,10 +310,10 @@ export class ProgressTracker {
 
     try {
       const currentContent = await this.getCommentContent(operation.commentId);
-      await this.linearClient.updateComment(
-        operation.commentId,
-        currentContent + errorNote
-      );
+      // TODO: Linear SDK doesn't have updateComment - need to implement workaround
+      logger.warn('Error update skipped - updateComment not available', { 
+        commentId: operation.commentId 
+      });
     } catch (updateError) {
       logger.error('Failed to send error update', {
         operationId,

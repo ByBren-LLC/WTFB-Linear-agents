@@ -207,7 +207,7 @@ export class EnhancedResponseEngine {
   async generateResponseWithProgress<T>(
     context: ResponseContext,
     operation: Promise<T>,
-    operationSteps: { name: string; description: string; estimatedDuration: number }[],
+    operationSteps: { name: string; description: string; estimatedDuration: number; status?: string }[],
     options: ResponseOptions = {}
   ): Promise<FormattedResponse> {
     const operationId = this.generateOperationId();
@@ -224,11 +224,16 @@ export class EnhancedResponseEngine {
 
     if (shouldTrackProgress) {
       // Execute with progress tracking
+      const stepsWithStatus = operationSteps.map(step => ({
+        ...step,
+        status: 'pending' as const
+      }));
+      
       const result = await this.progressTracker.trackOperation(
         operationId,
         issueId,
         operation,
-        operationSteps,
+        stepsWithStatus,
         (update: ProgressUpdate) => {
           logger.debug('Progress update', { operationId, progress: update.progress });
         }
@@ -250,7 +255,7 @@ export class EnhancedResponseEngine {
         : { 
             success: true, 
             data: result,
-            executionTime: Date.now() - context.operation?.startTime?.getTime() || 0,
+            executionTime: Date.now() - (context.operation?.startTime?.getTime() || Date.now()),
             command: context.command?.intent || 'unknown',
             parameters: context.command?.parameters || {}
           };

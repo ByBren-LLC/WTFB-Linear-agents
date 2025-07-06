@@ -88,53 +88,47 @@ describe('ResponseContextAnalyzer', () => {
   describe('selectResponseStyle', () => {
     it('should select technical style for developers', () => {
       const style = analyzer.selectResponseStyle({
-        analysis: {
-          userExperience: 'intermediate',
-          communicationPreference: 'detailed',
-          urgencyLevel: 'normal',
-          contextualFactors: []
-        },
-        responseType: 'success',
-        operationType: 'STORY_DECOMPOSE'
+        issueType: 'Story',
+        userRole: 'developer',
+        operationComplexity: 'complex',
+        teamContext: { size: 5, experienceLevel: 'intermediate' },
+        historicalContext: { previousInteractions: 10 },
+        userExperience: 'intermediate'
       });
 
       expect(style.tone).toBe('professional');
-      expect(style.detailLevel).toBe('comprehensive');
+      expect(style.detailLevel).toBe('detailed');
       expect(style.useEmoji).toBe(true);
       expect(style.includeTechnicalDetails).toBe(true);
     });
 
     it('should select executive style for managers', () => {
       const style = analyzer.selectResponseStyle({
-        analysis: {
-          userExperience: 'expert',
-          communicationPreference: 'summary',
-          urgencyLevel: 'normal',
-          contextualFactors: []
-        },
-        responseType: 'report',
-        operationType: 'VALUE_ANALYZE'
+        issueType: 'Epic',
+        userRole: 'manager',
+        operationComplexity: 'complex',
+        teamContext: { size: 10, experienceLevel: 'experienced' },
+        historicalContext: { previousInteractions: 50 },
+        userExperience: 'experienced'
       });
 
-      expect(style.tone).toBe('executive');
-      expect(style.detailLevel).toBe('summary');
-      expect(style.includeMetrics).toBe(true);
-      expect(style.emphasizeBusinessValue).toBe(true);
+      expect(style.tone).toBe('professional');
+      expect(style.detailLevel).toBe('standard');
+      expect(style.includeExamples).toBe(false);
+      expect(style.includeLinks).toBe(true);
     });
 
     it('should adapt style for errors', () => {
       const style = analyzer.selectResponseStyle({
-        analysis: {
-          userExperience: 'beginner',
-          communicationPreference: 'detailed',
-          urgencyLevel: 'high',
-          contextualFactors: []
-        },
-        responseType: 'error',
-        operationType: 'ART_PLAN'
+        issueType: 'Bug',
+        userRole: 'developer',
+        operationComplexity: 'complex',
+        teamContext: { size: 5, experienceLevel: 'new' },
+        historicalContext: { previousInteractions: 2 },
+        userExperience: 'new'
       });
 
-      expect(style.tone).toBe('helpful');
+      expect(style.tone).toBe('friendly');
       expect(style.includeExamples).toBe(true);
       expect(style.includeLinks).toBe(true);
     });

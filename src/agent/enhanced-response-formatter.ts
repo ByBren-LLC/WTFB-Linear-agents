@@ -15,7 +15,7 @@ import {
   FormattedResponse,
   ContextAnalysis
 } from './types/response-types';
-import { ExecutionResult } from '../types/agent-types';
+import { ExecutionResult } from './cli-executor';
 import { BehaviorResult } from '../agent/types/autonomous-types';
 import * as logger from '../utils/logger';
 
@@ -371,8 +371,9 @@ export class EnhancedResponseFormatter {
 
   /**
    * Format response to final output
+   * @deprecated Use the more complete implementation below
    */
-  formatToOutput(response: EnhancedResponse, format: 'markdown' | 'plain' = 'markdown'): FormattedResponse {
+  formatToOutput_OLD(response: EnhancedResponse, format: 'markdown' | 'plain' = 'markdown'): FormattedResponse {
     let content = '';
 
     // Add title

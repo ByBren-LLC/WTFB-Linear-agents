@@ -24,7 +24,7 @@
  * - Future enhancement ticket needed for robust relationship management
  */
 import { LinearClient, Issue } from '@linear/sdk';
-import { IssueRelationType } from '@linear/sdk/dist/_generated_documents';
+// import { IssueRelationType } from '@linear/sdk/dist/_generated_documents'; // Not available at runtime
 import * as logger from '../utils/logger';
 
 /**
@@ -165,7 +165,7 @@ export class RelationshipUpdater {
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: IssueRelationType.Blocks
+                type: 'blocks' as any // Linear SDK enum workaround
               });
 
               logger.info('Added blocking relationship', {
@@ -194,7 +194,7 @@ export class RelationshipUpdater {
               await this.linearClient.createIssueRelation({
                 issueId,
                 relatedIssueId,
-                type: IssueRelationType.Related
+                type: 'related' as any // Linear SDK enum workaround
               });
 
               logger.info('Added related relationship', {

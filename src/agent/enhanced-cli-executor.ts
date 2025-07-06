@@ -74,17 +74,17 @@ export class EnhancedCLIExecutor extends CLIExecutor {
 
     // Build response context
     const responseContext: ResponseContext = {
-      user: command.context.user ? {
-        id: command.context.userId || 'unknown',
-        name: command.context.user.name || 'User',
-        role: this.inferUserRole(command.context.user)
+      user: command.context.assigneeId ? {
+        id: command.context.assigneeId,
+        name: command.context.assigneeName || 'User',
+        role: 'developer' // Default role since we don't have user info in IssueContext
       } : undefined,
       issue: command.context.issueId ? {
         id: command.context.issueId,
         identifier: command.context.issueIdentifier || '',
-        type: command.context.issueType as any || 'Story',
-        state: command.context.issueState || 'Unknown',
-        priority: command.context.issuePriority || 2,
+        type: this.inferIssueType(command.context),
+        state: command.context.state || 'Unknown',
+        priority: command.context.priority || 2,
         team: command.context.teamId ? {
           id: command.context.teamId,
           name: command.context.teamName || 'Team'
@@ -98,7 +98,7 @@ export class EnhancedCLIExecutor extends CLIExecutor {
       command: {
         intent: command.intent,
         parameters: command.parameters,
-        raw: command.raw
+        raw: command.rawText
       }
     };
 
@@ -200,12 +200,16 @@ export class EnhancedCLIExecutor extends CLIExecutor {
   }
 
   /**
-   * Infer user role from context
+   * Infer issue type from context
    */
-  private inferUserRole(user: any): 'developer' | 'lead' | 'manager' | 'stakeholder' {
-    // Would implement actual role detection logic
-    // For now, return default
-    return 'developer';
+  private inferIssueType(context: any): 'Epic' | 'Feature' | 'Story' | 'Bug' | 'Task' {
+    // Check labels for type hints
+    const labels = context.labels || [];
+    if (labels.some((l: string) => l.toLowerCase() === 'epic')) return 'Epic';
+    if (labels.some((l: string) => l.toLowerCase() === 'feature')) return 'Feature';
+    if (labels.some((l: string) => l.toLowerCase() === 'bug')) return 'Bug';
+    if (labels.some((l: string) => l.toLowerCase() === 'task')) return 'Task';
+    return 'Story'; // Default
   }
 
   /**

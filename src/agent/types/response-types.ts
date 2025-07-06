@@ -56,6 +56,10 @@ export interface ContextAnalysis {
     lastInteraction?: Date;
   };
   responseStyle: ResponseStyle;
+  userExperience?: 'new' | 'intermediate' | 'experienced' | 'expert';
+  communicationPreference?: 'concise' | 'balanced' | 'detailed' | 'summary';
+  urgencyLevel?: 'low' | 'normal' | 'high' | 'critical';
+  contextualFactors?: string[];
 }
 
 /**
@@ -67,6 +71,8 @@ export interface ResponseStyle {
   includeExamples: boolean;
   includeLinks: boolean;
   tone: 'formal' | 'professional' | 'friendly';
+  useEmoji?: boolean;
+  includeTechnicalDetails?: boolean;
 }
 
 /**

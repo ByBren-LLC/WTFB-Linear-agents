@@ -275,7 +275,7 @@ export class PersonalityAdapter {
   /**
    * Get random element from array
    */
-  private getRandomElement<T>(array: T[]): T {
+  public getRandomElement<T>(array: T[]): T {
     return array[Math.floor(Math.random() * array.length)];
   }
 

@@ -9,7 +9,7 @@
 import { LinearClientWrapper } from '../linear/client';
 import { EnhancedCLIExecutor } from './enhanced-cli-executor';
 import { EnhancedBehaviorExecutor } from './enhanced-behavior-executor';
-import { CommandParser } from './command-parser';
+import { AgentCommandParser } from './command-parser';
 import { ParsedCommand } from './types/command-types';
 import { BehaviorTrigger, BehaviorTriggerType } from './types/autonomous-types';
 import * as logger from '../utils/logger';
@@ -30,7 +30,7 @@ export interface EnhancedAgentConfig {
   /** Linear API configuration */
   linear: {
     apiKey: string;
-    organizationId?: string;
+    organizationId: string;
   };
   
   /** Behavior configuration */
@@ -57,12 +57,12 @@ export class EnhancedAgentSystem {
   private linearClient: LinearClientWrapper;
   private cliExecutor: EnhancedCLIExecutor;
   private behaviorExecutor: EnhancedBehaviorExecutor;
-  private commandParser: CommandParser;
+  private commandParser: AgentCommandParser;
   private initialized = false;
 
   constructor(private config: EnhancedAgentConfig) {
     // Initialize Linear client
-    this.linearClient = new LinearClientWrapper(config.linear.apiKey);
+    this.linearClient = new LinearClientWrapper(config.linear.apiKey, config.linear.organizationId);
     
     // Initialize components
     this.cliExecutor = new EnhancedCLIExecutor(
@@ -75,7 +75,7 @@ export class EnhancedAgentSystem {
       config.behaviors?.config
     );
     
-    this.commandParser = new CommandParser();
+    this.commandParser = new AgentCommandParser();
   }
 
   /**
@@ -96,8 +96,7 @@ export class EnhancedAgentSystem {
         await this.behaviorExecutor.initialize();
       }
 
-      // Initialize command parser patterns
-      await this.commandParser.initialize();
+      // Command parser initializes itself in constructor, no need to call initialize
 
       this.initialized = true;
       logger.info('Enhanced agent system initialized successfully');
@@ -123,7 +122,7 @@ export class EnhancedAgentSystem {
 
     try {
       // Parse the command
-      const parsedCommand = await this.commandParser.parse(input, context);
+      const parsedCommand = this.commandParser.parseCommand(input, context || {});
       
       // Execute with enhanced response
       const result = await this.cliExecutor.executeWithEnhancedResponse(parsedCommand);
@@ -263,9 +262,13 @@ export class EnhancedAgentSystem {
         } : undefined,
         team: command.context.teamId ? {
           id: command.context.teamId,
-          name: command.context.teamName || 'Team'
+          name: command.context.teamName || 'Team',
+          key: command.context.teamId // Use teamId as key
         } : undefined,
-        user: command.context.user,
+        user: command.context.assigneeId ? {
+          id: command.context.assigneeId,
+          name: command.context.assigneeName || 'User'
+        } : undefined,
         timestamp: new Date()
       },
       timestamp: new Date()
@@ -288,8 +291,11 @@ export class EnhancedAgentSystem {
     return {
       issue: event.data,
       previousState: event.previousData,
-      team: event.data?.team,
-      user: event.user,
+      team: event.data?.team ? {
+        id: event.data.team.id,
+        name: event.data.team.name,
+        key: event.data.team.key || event.data.team.id // Use id as fallback for key
+      } : undefined,
       triggerType: 'webhook',
       timestamp: new Date(event.createdAt || Date.now())
     };

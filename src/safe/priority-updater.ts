@@ -220,7 +220,8 @@ export class PriorityUpdater {
         const oldPriority = story.priority || LinearPriority.MEDIUM;
 
         // Update the priority in Linear
-        await this.linearClient.updateIssue(update.storyId, {
+        await this.linearClient.updateIssue({
+          id: update.storyId,
           priority: update.recommendedPriority
         });
 
@@ -267,7 +268,8 @@ export class PriorityUpdater {
     for (const entry of Array.from(originalPriorities.entries())) {
       const [storyId, originalPriority] = entry;
       try {
-        await this.linearClient.updateIssue(storyId, {
+        await this.linearClient.updateIssue({
+          id: storyId,
           priority: originalPriority
         });
         rollbackCount++;
