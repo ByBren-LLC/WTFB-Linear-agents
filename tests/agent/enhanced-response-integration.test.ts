@@ -41,7 +41,8 @@ describe('Enhanced Response Integration', () => {
   beforeEach(async () => {
     agentSystem = new EnhancedAgentSystem({
       linear: {
-        apiKey: 'test-api-key'
+        apiKey: 'test-api-key',
+        organizationId: 'test-org-id'
       },
       behaviors: {
         enabled: true
