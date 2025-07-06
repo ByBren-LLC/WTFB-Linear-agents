@@ -707,7 +707,7 @@ Check these issues for potential dependencies before starting work.
       .filter(i => i.completedAt && i.createdAt)
       .map(i => (new Date(i.completedAt).getTime() - new Date(i.createdAt).getTime()) / (1000 * 60 * 60 * 24));
     
-    return Math.round(cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length);
+    return Math.round(cycleTimes.reduce((a: number, b: number) => a + b, 0) / cycleTimes.length);
   }
 
   private calculateQualityMetric(issues: any[]): number {
@@ -754,7 +754,7 @@ Check these issues for potential dependencies before starting work.
       (Date.now() - new Date(b.updatedAt || b.createdAt).getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    return Math.round(ages.reduce((a, b) => a + b, 0) / ages.length);
+    return Math.round(ages.reduce((a: number, b: number) => a + b, 0) / ages.length);
   }
 
   private getPriorityLabel(priority: number): string {

@@ -277,7 +277,7 @@ export class AnomalyDetectionBehavior implements AutonomousBehavior {
       .filter((i: any) => i.createdAt && i.completedAt)
       .map((i: any) => (new Date(i.completedAt).getTime() - new Date(i.createdAt).getTime()) / (1000 * 60 * 60 * 24));
     const avgCycleTime = cycleTimes.length > 0 
-      ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length 
+      ? cycleTimes.reduce((a: number, b: number) => a + b, 0) / cycleTimes.length 
       : 0;
 
     // Calculate blockage rate
@@ -293,7 +293,7 @@ export class AnomalyDetectionBehavior implements AutonomousBehavior {
       return Math.abs(actualTime - estimatedTime) / estimatedTime;
     });
     const avgEstimationVariance = estimationVariances.length > 0
-      ? estimationVariances.reduce((a, b) => a + b, 0) / estimationVariances.length
+      ? estimationVariances.reduce((a: number, b: number) => a + b, 0) / estimationVariances.length
       : 0;
 
     // Get team member workloads
@@ -347,7 +347,7 @@ export class AnomalyDetectionBehavior implements AutonomousBehavior {
       .map((i: any) => (new Date(i.completedAt).getTime() - new Date(i.createdAt).getTime()) / (1000 * 60 * 60 * 24));
     
     const averageCycleTime = cycleTimes.length > 0
-      ? cycleTimes.reduce((a, b) => a + b, 0) / cycleTimes.length
+      ? cycleTimes.reduce((a: number, b: number) => a + b, 0) / cycleTimes.length
       : 7; // Default to 7 days
 
     const metrics: HistoricalMetrics = {
