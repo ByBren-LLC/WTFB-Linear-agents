@@ -19,6 +19,17 @@ The SAFe PULSE Linear Agent System is an intelligent Linear workspace agent that
 - **ART Planning System** - Direct integration with SAFe planning capabilities
 - **Linear API** - Comprehensive client wrapper for issue management and commenting
 
+### Cross-Module Dependencies
+
+The agent system integrates with multiple application modules:
+
+- **`src/webhooks/`** - Webhook handlers import agent components for mention processing
+- **`src/index.ts`** - Main application initializes behavior registry and webhook integration
+- **`src/linear/`** - Linear client wrapper used throughout agent system
+- **`src/utils/`** - Operational notification coordinator for Slack integration
+- **`src/safe/`** - SAFe planning components accessed via CLI executor bridge
+- **`src/planning/`** - Planning models and PI management integration
+
 ---
 
 ## Architecture
@@ -249,6 +260,43 @@ await initializeGlobalRegistry({
 import { handleWebhook } from './webhooks/handler';
 
 app.post('/webhooks/linear', handleWebhook);
+```
+
+### Module Integration Patterns
+
+The agent system follows specific integration patterns with other application modules:
+
+#### Webhook Handler Integration
+```typescript
+// src/webhooks/handler.ts
+import { getGlobalRegistry } from '../agent/behavior-registry';
+import { processBehaviorWebhook } from '../agent/webhook-integration';
+
+// Webhook processors import agent components
+import {
+  IssueMentionProcessor,
+  IssueCommentMentionProcessor
+} from './processors';
+```
+
+#### Main Application Integration
+```typescript
+// src/index.ts
+import { initializeGlobalRegistry } from './agent/behavior-registry';
+import { processBehaviorWebhook } from './agent/webhook-integration';
+
+// Initialize agent system on startup
+await initializeGlobalRegistry({
+  linearClient,
+  enabledBehaviors: { /* configuration */ }
+});
+```
+
+#### Planning System Integration
+```typescript
+// Agent system accesses planning via CLI executor
+import { EnhancedCLIExecutor } from './enhanced-cli-executor';
+import { SAFeLinearImplementation } from '../safe/safe_linear_implementation';
 ```
 
 ### Linear Configuration
