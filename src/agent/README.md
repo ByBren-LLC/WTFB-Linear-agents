@@ -46,7 +46,14 @@ The agent system is built on four foundational components delivered through rece
 │  ├── Response Engine                                        │
 │  ├── Enhanced Response Formatter                           │
 │  ├── Context Analyzer                                      │
-│  └── Template Engine                                       │
+│  ├── Template Engine                                       │
+│  └── Progress Tracker                                      │
+├─────────────────────────────────────────────────────────────┤
+│  Progress Tracker Business Logic (LIN-64)                  │
+│  ├── Enhanced Progress Tracker                             │
+│  ├── Progress Configuration System                         │
+│  ├── State Transition Handler                              │
+│  └── Integration Error Handler                             │
 ├─────────────────────────────────────────────────────────────┤
 │  Command Parser (LIN-58)                                   │
 │  ├── Natural Language Parser                               │
@@ -161,6 +168,134 @@ export interface AutonomousBehavior {
 - **Periodic Reporting**: Generate regular status reports
 - **Anomaly Detection**: Identify unusual patterns in planning data
 
+### Progress Tracker Business Logic (LIN-64)
+
+The Progress Tracker Business Logic system provides robust edge case handling, configurable business rules, and enterprise-grade error management for progress tracking operations:
+
+#### Enhanced Progress Tracker
+- **Purpose**: Advanced progress calculation with comprehensive edge case handling
+- **Features**: 20+ edge cases handled, 3 calculation strategies, configurable business rules
+- **Integration**: Enhanced Response System, Linear API, monitoring and alerting
+
+```typescript
+export interface ProgressResult {
+  percentage: number;
+  weightedPercentage: number;
+  completedPoints: number;
+  totalPoints: number;
+  readinessLevel: 'critical' | 'warning' | 'good' | 'excellent';
+  alerts: ProgressAlert[];
+  businessRulesApplied: string[];
+  edgeCasesHandled: string[];
+}
+```
+
+**Edge Cases Handled**:
+- Zero-point stories with configurable weighting
+- Enabler story multipliers (1.2x default)
+- Moved story inclusion/exclusion logic
+- Dependency completion validation
+- Partial epic completion controls
+- Empty work item sets
+
+**Progress Calculation Strategies**:
+- **Simple**: Direct percentage calculation (completed/total)
+- **Weighted**: Story size-based weighting (larger stories have more impact)
+- **Milestone**: Epic/feature completion-based progress
+
+#### Progress Configuration System
+- **Purpose**: Configurable business rules and environment-specific settings
+- **Features**: Comprehensive validation, runtime updates, environment defaults
+- **Configuration**: Zero-point weighting, thresholds, state transition rules
+
+```typescript
+export interface ProgressTrackerConfig {
+  progressCalculation: {
+    zeroPointStoryWeight: number;
+    parentEpicProgressStrategy: EpicProgressStrategy;
+    includeMovedStories: boolean;
+    enablerStoryMultiplier: number;
+  };
+  thresholds: {
+    artReadinessWarning: number;        // Default: 85%
+    artReadinessCritical: number;       // Default: 70%
+    capacityUtilizationMax: number;     // Default: 95%
+    capacityUtilizationMin: number;     // Default: 70%
+    progressVarianceThreshold: number;  // Default: 15%
+  };
+  stateTransition: {
+    allowPartialEpicCompletion: boolean;
+    requireDependencyCompletion: boolean;
+    autoProgressParentEpics: boolean;
+    allowIncompleteSubtasks: boolean;
+  };
+  integration: {
+    linearApiRetryAttempts: number;
+    webhookDelayTolerance: number;
+    concurrentUpdateStrategy: ConcurrentUpdateStrategy;
+    rateLimitBackoffMultiplier: number;
+    maxBackoffDelay: number;
+  };
+}
+```
+
+#### State Transition Handler
+- **Purpose**: Business rule validation with transaction management for work item state changes
+- **Features**: Parent-child cascading, dependency validation, rollback capability
+- **Integration**: Linear API, business rule engine, comprehensive audit logging
+
+```typescript
+export interface TransitionResult {
+  success: boolean;
+  itemId: string;
+  fromState: WorkItemState;
+  toState: WorkItemState;
+  cascadedUpdates?: CascadedUpdate[];
+  violations?: BusinessRuleViolation[];
+  rollbackPerformed?: boolean;
+}
+```
+
+**Business Rules Enforced**:
+- Valid state transition validation
+- Dependency completion requirements
+- Epic-child relationship integrity
+- Blocker validation and warnings
+- Subtask completion requirements
+
+**State Cascading Logic**:
+- Epic moves to "In Progress" when first child starts
+- Epic moves to "Done" when all children complete
+- Epic moves to "Canceled" when all children canceled
+
+#### Integration Error Handler
+- **Purpose**: Sophisticated retry logic and error classification for Linear API integration
+- **Features**: 6 error types, rate limiting awareness, concurrent update strategies
+- **Integration**: Linear API, monitoring systems, operational notifications
+
+```typescript
+export enum IntegrationErrorType {
+  RATE_LIMIT = 'RATE_LIMIT',
+  NETWORK = 'NETWORK',
+  TIMEOUT = 'TIMEOUT',
+  INVALID_REQUEST = 'INVALID_REQUEST',
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  SERVER_ERROR = 'SERVER_ERROR'
+}
+```
+
+**Error Handling Features**:
+- Exponential backoff with jitter
+- Rate limit detection and retry-after support
+- Concurrent update conflict resolution
+- Comprehensive error classification
+- Transaction management with rollback
+
+**Concurrent Update Strategies**:
+- **Merge**: Wait for existing operation, re-execute for fresh data
+- **Latest**: Cancel previous operation, use latest request
+- **Conflict**: Throw error requiring explicit resolution
+
 ---
 
 ## API Reference
@@ -199,6 +334,45 @@ class AutonomousBehaviorEngine {
   registerBehavior(behavior: AutonomousBehavior): void;
   processTrigger(trigger: BehaviorTrigger): Promise<BehaviorResult[]>;
   getRegisteredBehaviors(): AutonomousBehavior[];
+}
+```
+
+#### EnhancedProgressTracker
+```typescript
+class EnhancedProgressTracker extends ProgressTracker {
+  calculateProgressWithEdgeCases(workItems: WorkItem[]): Promise<ProgressResult>;
+  updateConfig(updates: Partial<ProgressTrackerConfig>): void;
+  getConfig(): Readonly<ProgressTrackerConfig>;
+}
+```
+
+#### StateTransitionHandler
+```typescript
+class StateTransitionHandler {
+  handleStateTransition(
+    item: TransitionWorkItem,
+    newState: WorkItemState,
+    context: TransitionContext
+  ): Promise<TransitionResult>;
+}
+```
+
+#### IntegrationErrorHandler
+```typescript
+class IntegrationErrorHandler {
+  executeWithRetry<T>(
+    operation: () => Promise<T>,
+    context: string,
+    options?: RetryOptions
+  ): Promise<RetryResult<T>>;
+  
+  executeWithConcurrencyControl<T>(
+    key: string,
+    operation: () => Promise<T>,
+    context: string
+  ): Promise<T>;
+  
+  updateRateLimitInfo(context: string, headers: Record<string, string>): void;
 }
 ```
 
@@ -253,6 +427,17 @@ await initializeGlobalRegistry({
     anomalyDetection: true
   }
 });
+
+// Initialize Enhanced Progress Tracker with configuration
+import { EnhancedProgressTracker } from './agent/enhanced-progress-tracker';
+import { createDefaultConfig } from './agent/progress-config';
+
+const progressConfig = createDefaultConfig(process.env.NODE_ENV);
+const progressTracker = new EnhancedProgressTracker(
+  linearClient,
+  templateEngine,
+  progressConfig
+);
 ```
 
 3. **Webhook Configuration**
@@ -297,6 +482,40 @@ await initializeGlobalRegistry({
 // Agent system accesses planning via CLI executor
 import { EnhancedCLIExecutor } from './enhanced-cli-executor';
 import { SAFeLinearImplementation } from '../safe/safe_linear_implementation';
+```
+
+#### Progress Tracker Integration
+```typescript
+// Enhanced Response System integration
+import { EnhancedProgressTracker } from './enhanced-progress-tracker';
+import { StateTransitionHandler } from './state-transition-handler';
+import { IntegrationErrorHandler } from './integration-error-handler';
+
+// Progress tracking enhances agent responses
+const progressTracker = new EnhancedProgressTracker(linearClient, templateEngine, config);
+
+// Use in long-running operations
+await progressTracker.trackOperation(
+  'operation-id',
+  'issue-id', 
+  longRunningOperation,
+  operationSteps
+);
+
+// Business rule validation for state changes
+const stateHandler = new StateTransitionHandler(linearClient, config);
+const transitionResult = await stateHandler.handleStateTransition(
+  workItem,
+  newState,
+  context
+);
+
+// Error handling with retry logic
+const errorHandler = new IntegrationErrorHandler(config);
+const result = await errorHandler.executeWithRetry(
+  () => linearClient.updateIssue(issueId, updates),
+  'update-issue'
+);
 ```
 
 ### Linear Configuration
@@ -381,6 +600,133 @@ I've detected that **LIN-123: Implement User Dashboard** (8 points) may benefit 
 - [Analyze Dependencies] - `@saafepulse analyze dependencies LIN-123`
 ```
 
+### Progress Tracking with Edge Cases
+```typescript
+// Initialize Enhanced Progress Tracker with custom configuration
+import { EnhancedProgressTracker } from './enhanced-progress-tracker';
+import { createDefaultConfig } from './progress-config';
+
+const config = createDefaultConfig('production');
+config.progressCalculation.zeroPointStoryWeight = 0.5;
+config.thresholds.artReadinessWarning = 90;
+
+const progressTracker = new EnhancedProgressTracker(
+  linearClient,
+  templateEngine,
+  config
+);
+
+// Calculate progress with comprehensive edge case handling
+const workItems: WorkItem[] = [
+  { id: '1', title: 'Zero point story', storyPoints: 0, state: 'Done', type: 'Story' },
+  { id: '2', title: 'Enabler story', storyPoints: 3, state: 'Done', type: 'Enabler' },
+  { id: '3', title: 'Large story', storyPoints: 8, state: 'In Progress', type: 'Story' }
+];
+
+const result = await progressTracker.calculateProgressWithEdgeCases(workItems);
+
+console.log(`Progress: ${result.percentage}%`);
+console.log(`Readiness Level: ${result.readinessLevel}`);
+console.log(`Business Rules Applied: ${result.businessRulesApplied.join(', ')}`);
+console.log(`Edge Cases Handled: ${result.edgeCasesHandled.join(', ')}`);
+
+// Handle alerts
+result.alerts.forEach(alert => {
+  console.log(`${alert.type.toUpperCase()}: ${alert.message}`);
+  if (alert.recommendation) {
+    console.log(`Recommendation: ${alert.recommendation}`);
+  }
+});
+```
+
+### Configuration Management
+```typescript
+import { createDefaultConfig, validateConfig } from './progress-config';
+
+// Create environment-specific configuration
+const prodConfig = createDefaultConfig('production');
+console.log('Production ART readiness warning:', prodConfig.thresholds.artReadinessWarning); // 90%
+
+const testConfig = createDefaultConfig('test');
+console.log('Test retry attempts:', testConfig.integration.linearApiRetryAttempts); // 1
+
+// Validate configuration
+const customConfig = {
+  ...prodConfig,
+  thresholds: {
+    ...prodConfig.thresholds,
+    artReadinessWarning: 60,
+    artReadinessCritical: 80 // Invalid: critical higher than warning
+  }
+};
+
+const validation = validateConfig(customConfig);
+if (!validation.valid) {
+  console.error('Configuration errors:', validation.errors);
+}
+
+// Runtime configuration updates
+progressTracker.updateConfig({
+  progressCalculation: {
+    zeroPointStoryWeight: 2,
+    parentEpicProgressStrategy: 'milestone',
+    includeMovedStories: false,
+    enablerStoryMultiplier: 1.5
+  }
+});
+```
+
+### State Transitions with Business Rules
+```typescript
+import { StateTransitionHandler } from './state-transition-handler';
+
+const stateHandler = new StateTransitionHandler(linearClient, config);
+
+// Handle state transition with validation
+const workItem: TransitionWorkItem = {
+  id: 'story-123',
+  title: 'Implement User Authentication',
+  state: 'In Review',
+  type: 'Story',
+  dependencyIds: ['story-100', 'story-101'],
+  parentId: 'epic-42'
+};
+
+const context: TransitionContext = {
+  userId: 'user-123',
+  teamId: 'team-456',
+  reason: 'All acceptance criteria completed'
+};
+
+// Attempt to move to Done state
+const result = await stateHandler.handleStateTransition(
+  workItem,
+  'Done',
+  context
+);
+
+if (result.success) {
+  console.log(`Transition successful: ${result.fromState} → ${result.toState}`);
+  
+  // Check for cascaded updates
+  if (result.cascadedUpdates && result.cascadedUpdates.length > 0) {
+    console.log('Cascaded updates:');
+    result.cascadedUpdates.forEach(update => {
+      console.log(`  ${update.itemId}: ${update.fromState} → ${update.toState}`);
+      console.log(`  Reason: ${update.reason}`);
+    });
+  }
+} else {
+  console.error('Transition failed');
+  result.violations?.forEach(violation => {
+    console.error(`${violation.severity.toUpperCase()}: ${violation.message}`);
+    if (violation.recommendation) {
+      console.error(`Recommendation: ${violation.recommendation}`);
+    }
+  });
+}
+```
+
 ---
 
 ## Troubleshooting
@@ -437,6 +783,60 @@ I've detected that **LIN-123: Implement User Dashboard** (8 points) may benefit 
 - **Cause**: Autonomous behaviors not properly started
 - **Resolution**: Ensure `initializeGlobalRegistry()` called on startup
 
+### Progress Tracker Issues
+
+#### Configuration Validation Errors
+**Symptoms**: "Invalid configuration" error on startup or config update
+**Causes**: 
+- Threshold values in wrong order (warning < critical)
+- Invalid percentage values (outside 0-100 range)
+- Negative retry attempts or delays
+
+**Resolution**:
+1. Use `validateConfig()` to check configuration before applying
+2. Ensure warning thresholds > critical thresholds
+3. Verify percentage values are between 0-100
+4. Check retry and delay values are non-negative
+
+#### Business Rule Violations
+**Symptoms**: State transitions fail with violation messages
+**Causes**:
+- Dependencies incomplete when marking stories Done
+- Epic marked Done with incomplete children
+- Invalid state transition attempted
+
+**Resolution**:
+1. Complete all dependencies before marking stories Done
+2. Use force flag only when necessary: `context.force = true`
+3. Follow valid state transition flow
+4. Check business rule configuration matches team processes
+
+#### Progress Calculation Issues
+**Symptoms**: Unexpected progress percentages or alerts
+**Causes**:
+- Zero-point stories not weighted correctly
+- Moved stories included/excluded unexpectedly
+- Wrong progress calculation strategy
+
+**Resolution**:
+1. Verify `zeroPointStoryWeight` configuration
+2. Check `includeMovedStories` setting
+3. Review `parentEpicProgressStrategy` choice
+4. Validate work item data for completeness
+
+#### Integration Error Handling
+**Symptoms**: "Rate limit exceeded" or "Integration failed" errors
+**Causes**:
+- Linear API rate limits hit
+- Network connectivity issues
+- Concurrent update conflicts
+
+**Resolution**:
+1. Review `linearApiRetryAttempts` configuration
+2. Check `concurrentUpdateStrategy` setting
+3. Monitor rate limit headers and adjust usage
+4. Implement request throttling if needed
+
 ---
 
 ## Performance Guidelines
@@ -462,16 +862,25 @@ I've detected that **LIN-123: Implement User Dashboard** (8 points) may benefit 
    - Webhook processing time (<2 seconds target)
    - Command execution success rate (>95% target)
    - Response generation time (<1 second target)
+   - Progress calculation time (<500ms target)
+   - State transition success rate (>98% target)
+   - Integration error retry success rate (>90% target)
 
 2. **Health Checks**
    - Linear API connectivity
    - Database connection health
    - Slack notification delivery
+   - Progress Tracker configuration validation
+   - State transition business rule integrity
+   - Integration error handler responsiveness
 
 3. **Alerting**
    - Failed webhook processing
    - High error rates
    - Performance degradation
+   - Progress calculation anomalies
+   - Business rule violation spikes
+   - Integration retry threshold breaches
 
 ### Resource Requirements
 
@@ -482,4 +891,4 @@ I've detected that **LIN-123: Implement User Dashboard** (8 points) may benefit 
 
 ---
 
-**The SAFe PULSE Linear Agent System provides enterprise-grade intelligent assistance for Linear workspaces, enabling natural language interaction with sophisticated ART planning capabilities.** 🤖🏛️
+**The SAFe PULSE Linear Agent System provides enterprise-grade intelligent assistance for Linear workspaces, enabling natural language interaction with sophisticated ART planning capabilities. Enhanced with robust Progress Tracker Business Logic (LIN-64) for comprehensive edge case handling, configurable business rules, and enterprise-grade error management.** 🤖🏛️
