@@ -91,7 +91,7 @@ export class EnhancedResponseFormatter {
     context: any,
     analysis: ContextAnalysis
   ): EnhancedResponse {
-    const title = '⚠️ Operation Encountered an Issue';
+    const title = '⚠️ Operation Encountered an Error';
     
     const problem = this.explainProblem(error);
     const suggestions = this.generateErrorSuggestions(error, context);
@@ -222,10 +222,12 @@ export class EnhancedResponseFormatter {
    * Generate ART summary
    */
   private generateARTSummary(result: any): string {
-    const pi = result.programIncrement || 'Unknown PI';
-    const teams = result.teams?.length || 0;
-    const items = result.totalItems || 0;
-    const score = result.valueDeliveryScore || 0;
+    // Handle both direct properties and nested plan object
+    const plan = result.plan || result;
+    const pi = plan.piId || plan.programIncrement || 'Unknown PI';
+    const teams = plan.teams?.length || result.teams?.length || 0;
+    const items = plan.totalWorkItems || plan.totalItems || 0;
+    const score = plan.valueDeliveryConfidence ? Math.round(plan.valueDeliveryConfidence * 100) : (plan.valueDeliveryScore || 0);
 
     return `Successfully planned ${pi} with ${teams} teams and ${items} work items. ` +
            `Achieved ${score}% value delivery score.`;
@@ -235,11 +237,17 @@ export class EnhancedResponseFormatter {
    * Format ART metrics
    */
   private formatARTMetrics(result: any): string {
+    // Handle both direct properties and nested plan object
+    const plan = result.plan || result;
+    const readiness = plan.readinessScore ? Math.round(plan.readinessScore * 100) : (plan.artReadiness || 0);
+    const capacity = plan.capacityUtilization ? Math.round(plan.capacityUtilization * 100) : 0;
+    const valueScore = plan.valueDeliveryConfidence ? Math.round(plan.valueDeliveryConfidence * 100) : (plan.valueDeliveryScore || 0);
+    
     const metrics = [
-      `- **Value Delivery Score**: ${result.valueDeliveryScore || 0}% ${this.getTrendIndicator(result.valueDeliveryTrend)}`,
-      `- **ART Readiness**: ${result.artReadiness || 0}% (${this.getReadinessLabel(result.artReadiness)})`,
-      `- **Capacity Utilization**: ${result.capacityUtilization || 0}% (${this.getUtilizationLabel(result.capacityUtilization)})`,
-      `- **Risk Level**: ${result.riskLevel || 'Unknown'} ${this.getRiskIcon(result.riskLevel)}`
+      `- **Value Delivery Score**: ${valueScore}% ${this.getTrendIndicator(plan.valueDeliveryTrend)}`,
+      `- **ART Readiness**: ${readiness}% (${this.getReadinessLabel(readiness)})`,
+      `- **Capacity Utilization**: ${capacity}% (${this.getUtilizationLabel(capacity)})`,
+      `- **Risk Level**: ${plan.riskLevel || 'Normal'} ${this.getRiskIcon(plan.riskLevel || 'low')}`
     ];
 
     return metrics.join('\n');
@@ -346,7 +354,8 @@ export class EnhancedResponseFormatter {
       executionTime: data?.executionTime,
       operationId: data?.operationId,
       responseType: type,
-      version: this.version
+      version: this.version,
+      style: data?.style
     };
   }
 
@@ -373,7 +382,7 @@ export class EnhancedResponseFormatter {
    * Format response to final output
    * @deprecated Use the more complete implementation below
    */
-  formatToOutput_OLD(response: EnhancedResponse, format: 'markdown' | 'plain' = 'markdown'): FormattedResponse {
+  private formatToOutput_OLD(response: EnhancedResponse, format: 'markdown' | 'plain' = 'markdown'): FormattedResponse {
     let content = '';
 
     // Add title
@@ -486,6 +495,9 @@ export class EnhancedResponseFormatter {
   }
 
   private explainProblem(error: any): string {
+    if (typeof error === 'string') {
+      return error;
+    }
     return error.message || 'An unexpected error occurred.';
   }
 
@@ -494,7 +506,8 @@ export class EnhancedResponseFormatter {
   }
 
   private explainError(error: any, analysis: ContextAnalysis): string {
-    return `The operation failed due to: ${error.message}`;
+    const message = typeof error === 'string' ? error : (error.message || 'Unknown error');
+    return `The operation failed due to: ${message}`;
   }
 
   private formatSuggestions(suggestions: string[]): string {
@@ -506,7 +519,7 @@ export class EnhancedResponseFormatter {
   }
 
   private buildErrorContent(error: any, analysis: ContextAnalysis): string {
-    return `The ${error.operation || 'operation'} could not be completed.`;
+    return `The ${error.operation || 'operation'} encountered an error and could not be completed.`;
   }
 
   private generateErrorActions(error: any, context: any): ResponseAction[] {

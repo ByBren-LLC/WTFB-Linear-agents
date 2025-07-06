@@ -73,7 +73,7 @@ describe('EnhancedResponseEngine', () => {
       expect(response.markdown).toContain('ART Planning Complete');
       expect(response.markdown).toContain('PI-2024-Q1');
       expect(response.markdown).toContain('85%'); // readiness score
-      expect(response.sections).toHaveLength(2); // results and metadata
+      expect(response.sections).toHaveLength(3); // key results, highlights, and detailed analysis
     });
 
     it('should generate error response with helpful guidance', async () => {
@@ -91,7 +91,7 @@ describe('EnhancedResponseEngine', () => {
       expect(response.markdown).toContain('encountered an error');
       expect(response.markdown).toContain('Invalid PI format');
       expect(response.sections).toContainEqual(
-        expect.objectContaining({ title: 'Error Details' })
+        expect.objectContaining({ heading: '🔍 What Happened' })
       );
     });
 
@@ -127,8 +127,8 @@ describe('EnhancedResponseEngine', () => {
       });
 
       const steps = [
-        { name: 'Step 1', description: 'First step', estimatedDuration: 50 },
-        { name: 'Step 2', description: 'Second step', estimatedDuration: 50 }
+        { name: 'Step 1', description: 'First step', estimatedDuration: 3000 },
+        { name: 'Step 2', description: 'Second step', estimatedDuration: 3000 }
       ];
 
       const response = await responseEngine.generateResponseWithProgress(
@@ -219,7 +219,8 @@ describe('EnhancedResponseEngine', () => {
         id: 'conditional',
         name: 'Conditional Template',
         type: ResponseType.INFO,
-        template: 'Base content',
+        template: 'Base content{{section:extra}}',
+        variables: [],
         sections: [{
           name: 'extra',
           condition: 'showExtra === true',

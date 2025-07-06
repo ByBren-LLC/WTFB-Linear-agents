@@ -43,6 +43,13 @@ export class ResponseTemplateEngine {
   }
 
   /**
+   * Get a template by ID
+   */
+  getTemplate(id: string): ResponseTemplate | undefined {
+    return this.templates.get(id);
+  }
+
+  /**
    * Select appropriate template based on context
    */
   selectTemplate(
@@ -79,14 +86,16 @@ export class ResponseTemplateEngine {
       let content = template.template;
 
       // Replace variables
-      for (const variable of template.variables) {
-        const value = data[variable.name] ?? variable.defaultValue;
-        const formattedValue = variable.formatter 
-          ? variable.formatter(value)
-          : this.formatValue(value, variable.type);
-        
-        const placeholder = `{{${variable.name}}}`;
-        content = content.replace(new RegExp(placeholder, 'g'), formattedValue);
+      if (template.variables) {
+        for (const variable of template.variables) {
+          const value = data[variable.name] ?? variable.defaultValue;
+          const formattedValue = variable.formatter 
+            ? variable.formatter(value)
+            : this.formatValue(value, variable.type);
+          
+          const placeholder = `{{${variable.name}}}`;
+          content = content.replace(new RegExp(placeholder, 'g'), formattedValue);
+        }
       }
 
       // Process sections
@@ -196,6 +205,7 @@ export class ResponseTemplateEngine {
   private renderSection(section: TemplateSection, data: Record<string, any>): string {
     let content = section.template;
 
+    // First process section-specific variables
     if (section.variables) {
       for (const variable of section.variables) {
         const value = data[variable.name] ?? variable.defaultValue;
@@ -207,6 +217,18 @@ export class ResponseTemplateEngine {
           new RegExp(`{{${variable.name}}}`, 'g'),
           formattedValue
         );
+      }
+    }
+
+    // Then process any remaining variables from the data
+    const variableMatches = content.match(/{{(\w+)}}/g);
+    if (variableMatches) {
+      for (const match of variableMatches) {
+        const variableName = match.replace(/[{}]/g, '');
+        if (data[variableName] !== undefined) {
+          const value = this.formatValue(data[variableName], 'string');
+          content = content.replace(new RegExp(`{{${variableName}}}`, 'g'), value);
+        }
       }
     }
 

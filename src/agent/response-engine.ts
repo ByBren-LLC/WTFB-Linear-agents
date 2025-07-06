@@ -117,6 +117,11 @@ export class EnhancedResponseEngine {
       } else {
         enhancedResponse = this.generateErrorResponse(context, result, analysis);
       }
+      
+      // Set style in metadata based on user role
+      if (enhancedResponse.metadata) {
+        enhancedResponse.metadata.style = this.determineResponseStyle(analysis);
+      }
 
       // Format to final output
       const formattedResponse = this.formatter.formatToOutput(
@@ -310,10 +315,10 @@ export class EnhancedResponseEngine {
     analysis: any
   ): EnhancedResponse {
     // Route to specific formatter based on command
-    const command = context.command?.intent || 'unknown';
+    const command = context.command?.intent || result.command || 'unknown';
     
     // Special handling for ART planning
-    if (command.includes('plan') && command.includes('pi')) {
+    if (command.includes('art-plan') || (command.includes('plan') && command.includes('pi'))) {
       return this.formatter.formatARTPlanningResult(result.data, analysis);
     }
 
@@ -329,8 +334,12 @@ export class EnhancedResponseEngine {
     result: ExecutionResult,
     analysis: any
   ): EnhancedResponse {
+    const error = typeof result.error === 'string' 
+      ? { message: result.error }
+      : result.error || { message: 'Unknown error occurred' };
+    
     return this.formatter.formatErrorResponse(
-      result.error || { message: 'Unknown error occurred' },
+      error,
       context,
       analysis
     );
@@ -490,6 +499,19 @@ Hi team! I noticed this story has **{{storyPoints}} story points**, which is abo
    */
   private isExecutionResult(result: any): result is ExecutionResult {
     return result && typeof result === 'object' && 'success' in result;
+  }
+
+  /**
+   * Determine response style based on analysis
+   */
+  private determineResponseStyle(analysis: any): 'technical' | 'executive' | 'standard' {
+    if (analysis.userRole === 'manager' || analysis.userRole === 'stakeholder') {
+      return 'executive';
+    }
+    if (analysis.userRole === 'developer' || analysis.userRole === 'lead') {
+      return 'technical';
+    }
+    return 'standard';
   }
 
   /**

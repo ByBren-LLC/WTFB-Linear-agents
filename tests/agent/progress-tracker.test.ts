@@ -4,14 +4,17 @@
 
 import { ProgressTracker } from '../../src/agent/progress-tracker';
 import { ProgressUpdate } from '../../src/agent/types/response-types';
+import { ResponseTemplateEngine } from '../../src/agent/response-template-engine';
 
 // Mock Linear client
 jest.mock('../../src/linear/client');
 jest.mock('../../src/utils/logger');
+jest.mock('../../src/agent/response-template-engine');
 
 describe('ProgressTracker', () => {
   let progressTracker: ProgressTracker;
   let mockLinearClient: any;
+  let mockTemplateEngine: any;
 
   beforeEach(() => {
     mockLinearClient = {
@@ -19,14 +22,22 @@ describe('ProgressTracker', () => {
       updateComment: jest.fn().mockResolvedValue({ id: 'comment-1' })
     };
     
-    progressTracker = new ProgressTracker(mockLinearClient);
+    mockTemplateEngine = {
+      selectTemplate: jest.fn().mockReturnValue({
+        id: 'test-template',
+        template: 'Test {{progress}}%'
+      }),
+      renderTemplate: jest.fn().mockReturnValue('Test progress content')
+    };
+    
+    progressTracker = new ProgressTracker(mockLinearClient, mockTemplateEngine);
   });
 
   describe('trackOperation', () => {
     it('should track simple operation without updates', async () => {
       const operation = Promise.resolve({ data: 'test' });
       const steps = [
-        { name: 'Step 1', description: 'First step', estimatedDuration: 100 }
+        { name: 'Step 1', description: 'First step', estimatedDuration: 100, status: 'pending' as const }
       ];
 
       const result = await progressTracker.trackOperation(
@@ -48,9 +59,9 @@ describe('ProgressTracker', () => {
       });
 
       const steps = [
-        { name: 'Fetching data', description: 'Getting work items', estimatedDuration: 5000 },
-        { name: 'Processing', description: 'Analyzing data', estimatedDuration: 5000 },
-        { name: 'Generating', description: 'Creating output', estimatedDuration: 5000 }
+        { name: 'Fetching data', description: 'Getting work items', estimatedDuration: 5000, status: 'pending' as const },
+        { name: 'Processing', description: 'Analyzing data', estimatedDuration: 5000, status: 'pending' as const },
+        { name: 'Generating', description: 'Creating output', estimatedDuration: 5000, status: 'pending' as const }
       ];
 
       const progressUpdates: ProgressUpdate[] = [];
@@ -82,7 +93,7 @@ describe('ProgressTracker', () => {
     it('should handle operation errors gracefully', async () => {
       const operation = Promise.reject(new Error('Operation failed'));
       const steps = [
-        { name: 'Step 1', description: 'Will fail', estimatedDuration: 1000 }
+        { name: 'Step 1', description: 'Will fail', estimatedDuration: 1000, status: 'pending' as const }
       ];
 
       await expect(

@@ -249,11 +249,13 @@ export class ResponseContextAnalyzer {
       detailLevel = 'minimal';
     }
 
-    // Adjust for role
+    // Adjust for role and complexity
     if (userRole === 'stakeholder') {
       detailLevel = 'minimal'; // Executives prefer concise responses
     } else if (userRole === 'manager' && operationComplexity === 'complex') {
       detailLevel = 'standard'; // Managers need balanced detail for complex ops
+    } else if (userRole === 'developer' && operationComplexity === 'complex') {
+      detailLevel = 'detailed'; // Developers need detailed info for complex ops
     }
 
     // Determine technical depth
@@ -265,9 +267,10 @@ export class ResponseContextAnalyzer {
     }
 
     // Determine if examples and links should be included
-    const includeExamples = userExperience === 'new' || 
+    const includeExamples = (userExperience === 'new' || 
                           historicalContext.previousInteractions < 3 ||
-                          operationComplexity === 'complex';
+                          operationComplexity === 'complex') &&
+                          !(userRole === 'manager' && userExperience === 'experienced');
 
     const includeLinks = detailLevel !== 'minimal' &&
                         (operationComplexity === 'complex' || 
@@ -283,7 +286,7 @@ export class ResponseContextAnalyzer {
     }
 
     // Determine emoji usage
-    const useEmoji = tone === 'friendly' || userExperience === 'new';
+    const useEmoji = tone === 'friendly' || userExperience === 'new' || userRole === 'developer';
     
     // Determine technical details inclusion
     const includeTechnicalDetails = technicalDepth === 'advanced' || 
@@ -325,6 +328,11 @@ export class ResponseContextAnalyzer {
     // Use explicit experience level if provided
     if (user?.experienceLevel) {
       return user.experienceLevel;
+    }
+    
+    // Managers are considered experts
+    if (user?.role === 'manager') {
+      return 'expert';
     }
     
     // Infer from interaction history
@@ -416,9 +424,18 @@ export class ResponseContextAnalyzer {
       factors.push('long_running_operation');
     }
     
+    if (context.operation?.type === 'ART_PLAN' || context.command?.intent === 'ART_PLAN') {
+      factors.push('pi_planning');
+    }
+    
     // User factors
     if (context.user?.role === 'manager') {
       factors.push('management_oversight');
+    }
+    
+    // Team factors
+    if (context.issue?.team) {
+      factors.push('team_context');
     }
     
     return factors;
