@@ -24,6 +24,9 @@ export interface BehaviorContext {
   /** Issue being processed (if applicable) */
   issue?: any;
   
+  /** Previous state of the issue (for change detection) */
+  previousState?: any;
+  
   /** Team context */
   team?: {
     id: string;
@@ -43,6 +46,9 @@ export interface BehaviorContext {
   
   /** Current iteration */
   currentIteration?: string;
+  
+  /** Type of trigger */
+  triggerType?: BehaviorTriggerType | 'schedule';
   
   /** Additional context data */
   metadata?: Record<string, any>;
@@ -102,7 +108,7 @@ export interface BehaviorResult {
  */
 export interface BehaviorAction {
   /** Type of action */
-  type: 'comment' | 'status_change' | 'notification' | 'analysis' | 'suggestion';
+  type: 'comment' | 'status_change' | 'notification' | 'analysis' | 'suggestion' | 'update' | 'notify' | 'report';
   
   /** Target of the action (e.g., issue ID) */
   target: string;
