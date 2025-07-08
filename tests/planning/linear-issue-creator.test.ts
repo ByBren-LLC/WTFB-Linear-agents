@@ -85,7 +85,12 @@ describe('LinearIssueCreatorFromPlanning', () => {
   describe('createIssuesFromConfluence', () => {
     it('should create issues from Confluence planning data', async () => {
       // Arrange
-      const mockDocument = {};
+      const mockDocument = {
+        title: 'Test Planning Document',
+        elements: [],
+        sections: [],
+        metadata: {}
+      };
       mockConfluenceClient.parsePage = mockResolvedValue(mockDocument);
       mockPlanningExtractor.getPlanningDocument = mockReturnValue(mockPlanningDocument);
       mockPlanningIssueMapper.mapToLinear = mockResolvedValue(mockMappingResult);
@@ -109,7 +114,12 @@ describe('LinearIssueCreatorFromPlanning', () => {
         confluencePageIdOrUrl: 'https://example.atlassian.net/wiki/spaces/SPACE/pages/123456789'
       };
       const urlIssueCreator = new LinearIssueCreatorFromPlanning(urlOptions);
-      const mockDocument = {};
+      const mockDocument = {
+        title: 'Test Planning Document',
+        elements: [],
+        sections: [],
+        metadata: {}
+      };
       mockConfluenceClient.parsePageByUrl = mockResolvedValue(mockDocument);
       mockPlanningExtractor.getPlanningDocument = mockReturnValue(mockPlanningDocument);
       mockPlanningIssueMapper.mapToLinear = mockResolvedValue(mockMappingResult);
