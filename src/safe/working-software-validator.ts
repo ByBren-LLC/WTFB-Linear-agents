@@ -29,6 +29,11 @@ interface ValidationConfig {
   maxIntegrationComplexity: number;
   requiredQualityGates: string[];
   deploymentReadinessThreshold: number;
+  // Additional properties used in tests
+  readinessThreshold?: number;
+  qualityGateWeights?: Map<string, number>;
+  minDocumentationScore?: number;
+  minIntegrationScore?: number;
 }
 
 /**

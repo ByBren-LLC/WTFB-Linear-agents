@@ -34,6 +34,8 @@ interface ValueAnalysisConfig {
   minWorkingSoftwareRatio: number;
   maxValueRiskScore: number;
   valueStreamPriorities: Map<string, number>;
+  // Additional properties used in tests
+  minConfidence?: number;
 }
 
 /**
