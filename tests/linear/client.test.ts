@@ -121,7 +121,7 @@ describe('Linear Client Wrapper', () => {
       const mockLinearClient = require('@linear/sdk').LinearClient.mock.results[0].value;
       mockLinearClient.updateIssue.mockResolvedValue(mockResponse);
 
-      const result = await linearClientWrapper.updateIssue('test-id', mockInput);
+      const result = await linearClientWrapper.updateIssue({ id: 'test-id', ...mockInput });
 
       expect(mockLinearClient.updateIssue).toHaveBeenCalledWith('test-id', mockInput);
       expect(result).toEqual(mockResponse);

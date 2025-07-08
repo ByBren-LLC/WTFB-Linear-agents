@@ -12,7 +12,7 @@ jest.mock('@linear/sdk', () => {
   return {
     LinearClient: jest.fn().mockImplementation(() => {
       return {
-        issueCreate: jest.fn().mockImplementation(async (data) => {
+        createIssue: jest.fn().mockImplementation(async (data) => {
           return {
             success: true,
             issue: Promise.resolve({
@@ -20,6 +20,29 @@ jest.mock('@linear/sdk', () => {
               title: data.title,
               description: data.description,
               parent: data.parentId ? Promise.resolve({ id: data.parentId }) : undefined,
+              cycle: data.cycleId ? Promise.resolve({ id: data.cycleId }) : undefined,
+              ...data
+            })
+          };
+        }),
+        createCycle: jest.fn().mockImplementation(async (data) => {
+          return {
+            success: true,
+            cycle: Promise.resolve({
+              id: 'mock-cycle-id',
+              name: data.name,
+              description: data.description,
+              startsAt: data.startsAt instanceof Date ? data.startsAt.toISOString() : data.startsAt,
+              endsAt: data.endsAt instanceof Date ? data.endsAt.toISOString() : data.endsAt,
+              teamId: data.teamId
+            })
+          };
+        }),
+        updateIssue: jest.fn().mockImplementation(async (id, data) => {
+          return {
+            success: true,
+            issue: Promise.resolve({
+              id,
               cycle: data.cycleId ? Promise.resolve({ id: data.cycleId }) : undefined,
               ...data
             })
@@ -203,8 +226,8 @@ describe('SAFeLinearImplementation', () => {
       
       expect(pi).toBeDefined();
       expect(pi?.name).toBe('PI-2023-Q1');
-      expect(pi?.startsAt).toBe(startDate.toISOString());
-      expect(pi?.endsAt).toBe(endDate.toISOString());
+      expect(pi?.startsAt).toEqual(startDate.toISOString());
+      expect(pi?.endsAt).toEqual(endDate.toISOString());
     });
   });
   
