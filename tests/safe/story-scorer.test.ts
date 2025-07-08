@@ -23,15 +23,15 @@ jest.mock('../../src/utils/logger', () => ({
   error: jest.fn()
 }));
 
-describe('StoryScorer', () => {
-  let storyScorer: StoryScorer;
-  
-  const sampleStory: Story = {
+// Shared test data accessible to all describe blocks
+const sampleStory: Story = {
     id: 'TEST-001',
+    type: 'story',
     title: 'Implement user authentication and security features',
     description: 'Add secure login system with multi-factor authentication to improve user security and reduce risk of data breaches. This is a high-priority customer commitment for Q4 release.',
     storyPoints: 5,
     priority: 2,
+    attributes: {},
     acceptanceCriteria: [
       'User can login with email and password',
       'Multi-factor authentication is required for admin users',
@@ -39,6 +39,9 @@ describe('StoryScorer', () => {
       'Security audit trails are maintained'
     ]
   };
+
+describe('StoryScorer', () => {
+  let storyScorer: StoryScorer;
 
   beforeEach(() => {
     storyScorer = new StoryScorer();
@@ -82,9 +85,12 @@ describe('StoryScorer', () => {
     it('should handle story with minimal information', async () => {
       const minimalStory: Story = {
         id: 'TEST-002',
+        type: 'story',
         title: 'Update documentation',
         description: '',
-        storyPoints: 1
+        storyPoints: 1,
+        attributes: {},
+        acceptanceCriteria: ['Documentation is updated']
       };
 
       const scoredStory = await storyScorer.scoreStory(minimalStory);
@@ -100,10 +106,13 @@ describe('StoryScorer', () => {
       // High-value, urgent story
       const urgentStory: Story = {
         id: 'TEST-003',
+        type: 'story',
         title: 'Critical security vulnerability fix for customer deadline',
         description: 'Fix critical security vulnerability that affects all users. Customer commitment requires this for immediate release to meet regulatory compliance deadline.',
         storyPoints: 2,
-        priority: 1
+        priority: 1,
+        attributes: {},
+        acceptanceCriteria: ['Security vulnerability is fixed', 'Regulatory compliance is met']
       };
 
       const scoredStory = await storyScorer.scoreStory(urgentStory);
@@ -116,9 +125,12 @@ describe('StoryScorer', () => {
     it('should handle edge cases gracefully', async () => {
       const edgeCaseStory: Story = {
         id: 'TEST-004',
+        type: 'story',
         title: '',
-        description: undefined,
-        storyPoints: 0
+        description: '',
+        storyPoints: 0,
+        attributes: {},
+        acceptanceCriteria: ['Edge case handled']
       };
 
       const scoredStory = await storyScorer.scoreStory(edgeCaseStory);
@@ -136,24 +148,33 @@ describe('StoryScorer', () => {
       const stories: Story[] = [
         {
           id: 'TEST-005',
+          type: 'story',
           title: 'Low priority documentation update',
           description: 'Update some internal documentation',
           storyPoints: 8,
-          priority: 4
+          priority: 4,
+          attributes: {},
+          acceptanceCriteria: ['Documentation is updated']
         },
         {
           id: 'TEST-006',
+          type: 'story',
           title: 'Critical user-facing security enhancement',
           description: 'Implement critical security features for user protection with regulatory compliance requirements',
           storyPoints: 3,
-          priority: 1
+          priority: 1,
+          attributes: {},
+          acceptanceCriteria: ['Security features are implemented', 'Regulatory compliance is met']
         },
         {
           id: 'TEST-007',
+          type: 'story',
           title: 'Performance optimization for customer experience',
           description: 'Optimize application performance to improve user experience and business metrics',
           storyPoints: 5,
-          priority: 2
+          priority: 2,
+          attributes: {},
+          acceptanceCriteria: ['Performance is optimized', 'User experience is improved']
         }
       ];
 
@@ -182,10 +203,13 @@ describe('StoryScorer', () => {
       const stories: Story[] = [
         {
           id: 'TEST-008',
+          type: 'story',
           title: 'High-value quick win',
           description: 'Simple user experience improvement with high business value',
           storyPoints: 1,
-          priority: 4 // Currently low, should be higher
+          priority: 4, // Currently low, should be higher
+          attributes: {},
+          acceptanceCriteria: ['User experience is improved']
         }
       ];
 
@@ -202,26 +226,35 @@ describe('StoryScorer', () => {
         // Quick win: high value, low effort
         {
           id: 'TEST-009',
+          type: 'story',
           title: 'High-value user interface improvement',
           description: 'Simple UI enhancement with significant user experience impact',
           storyPoints: 2,
-          priority: 3
+          priority: 3,
+          attributes: {},
+          acceptanceCriteria: ['UI is improved', 'User experience impact is significant']
         },
         // Large valuable story: should suggest splitting
         {
           id: 'TEST-010',
+          type: 'story',
           title: 'Complete system redesign for business efficiency',
           description: 'Major system overhaul to improve business processes and user experience',
           storyPoints: 13,
-          priority: 2
+          priority: 2,
+          attributes: {},
+          acceptanceCriteria: ['System is redesigned', 'Business processes are improved']
         },
         // Low value, high effort: should suggest delaying
         {
           id: 'TEST-011',
+          type: 'story',
           title: 'Complex internal tooling update',
           description: 'Update internal development tools',
           storyPoints: 8,
-          priority: 4
+          priority: 4,
+          attributes: {},
+          acceptanceCriteria: ['Internal tools are updated']
         }
       ];
 
@@ -248,16 +281,22 @@ describe('StoryScorer', () => {
     it('should score user-facing features higher', async () => {
       const userStory: Story = {
         id: 'TEST-012',
+        type: 'story',
         title: 'Improve user interface and customer experience',
         description: 'Enhance the user interface to provide better customer experience and usability',
-        storyPoints: 3
+        storyPoints: 3,
+        attributes: {},
+        acceptanceCriteria: ['User interface is improved', 'Customer experience is enhanced']
       };
 
       const internalStory: Story = {
         id: 'TEST-013',
+        type: 'story',
         title: 'Internal code refactoring',
         description: 'Refactor internal code structure',
-        storyPoints: 3
+        storyPoints: 3,
+        attributes: {},
+        acceptanceCriteria: ['Code is refactored', 'Structure is improved']
       };
 
       const userScoredStory = await storyScorer.scoreStory(userStory);
@@ -269,9 +308,12 @@ describe('StoryScorer', () => {
     it('should score business impact keywords appropriately', async () => {
       const businessStory: Story = {
         id: 'TEST-014',
+        type: 'story',
         title: 'Revenue optimization and cost reduction automation',
         description: 'Implement automation to improve business efficiency and revenue metrics',
-        storyPoints: 4
+        storyPoints: 4,
+        attributes: {},
+        acceptanceCriteria: ['Revenue is optimized', 'Cost reduction is automated', 'Business efficiency is improved']
       };
 
       const scoredStory = await storyScorer.scoreStory(businessStory);
@@ -284,18 +326,24 @@ describe('StoryScorer', () => {
     it('should score deadline-related stories higher', async () => {
       const urgentStory: Story = {
         id: 'TEST-015',
+        type: 'story',
         title: 'Customer deadline feature for market launch',
         description: 'Critical feature needed for customer commitment and competitive market window',
         storyPoints: 3,
-        priority: 1
+        priority: 1,
+        attributes: {},
+        acceptanceCriteria: ['Feature meets customer deadline', 'Market launch requirements are satisfied']
       };
 
       const regularStory: Story = {
         id: 'TEST-016',
+        type: 'story',
         title: 'General improvement',
         description: 'General system improvement',
         storyPoints: 3,
-        priority: 3
+        priority: 3,
+        attributes: {},
+        acceptanceCriteria: ['System is improved']
       };
 
       const urgentScoredStory = await storyScorer.scoreStory(urgentStory);
@@ -307,18 +355,24 @@ describe('StoryScorer', () => {
     it('should consider Linear priority in time criticality', async () => {
       const highPriorityStory: Story = {
         id: 'TEST-017',
+        type: 'story',
         title: 'Feature implementation',
         description: 'Standard feature implementation',
         storyPoints: 3,
-        priority: 1 // High priority
+        priority: 1, // High priority
+        attributes: {},
+        acceptanceCriteria: ['Feature is implemented']
       };
 
       const lowPriorityStory: Story = {
         id: 'TEST-018',
+        type: 'story',
         title: 'Feature implementation',
         description: 'Standard feature implementation',
         storyPoints: 3,
-        priority: 4 // Low priority
+        priority: 4, // Low priority
+        attributes: {},
+        acceptanceCriteria: ['Feature is implemented']
       };
 
       const highScoredStory = await storyScorer.scoreStory(highPriorityStory);
@@ -332,16 +386,22 @@ describe('StoryScorer', () => {
     it('should score security-related stories higher', async () => {
       const securityStory: Story = {
         id: 'TEST-019',
+        type: 'story',
         title: 'Security vulnerability fix and authentication enhancement',
         description: 'Fix security vulnerabilities and improve authentication reliability',
-        storyPoints: 4
+        storyPoints: 4,
+        attributes: {},
+        acceptanceCriteria: ['Security vulnerabilities are fixed', 'Authentication is enhanced']
       };
 
       const featureStory: Story = {
         id: 'TEST-020',
+        type: 'story',
         title: 'New feature addition',
         description: 'Add new user feature',
-        storyPoints: 4
+        storyPoints: 4,
+        attributes: {},
+        acceptanceCriteria: ['New feature is added']
       };
 
       const securityScoredStory = await storyScorer.scoreStory(securityStory);
@@ -355,16 +415,22 @@ describe('StoryScorer', () => {
     it('should reflect story points in job size', async () => {
       const smallStory: Story = {
         id: 'TEST-021',
+        type: 'story',
         title: 'Small task',
         description: 'Simple implementation',
-        storyPoints: 1
+        storyPoints: 1,
+        attributes: {},
+        acceptanceCriteria: ['Task is completed']
       };
 
       const largeStory: Story = {
         id: 'TEST-022',
+        type: 'story',
         title: 'Large complex task',
         description: 'Complex implementation with multiple integrations',
-        storyPoints: 8
+        storyPoints: 8,
+        attributes: {},
+        acceptanceCriteria: ['Complex task is completed', 'Integrations are working']
       };
 
       const smallScoredStory = await storyScorer.scoreStory(smallStory);
@@ -376,16 +442,22 @@ describe('StoryScorer', () => {
     it('should account for complexity in job size', async () => {
       const complexStory: Story = {
         id: 'TEST-023',
+        type: 'story',
         title: 'Complex integration with unknown algorithm optimization',
         description: 'Complex system integration requiring research and investigation of unknown optimization algorithms',
-        storyPoints: 5
+        storyPoints: 5,
+        attributes: {},
+        acceptanceCriteria: ['Complex integration is completed', 'Algorithm optimization is researched']
       };
 
       const simpleStory: Story = {
         id: 'TEST-024',
+        type: 'story',
         title: 'Simple update',
         description: 'Simple configuration update',
-        storyPoints: 5
+        storyPoints: 5,
+        attributes: {},
+        acceptanceCriteria: ['Configuration is updated']
       };
 
       const complexScoredStory = await storyScorer.scoreStory(complexStory);
@@ -432,9 +504,12 @@ describe('StoryScorer', () => {
         null as unknown as Story, // This will cause an error
         {
           id: 'TEST-025',
+          type: 'story' as const,
           title: 'Valid story',
           description: 'This should be scored successfully',
-          storyPoints: 2
+          storyPoints: 2,
+          attributes: {},
+          acceptanceCriteria: ['Story is valid']
         }
       ];
 
@@ -490,41 +565,44 @@ describe('WSJFCalculator', () => {
   describe('prioritizeStories', () => {
     it('should sort stories by WSJF score', () => {
       const stories: ScoredStory[] = [
-        { 
-          ...sampleStory, 
-          id: 'LOW', 
-          wsjfScore: 2.0, 
-          businessValue: 40, 
-          timeCriticality: 30, 
-          riskReduction: 20, 
-          jobSize: 5, 
-          priorityScore: 20, 
+        {
+          ...sampleStory,
+          id: 'LOW',
+          priority: 4,
+          wsjfScore: 2.0,
+          businessValue: 40,
+          timeCriticality: 30,
+          riskReduction: 20,
+          jobSize: 5,
+          priorityScore: 20,
           recommendedPriority: LinearPriority.LOW,
           scoringTimestamp: new Date(),
           scoringVersion: '1.0.0'
         },
-        { 
-          ...sampleStory, 
-          id: 'HIGH', 
-          wsjfScore: 8.0, 
-          businessValue: 80, 
-          timeCriticality: 70, 
-          riskReduction: 60, 
-          jobSize: 3, 
-          priorityScore: 80, 
+        {
+          ...sampleStory,
+          id: 'HIGH',
+          priority: 1,
+          wsjfScore: 8.0,
+          businessValue: 80,
+          timeCriticality: 70,
+          riskReduction: 60,
+          jobSize: 3,
+          priorityScore: 80,
           recommendedPriority: LinearPriority.URGENT,
           scoringTimestamp: new Date(),
           scoringVersion: '1.0.0'
         },
-        { 
-          ...sampleStory, 
-          id: 'MEDIUM', 
-          wsjfScore: 5.0, 
-          businessValue: 60, 
-          timeCriticality: 50, 
-          riskReduction: 40, 
-          jobSize: 4, 
-          priorityScore: 50, 
+        {
+          ...sampleStory,
+          id: 'MEDIUM',
+          priority: 2,
+          wsjfScore: 5.0,
+          businessValue: 60,
+          timeCriticality: 50,
+          riskReduction: 40,
+          jobSize: 4,
+          priorityScore: 50,
           recommendedPriority: LinearPriority.HIGH,
           scoringTimestamp: new Date(),
           scoringVersion: '1.0.0'
@@ -542,15 +620,16 @@ describe('WSJFCalculator', () => {
   describe('generateOptimizationRecommendations', () => {
     it('should identify quick wins', () => {
       const stories: ScoredStory[] = [
-        { 
-          ...sampleStory, 
-          id: 'QUICK-WIN', 
-          wsjfScore: 7.0, 
+        {
+          ...sampleStory,
+          id: 'QUICK-WIN',
+          priority: 1,
+          wsjfScore: 7.0,
           jobSize: 2,
-          businessValue: 80, 
-          timeCriticality: 60, 
-          riskReduction: 50, 
-          priorityScore: 70, 
+          businessValue: 80,
+          timeCriticality: 60,
+          riskReduction: 50,
+          priorityScore: 70,
           recommendedPriority: LinearPriority.HIGH,
           scoringTimestamp: new Date(),
           scoringVersion: '1.0.0'
@@ -569,15 +648,16 @@ describe('WSJFCalculator', () => {
 
     it('should suggest splitting large valuable stories', () => {
       const stories: ScoredStory[] = [
-        { 
-          ...sampleStory, 
-          id: 'LARGE-VALUABLE', 
-          wsjfScore: 6.0, 
+        {
+          ...sampleStory,
+          id: 'LARGE-VALUABLE',
+          priority: 2,
+          wsjfScore: 6.0,
           jobSize: 10,
-          businessValue: 90, 
-          timeCriticality: 70, 
-          riskReduction: 60, 
-          priorityScore: 60, 
+          businessValue: 90,
+          timeCriticality: 70,
+          riskReduction: 60,
+          priorityScore: 60,
           recommendedPriority: LinearPriority.HIGH,
           scoringTimestamp: new Date(),
           scoringVersion: '1.0.0'

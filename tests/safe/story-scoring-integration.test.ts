@@ -69,10 +69,12 @@ describe('Story Scoring Integration', () => {
       const stories: Story[] = [
         {
           id: 'STORY-001',
+          type: 'story',
           title: 'Critical security vulnerability fix',
           description: 'Fix critical security vulnerability affecting user authentication. Customer commitment for regulatory compliance deadline.',
           storyPoints: 3,
           priority: 2,
+          attributes: {},
           acceptanceCriteria: [
             'Security vulnerability is patched',
             'Authentication flow is secure',
@@ -81,10 +83,12 @@ describe('Story Scoring Integration', () => {
         },
         {
           id: 'STORY-002',
+          type: 'story',
           title: 'User experience improvement for mobile app',
           description: 'Enhance mobile user interface to improve customer experience and increase user engagement metrics.',
           storyPoints: 5,
           priority: 3,
+          attributes: {},
           acceptanceCriteria: [
             'Mobile UI is responsive',
             'User engagement increases by 15%',
@@ -93,10 +97,12 @@ describe('Story Scoring Integration', () => {
         },
         {
           id: 'STORY-003',
+          type: 'story',
           title: 'Internal documentation update',
           description: 'Update internal development documentation and coding standards.',
           storyPoints: 8,
           priority: 4,
+          attributes: {},
           acceptanceCriteria: [
             'Documentation is current',
             'Standards are clear',
@@ -138,11 +144,13 @@ describe('Story Scoring Integration', () => {
       // Large story that needs decomposition
       const largeStory: LargeStory = {
         id: 'LARGE-001',
+        type: 'story',
         title: 'Complete user management system with security and analytics',
         description: 'Implement comprehensive user management system including authentication, authorization, user profiles, security monitoring, and analytics dashboard.',
         storyPoints: 13,
         estimate: 13,
         priority: 1,
+        attributes: {},
         acceptanceCriteria: [
           'User authentication works',
           'Authorization system is implemented',
@@ -157,6 +165,7 @@ describe('Story Scoring Integration', () => {
       const decomposedStories: DecomposedStory[] = [
         {
           id: 'SUB-001',
+          type: 'story',
           title: 'User authentication system',
           description: 'Implement secure user login and session management',
           storyPoints: 3,
@@ -164,10 +173,12 @@ describe('Story Scoring Integration', () => {
           decompositionIndex: 0,
           originalStoryPoints: 13,
           businessValuePortion: 0.3,
+          attributes: {},
           acceptanceCriteria: ['User authentication works']
         },
         {
           id: 'SUB-002',
+          type: 'story',
           title: 'User authorization and permissions',
           description: 'Implement role-based access control and permissions',
           storyPoints: 4,
@@ -175,10 +186,12 @@ describe('Story Scoring Integration', () => {
           decompositionIndex: 1,
           originalStoryPoints: 13,
           businessValuePortion: 0.25,
+          attributes: {},
           acceptanceCriteria: ['Authorization system is implemented', 'Admin controls are available']
         },
         {
           id: 'SUB-003',
+          type: 'story',
           title: 'User profiles and management',
           description: 'Implement user profile management and editing capabilities',
           storyPoints: 3,
@@ -186,10 +199,12 @@ describe('Story Scoring Integration', () => {
           decompositionIndex: 2,
           originalStoryPoints: 13,
           businessValuePortion: 0.2,
+          attributes: {},
           acceptanceCriteria: ['User profiles are functional']
         },
         {
           id: 'SUB-004',
+          type: 'story',
           title: 'Security monitoring and analytics',
           description: 'Implement security monitoring and analytics dashboard',
           storyPoints: 3,
@@ -197,16 +212,22 @@ describe('Story Scoring Integration', () => {
           decompositionIndex: 3,
           originalStoryPoints: 13,
           businessValuePortion: 0.25,
+          attributes: {},
           acceptanceCriteria: ['Security monitoring is active', 'Analytics dashboard shows user metrics']
         }
       ];
 
       mockEngine.decomposeStory.mockResolvedValue({
+        parentStory: largeStory,
         subStories: decomposedStories,
         pointsDistribution: [3, 4, 3, 3],
-        totalPoints: 13,
         decompositionRationale: 'Split by functional areas',
-        traceabilityMatrix: new Map()
+        criteriaMapping: [
+          { originalCriteria: 'User authentication works', targetSubStoryId: 'SUB-001', adaptedCriteria: 'User authentication works', originalIndex: 0 },
+          { originalCriteria: 'Authorization system is functional', targetSubStoryId: 'SUB-002', adaptedCriteria: 'Authorization system is functional', originalIndex: 1 }
+        ],
+        decompositionId: 'decomp-001',
+        timestamp: new Date()
       });
 
       // Step 1: Decompose the large story
@@ -247,26 +268,35 @@ describe('Story Scoring Integration', () => {
         // Regular high-priority story
         {
           id: 'REG-001',
+          type: 'story',
           title: 'Critical bug fix for production issue',
           description: 'Fix critical production bug affecting customer payments',
           storyPoints: 2,
-          priority: 1
+          priority: 1,
+          attributes: {},
+          acceptanceCriteria: ['Production bug is fixed', 'Customer payments work correctly']
         },
         // Decomposed sub-story (would come from API adapter)
         {
           id: 'SUB-001',
+          type: 'story',
           title: 'User authentication from larger epic',
           description: 'Authentication component from decomposed user management epic',
           storyPoints: 3,
-          priority: 2
+          priority: 2,
+          attributes: {},
+          acceptanceCriteria: ['User authentication is implemented']
         },
         // Regular lower-priority story
         {
           id: 'REG-002',
+          type: 'story',
           title: 'Performance optimization',
           description: 'Optimize database queries for better performance',
           storyPoints: 4,
-          priority: 3
+          priority: 3,
+          attributes: {},
+          acceptanceCriteria: ['Database queries are optimized', 'Performance is improved']
         }
       ];
 
@@ -297,9 +327,13 @@ describe('Story Scoring Integration', () => {
       const stories: ScoredStory[] = [
         {
           id: 'DEP-001',
+          type: 'story',
           title: 'Database setup',
           description: 'Set up database infrastructure',
           storyPoints: 3,
+          priority: 2,
+          attributes: {},
+          acceptanceCriteria: ['Database is set up'],
           wsjfScore: 4.0,
           businessValue: 30,
           timeCriticality: 25,
@@ -312,9 +346,13 @@ describe('Story Scoring Integration', () => {
         },
         {
           id: 'DEP-002',
+          type: 'story',
           title: 'User management (depends on database)',
           description: 'Implement user management features',
           storyPoints: 5,
+          priority: 1,
+          attributes: {},
+          acceptanceCriteria: ['User management is implemented'],
           wsjfScore: 7.0,
           businessValue: 80,
           timeCriticality: 60,
@@ -327,9 +365,13 @@ describe('Story Scoring Integration', () => {
         },
         {
           id: 'DEP-003',
+          type: 'story',
           title: 'Independent feature',
           description: 'Feature that doesn\'t depend on others',
           storyPoints: 2,
+          priority: 1,
+          attributes: {},
+          acceptanceCriteria: ['Independent feature is implemented'],
           wsjfScore: 6.0,
           businessValue: 60,
           timeCriticality: 50,
@@ -365,10 +407,13 @@ describe('Story Scoring Integration', () => {
       // Generate 100 test stories
       const stories: Story[] = Array.from({ length: 100 }, (_, i) => ({
         id: `PERF-${i.toString().padStart(3, '0')}`,
+        type: 'story' as const,
         title: `Test story ${i}`,
         description: `Description for test story ${i}`,
         storyPoints: Math.floor(Math.random() * 8) + 1,
-        priority: Math.floor(Math.random() * 4) + 1
+        priority: Math.floor(Math.random() * 4) + 1,
+        attributes: {},
+        acceptanceCriteria: [`Test story ${i} is completed`]
       }));
 
       const startTime = Date.now();
@@ -402,10 +447,13 @@ describe('Story Scoring Integration', () => {
     it('should handle API adapter errors gracefully', async () => {
       const largeStory: LargeStory = {
         id: 'ERROR-001',
+        type: 'story',
         title: 'Story that will cause decomposition error',
         description: 'This story will trigger an error in decomposition',
         storyPoints: 10,
-        estimate: 10
+        estimate: 10,
+        attributes: {},
+        acceptanceCriteria: ['Story causes error']
       };
 
       // Mock decomposition error
@@ -416,9 +464,12 @@ describe('Story Scoring Integration', () => {
       // Scoring should still work with valid stories
       const validStory: Story = {
         id: 'VALID-001',
+        type: 'story',
         title: 'Valid story',
         description: 'This story should score normally',
-        storyPoints: 3
+        storyPoints: 3,
+        attributes: {},
+        acceptanceCriteria: ['Story is valid']
       };
 
       const scoringResult = await storyScorer.scoreStories([validStory]);
@@ -428,9 +479,12 @@ describe('Story Scoring Integration', () => {
     it('should handle edge cases in WSJF calculation', async () => {
       const edgeCaseStory: Story = {
         id: 'EDGE-001',
+        type: 'story',
         title: '',
         description: '',
-        storyPoints: 0
+        storyPoints: 0,
+        attributes: {},
+        acceptanceCriteria: ['Edge case handled']
       };
 
       const scoredStory = await storyScorer.scoreStory(edgeCaseStory);
