@@ -58,11 +58,11 @@ describe('ValueDeliveryAnalyzer', () => {
       const result = await analyzer.analyzeIterationValue(testIteration);
       
       expect(result).toBeDefined();
-      expect(result.valueStreams).toBeDefined();
-      expect(result.businessImpact).toBeDefined();
-      expect(result.userAdoption).toBeDefined();
-      expect(result.overallScore).toBeGreaterThanOrEqual(0);
-      expect(result.overallScore).toBeLessThanOrEqual(1);
+      expect(result.primaryValueStreams).toBeDefined();
+      expect(result.businessValueRealization).toBeDefined();
+      expect(result.userImpactAssessment).toBeDefined();
+      expect(result.valueDeliveryScore).toBeGreaterThanOrEqual(0);
+      expect(result.valueDeliveryScore).toBeLessThanOrEqual(1);
     });
   });
 
@@ -85,11 +85,11 @@ describe('ValueDeliveryAnalyzer', () => {
       const result = await analyzer.validateWorkingSoftwareDelivery(testWorkItems);
       
       expect(result).toBeDefined();
-      expect(result.isValid).toBeDefined();
-      expect(result.deliverables).toBeDefined();
+      expect(result.canDeployToProduction).toBeDefined();
+      expect(result.userValueDelivered).toBeDefined();
       expect(result.qualityGates).toBeDefined();
-      expect(result.readinessScore).toBeGreaterThanOrEqual(0);
-      expect(result.readinessScore).toBeLessThanOrEqual(1);
+      expect(result.deploymentReadinessScore).toBeGreaterThanOrEqual(0);
+      expect(result.deploymentReadinessScore).toBeLessThanOrEqual(1);
     });
   });
 
@@ -134,7 +134,7 @@ describe('ValueDeliveryAnalyzer', () => {
     it('should handle empty work items gracefully', async () => {
       const result = await analyzer.validateWorkingSoftwareDelivery([]);
       expect(result).toBeDefined();
-      expect(result.isValid).toBeDefined();
+      expect(result.canDeployToProduction).toBeDefined();
     });
   });
 });

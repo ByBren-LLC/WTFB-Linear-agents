@@ -362,10 +362,10 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       // Validate optimization results structure
       if (result.length > 0) {
         const firstOptimization = result[0];
-        expect(firstOptimization.originalIteration).toBeDefined();
-        expect(firstOptimization.optimizedSequence).toBeDefined();
-        expect(firstOptimization.valueImprovements).toBeDefined();
-        expect(firstOptimization.riskReductions).toBeDefined();
+        expect(firstOptimization.originalPlan).toBeDefined();
+        expect(firstOptimization.optimizedAllocation).toBeDefined();
+        expect(firstOptimization.valueImprovementPotential).toBeDefined();
+        expect(firstOptimization.riskReduction).toBeDefined();
       }
     });
 

@@ -116,29 +116,29 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       
       // Validate core structure
       expect(result).toBeDefined();
-      expect(result.valueStreams).toBeDefined();
-      expect(result.valueStreams.length).toBeGreaterThan(0);
-      
+      expect(result.primaryValueStreams).toBeDefined();
+      expect(result.primaryValueStreams.length).toBeGreaterThan(0);
+
       // Validate business value quantification
       expect(result.businessValueRealization).toBeDefined();
-      expect(result.businessValueRealization.totalValue).toBeGreaterThan(0);
-      expect(result.businessValueRealization.roiProjection).toBeGreaterThanOrEqual(0);
-      
+      expect(result.businessValueRealization.estimatedRevenue).toBeGreaterThanOrEqual(0);
+      expect(result.businessValueRealization.costSavings).toBeGreaterThanOrEqual(0);
+
       // Validate user impact metrics
-      expect(result.userImpact).toBeDefined();
-      expect(result.userImpact.userValueMetrics).toBeDefined();
-      
+      expect(result.userImpactAssessment).toBeDefined();
+      expect(result.userImpactAssessment.impactedUserCount).toBeGreaterThanOrEqual(0);
+
       // Validate working software components
       expect(result.workingSoftwareComponents).toBeDefined();
       expect(result.workingSoftwareComponents.length).toBeGreaterThanOrEqual(0);
-      
+
       // Validate overall scoring
-      expect(result.overallScore).toBeGreaterThanOrEqual(0);
-      expect(result.overallScore).toBeLessThanOrEqual(1);
-      
+      expect(result.valueDeliveryScore).toBeGreaterThanOrEqual(0);
+      expect(result.valueDeliveryScore).toBeLessThanOrEqual(1);
+
       // Validate confidence metrics
-      expect(result.confidence).toBeGreaterThanOrEqual(0);
-      expect(result.confidence).toBeLessThanOrEqual(1);
+      expect(result.confidenceScore).toBeGreaterThanOrEqual(0);
+      expect(result.confidenceScore).toBeLessThanOrEqual(1);
     });
 
     it('should handle technical debt and infrastructure stories', async () => {
@@ -205,15 +205,15 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       const result = await analyzer.analyzeIterationValue(techDebtIteration);
       
       expect(result).toBeDefined();
-      expect(result.valueStreams).toBeDefined();
-      
+      expect(result.primaryValueStreams).toBeDefined();
+
       // Technical debt should have lower user value but higher technical value
-      expect(result.businessValueRealization.totalValue).toBeGreaterThan(0);
-      expect(result.userImpact.userValueMetrics.directUserBenefit).toBeLessThanOrEqual(0.5);
-      
+      expect(result.businessValueRealization.estimatedRevenue).toBeGreaterThanOrEqual(0);
+      expect(result.userImpactAssessment.valuePerUser).toBeGreaterThanOrEqual(0);
+
       // Should still have valid confidence scoring
-      expect(result.confidence).toBeGreaterThanOrEqual(0);
-      expect(result.overallScore).toBeGreaterThanOrEqual(0);
+      expect(result.confidenceScore).toBeGreaterThanOrEqual(0);
+      expect(result.valueDeliveryScore).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle empty iteration gracefully', async () => {
@@ -257,10 +257,10 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       const result = await analyzer.analyzeIterationValue(emptyIteration);
       
       expect(result).toBeDefined();
-      expect(result.valueStreams).toBeDefined();
-      expect(result.valueStreams.length).toBe(0);
+      expect(result.primaryValueStreams).toBeDefined();
+      expect(result.primaryValueStreams.length).toBe(0);
       expect(result.workingSoftwareComponents.length).toBe(0);
-      expect(result.overallScore).toBe(0);
+      expect(result.valueDeliveryScore).toBe(0);
     });
   });
 
@@ -336,10 +336,10 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       
       // Validate optimization structure
       if (result.length > 0) {
-        expect(result[0].originalIteration).toBeDefined();
-        expect(result[0].optimizedSequence).toBeDefined();
-        expect(result[0].valueImprovements).toBeDefined();
-        expect(result[0].riskReductions).toBeDefined();
+        expect(result[0].originalPlan).toBeDefined();
+        expect(result[0].optimizedAllocation).toBeDefined();
+        expect(result[0].valueImprovementPotential).toBeDefined();
+        expect(result[0].riskReduction).toBeDefined();
       }
     });
 
@@ -415,7 +415,7 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       expect(result).toBeDefined();
       
       // Should indicate low confidence due to invalid data
-      expect(result.confidence).toBeLessThanOrEqual(0.5);
+      expect(result.confidenceScore).toBeLessThanOrEqual(0.5);
     });
   });
 
@@ -525,17 +525,17 @@ describe('ValueDeliveryAnalyzer Comprehensive Tests', () => {
       const result = await analyzer.analyzeIterationValue(multiStreamIteration);
       
       expect(result).toBeDefined();
-      expect(result.valueStreams.length).toBeGreaterThanOrEqual(3);
-      
+      expect(result.primaryValueStreams.length).toBeGreaterThanOrEqual(3);
+
       // Should identify different value stream types
-      const streamTypes = result.valueStreams.map(stream => stream.type);
+      const streamTypes = result.primaryValueStreams.map(stream => stream.type);
       expect(streamTypes).toContain('customer-facing');
       expect(streamTypes).toContain('revenue-generating');
       expect(streamTypes).toContain('efficiency-improving');
-      
+
       // Should have reasonable overall score for diverse value
-      expect(result.overallScore).toBeGreaterThan(0.5);
-      expect(result.confidence).toBeGreaterThan(0.6);
+      expect(result.valueDeliveryScore).toBeGreaterThan(0.5);
+      expect(result.confidenceScore).toBeGreaterThan(0.6);
     });
   });
 });
