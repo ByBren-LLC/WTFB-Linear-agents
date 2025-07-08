@@ -9,11 +9,12 @@ import { ARTPlanner } from '../../../src/safe/art-planner';
 import { ARTLinearIntegration } from '../../../src/safe/art-linear-integration';
 import { LinearClientWrapper } from '../../../src/linear/client';
 import {
-  ProgramIncrement,
   PlanningWorkItem,
-  ARTTeam,
-  DependencyGraph
+  ARTTeam
 } from '../../../src/types/art-planning-types';
+import { ProgramIncrement } from '../../../src/safe/pi-model';
+import { DependencyGraph, DependencyType, DependencyStrength, DetectionMethod } from '../../../src/types/dependency-types';
+import { createTestStory } from '../../types/test-types';
 
 // Mock only external dependencies
 jest.mock('../../../src/linear/client');
@@ -57,26 +58,20 @@ describe('ART Planning Integration Tests', () => {
     };
 
     testWorkItems = [
-      {
+      createTestStory({
         id: 'story-1',
-        type: 'story',
         title: 'User Authentication API',
         description: 'Implement JWT-based authentication',
-        parentId: undefined,
-        attributes: {},
         storyPoints: 5,
         priority: 1
-      },
-      {
+      }),
+      createTestStory({
         id: 'story-2',
-        type: 'story',
         title: 'User Profile Service',
         description: 'Create user profile management',
-        parentId: undefined,
-        attributes: {},
         storyPoints: 3,
         priority: 2
-      },
+      }),
       {
         id: 'enabler-1',
         type: 'enabler',
@@ -95,10 +90,10 @@ describe('ART Planning Integration Tests', () => {
           id: 'dep-1',
           sourceId: 'story-1',
           targetId: 'enabler-1',
-          type: 'REQUIRES',
-          strength: 'HARD',
+          type: DependencyType.REQUIRES,
+          strength: DependencyStrength.HARD,
           rationale: 'API needs database',
-          detectionMethod: 'MANUAL',
+          detectionMethod: DetectionMethod.MANUAL,
           confidence: 1.0,
           triggers: ['database'],
           detectedAt: new Date()
@@ -338,16 +333,13 @@ describe('ART Planning Integration Tests', () => {
       // Create 50 work items
       const largeWorkItems: PlanningWorkItem[] = [];
       for (let i = 0; i < 50; i++) {
-        largeWorkItems.push({
+        largeWorkItems.push(createTestStory({
           id: `story-${i}`,
-          type: 'story',
           title: `Story ${i}`,
           description: `Description for story ${i}`,
-          parentId: undefined,
-          attributes: {},
           storyPoints: Math.floor(Math.random() * 8) + 1,
           priority: Math.floor(Math.random() * 4) + 1
-        });
+        }));
       }
 
       const largeDependencies: DependencyGraph = {

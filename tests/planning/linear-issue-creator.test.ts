@@ -86,9 +86,9 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should create issues from Confluence planning data', async () => {
       // Arrange
       const mockDocument = {};
-      (mockConfluenceClient.parsePage as jest.Mock).mockResolvedValue(mockDocument);
-      (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      mockConfluenceClient.parsePage = mockResolvedValue(mockDocument);
+      mockPlanningExtractor.getPlanningDocument = mockReturnValue(mockPlanningDocument);
+      mockPlanningIssueMapper.mapToLinear = mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await issueCreator.createIssuesFromConfluence();
@@ -110,9 +110,9 @@ describe('LinearIssueCreatorFromPlanning', () => {
       };
       const urlIssueCreator = new LinearIssueCreatorFromPlanning(urlOptions);
       const mockDocument = {};
-      (mockConfluenceClient.parsePageByUrl as jest.Mock).mockResolvedValue(mockDocument);
-      (mockPlanningExtractor.getPlanningDocument as jest.Mock).mockReturnValue(mockPlanningDocument);
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      mockConfluenceClient.parsePageByUrl = mockResolvedValue(mockDocument);
+      mockPlanningExtractor.getPlanningDocument = mockReturnValue(mockPlanningDocument);
+      mockPlanningIssueMapper.mapToLinear = mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await urlIssueCreator.createIssuesFromConfluence();
@@ -129,7 +129,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockConfluenceClient.parsePage as jest.Mock).mockRejectedValue(error);
+      mockConfluenceClient.parsePage = mockRejectedValue(error);
 
       // Act & Assert
       await expect(issueCreator.createIssuesFromConfluence()).rejects.toThrow(error);
@@ -139,7 +139,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
   describe('createIssuesFromPlanningDocument', () => {
     it('should create issues from a planning document', async () => {
       // Arrange
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockResolvedValue(mockMappingResult);
+      mockPlanningIssueMapper.mapToLinear = mockResolvedValue(mockMappingResult);
 
       // Act
       const result = await issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any);
@@ -155,7 +155,7 @@ describe('LinearIssueCreatorFromPlanning', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockPlanningIssueMapper.mapToLinear as jest.Mock).mockRejectedValue(error);
+      mockPlanningIssueMapper.mapToLinear = mockRejectedValue(error);
 
       // Act & Assert
       await expect(issueCreator.createIssuesFromPlanningDocument(mockPlanningDocument as any)).rejects.toThrow(error);

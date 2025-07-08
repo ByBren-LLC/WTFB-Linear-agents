@@ -5,10 +5,10 @@ import { LinearClientWrapper } from '../../src/linear/client';
 import { SyncStore } from '../../src/sync/sync-store';
 import { Conflict, Change, ChangeType, ChangeSource, ChangeItemType } from '../../src/sync/change-detector';
 import {
-  createMockResolvedValue,
-  createMockRejectedValue,
-  type SyncConflict
-} from '../types/test-types';
+  mockResolvedValue,
+  mockRejectedValue
+} from '../types/mock-types';
+import { type SyncConflict } from '../types/test-types';
 
 // Mock dependencies
 jest.mock('../../src/confluence/client');
@@ -56,10 +56,10 @@ describe('ConflictResolver', () => {
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({}));
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({}));
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      storeConflict: jest.fn().mockResolvedValue(undefined),
-      storeResolvedConflict: jest.fn().mockResolvedValue(undefined),
-      getUnresolvedConflicts: jest.fn().mockResolvedValue([]),
-      getResolvedConflicts: jest.fn().mockResolvedValue([])
+      storeConflict: mockResolvedValue(undefined),
+      storeResolvedConflict: mockResolvedValue(undefined),
+      getUnresolvedConflicts: mockResolvedValue([]),
+      getResolvedConflicts: mockResolvedValue([])
     }));
 
     // Create instance with mocked dependencies

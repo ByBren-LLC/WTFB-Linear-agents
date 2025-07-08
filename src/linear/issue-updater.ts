@@ -105,7 +105,7 @@ export class LinearIssueUpdater {
       const existingLabelIds = labelsResponse.nodes.map((label: any) => label.id) || [];
 
       // Combine existing and new label IDs, removing duplicates
-      const updatedLabelIds = [...new Set([...existingLabelIds, ...labelIds])];
+      const updatedLabelIds = Array.from(new Set([...existingLabelIds, ...labelIds]));
 
       return this.updateLabels(issueId, updatedLabelIds);
     } catch (error) {
