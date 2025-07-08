@@ -9,6 +9,9 @@ import { Story, Feature, Epic, Enabler } from '../planning/models';
 import { DependencyGraph, WorkItem } from './dependency-types';
 import { ProgramIncrement } from '../safe/pi-model';
 
+// Re-export ProgramIncrement for test files
+export { ProgramIncrement };
+
 /**
  * Union type for work items that can be planned in iterations
  */
@@ -96,6 +99,14 @@ export interface AllocatedWorkItem {
   allocatedPoints: number;
   /** Whether this completes the work item */
   isComplete: boolean;
+  /** Estimated effort in hours */
+  estimatedEffort: number;
+  /** Dependencies that must be completed first */
+  dependencies: string[];
+  /** Risk level for this allocation */
+  riskLevel: 'low' | 'medium' | 'high';
+  /** Value contribution score (0-1) */
+  valueContribution: number;
   /** Allocation confidence (0-1) */
   confidence: number;
   /** Allocation rationale */
