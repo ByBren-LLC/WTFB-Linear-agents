@@ -487,13 +487,8 @@ function createMockStory(
     type: 'story',
     storyPoints,
     priority: 3,
-    parentId,
-    acceptanceCriteria: [`Given ${title}, when implemented, then ${description}`],
-    status: 'todo',
-    teamId: 'team-1',
-    tags: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    attributes: {},
+    acceptanceCriteria: [`Given ${title}, when implemented, then ${description}`]
   };
 }
 
@@ -508,14 +503,9 @@ function createMockFeature(
     title,
     description,
     type: 'feature',
-    parentId,
-    businessValue: 'High business value',
-    acceptanceCriteria: [`Feature ${title} provides ${description}`],
-    status: 'todo',
-    teamId: 'team-1',
-    tags: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    attributes: {},
+    stories: [],
+    enablers: []
   };
 }
 
