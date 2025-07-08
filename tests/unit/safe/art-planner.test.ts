@@ -28,6 +28,12 @@ describe('ARTPlanner', () => {
   let mockIterationAllocator: jest.Mocked<IterationAllocator>;
   let mockCapacityManager: jest.Mocked<CapacityManager>;
   let mockValidator: jest.Mocked<ARTValidator>;
+
+  // Shared test data
+  let mockPI: ProgramIncrement;
+  let mockWorkItems: PlanningWorkItem[];
+  let mockDependencies: any;
+  let mockTeams: ARTTeam[];
   let mockValueAnalyzer: jest.Mocked<ValueDeliveryAnalyzer>;
 
   beforeEach(() => {
@@ -89,7 +95,8 @@ describe('ARTPlanner', () => {
           title: 'Test Story 1',
           description: 'Test description',
           parentId: undefined,
-          attributes: {}
+          attributes: {},
+          acceptanceCriteria: ['Test criteria 1', 'Test criteria 2']
         }
       ];
 
@@ -129,8 +136,18 @@ describe('ARTPlanner', () => {
     it('should create ART plan with iterations', async () => {
       // Mock the allocator response
       mockIterationAllocator.allocateWorkItems.mockResolvedValue({
-        iterations: [],
-        unallocatedItems: []
+        allocated: [],
+        unallocated: [],
+        statistics: {
+          totalWorkItems: 0,
+          allocatedWorkItems: 0,
+          unallocatedWorkItems: 0,
+          totalStoryPoints: 0,
+          allocatedStoryPoints: 0,
+          averageCapacityUtilization: 0,
+          iterationCount: 0
+        },
+        issues: []
       });
 
       const result = await artPlanner.planART(

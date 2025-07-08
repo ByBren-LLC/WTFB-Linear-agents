@@ -5,6 +5,8 @@
  */
 
 import { ValueDeliveryAnalyzer } from '../../../src/safe/value-delivery-analyzer';
+import { IterationPlan, AllocatedWorkItem, PlanningWorkItem } from '../../../src/types/art-planning-types';
+import { createTestStory, createTestIterationPlan, createTestAllocatedWorkItem } from '../../helpers/test-data-factory';
 
 describe('ValueDeliveryAnalyzer Enhanced Tests', () => {
   let analyzer: ValueDeliveryAnalyzer;
@@ -149,26 +151,22 @@ describe('ValueDeliveryAnalyzer Enhanced Tests', () => {
           ]
         },
         allocatedWork: [
-          {
-            workItem: {
+          createTestAllocatedWorkItem(
+            createTestStory({
               id: 'story-1',
-              type: 'story',
               title: 'Test Story',
               description: 'A test story',
-              parentId: undefined,
-              attributes: {
-                storyPoints: 5,
-                priority: 1
-              }
-            },
-            assignedTeam: 'team-1',
-            allocatedPoints: 5,
-            isComplete: true,
-            confidence: 0.8,
-            rationale: 'Well-defined story',
-            blockedBy: [],
-            enables: []
-          }
+              storyPoints: 5,
+              priority: 1
+            }),
+            {
+              assignedTeam: 'team-1',
+              allocatedPoints: 5,
+              isComplete: true,
+              confidence: 0.8,
+              rationale: 'Well-defined story'
+            }
+          )
         ],
         totalPoints: 5,
         totalCapacity: 10,
