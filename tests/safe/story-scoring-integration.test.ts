@@ -250,7 +250,7 @@ describe('Story Scoring Integration', () => {
 
       // Step 3: Validate business value preservation
       const totalBusinessValue = scoringResult.scoredStories.reduce(
-        (sum, story) => sum + (story.businessValue * story.storyPoints), 
+        (sum, story) => sum + (story.businessValue * (story.storyPoints || 0)),
         0
       );
       
