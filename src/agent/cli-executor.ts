@@ -397,6 +397,10 @@ export class CLIExecutor {
           assignedTeam: item.team?.id || params.teamId || '',
           allocatedPoints: item.estimate || 0,
           isComplete: false,
+          estimatedEffort: (item.estimate || 0) * 8, // Convert points to hours
+          dependencies: [],
+          riskLevel: 'low' as const,
+          valueContribution: 0.7,
           confidence: 0.8,
           rationale: 'Allocated for value analysis',
           blockedBy: [],

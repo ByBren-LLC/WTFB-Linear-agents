@@ -274,6 +274,10 @@ export class IterationAllocator {
       assignedTeam: bestTeam,
       allocatedPoints: workItemPoints,
       isComplete: true,
+      estimatedEffort: workItemPoints * 8, // Convert points to hours
+      dependencies: prerequisites,
+      riskLevel: this.calculateRiskLevel(workItem, dependencies),
+      valueContribution: this.calculateValueContribution(workItem),
       confidence: this.calculateAllocationConfidence(workItem, earliestIteration.iteration, dependencies),
       rationale: this.generateAllocationRationale(workItem, earliestIteration.iteration, bestTeam),
       blockedBy: prerequisites,
@@ -549,6 +553,32 @@ export class IterationAllocator {
   ): string[] {
     // TODO: Implement capacity overrun detection
     return [];
+  }
+
+  /**
+   * Calculate risk level for work item allocation
+   */
+  private calculateRiskLevel(workItem: PlanningWorkItem, dependencies: DependencyGraph): 'low' | 'medium' | 'high' {
+    const dependencyCount = dependencies.edges.filter(edge => edge.targetId === workItem.id).length;
+    if (dependencyCount > 3) return 'high';
+    if (dependencyCount > 1) return 'medium';
+    return 'low';
+  }
+
+  /**
+   * Calculate value contribution for work item
+   */
+  private calculateValueContribution(workItem: PlanningWorkItem): number {
+    // Base value contribution based on work item type
+    const baseValue = workItem.type === 'story' ? 0.8 :
+                     workItem.type === 'feature' ? 0.9 :
+                     workItem.type === 'epic' ? 0.95 : 0.6;
+
+    // Adjust based on priority if available
+    const priority = workItem.type === 'story' ? (workItem as any).priority : undefined;
+    const priorityAdjustment = priority ? (5 - priority) * 0.05 : 0;
+
+    return Math.min(1.0, baseValue + priorityAdjustment);
   }
 }
 
