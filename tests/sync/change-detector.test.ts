@@ -4,6 +4,7 @@ import { ConfluenceClient } from '../../src/confluence/client';
 import { LinearClientWrapper } from '../../src/linear/client';
 import { SyncStore } from '../../src/sync/sync-store';
 import { PlanningExtractor } from '../../src/planning/extractor';
+import { mockResolvedValue, mockReturnValue, mockRejectedValue } from '../types/mock-types';
 
 // Mock dependencies
 jest.mock('../../src/confluence/client');
@@ -28,12 +29,12 @@ describe('ChangeDetector', () => {
 
     // Setup mock implementations
     (ConfluenceClient as jest.Mock).mockImplementation(() => ({
-      parsePageByUrl: jest.fn().mockResolvedValue({} as any),
-      parsePage: jest.fn().mockResolvedValue({} as any)
+      parsePageByUrl: mockResolvedValue({}),
+      parsePage: mockResolvedValue({})
     }));
 
     (LinearClientWrapper as jest.Mock).mockImplementation(() => ({
-      executeQuery: jest.fn().mockResolvedValue({
+      executeQuery: mockResolvedValue({
         nodes: [
           {
             id: 'issue-1',
@@ -52,15 +53,15 @@ describe('ChangeDetector', () => {
             labels: { nodes: [{ name: 'Feature' }] }
           }
         ]
-      } as any)
+      })
     }));
 
     (SyncStore as jest.Mock).mockImplementation(() => ({
-      getLastSyncTimestamp: jest.fn().mockResolvedValue(lastSyncTimestamp as any)
+      getLastSyncTimestamp: mockResolvedValue(lastSyncTimestamp)
     }));
 
     (PlanningExtractor as jest.Mock).mockImplementation(() => ({
-      getPlanningDocument: jest.fn().mockReturnValue({
+      getPlanningDocument: mockReturnValue({
         epics: [
           {
             id: 'epic-1',
@@ -168,7 +169,7 @@ describe('ChangeDetector', () => {
 
     it('should detect Confluence changes on first sync', async () => {
       // Arrange
-      (mockSyncStore.getLastSyncTimestamp as jest.Mock).mockResolvedValue(null as any);
+      mockSyncStore.getLastSyncTimestamp = mockResolvedValue(null);
 
       // Act
       const changes = await changeDetector.detectChanges(
@@ -207,7 +208,7 @@ describe('ChangeDetector', () => {
     it('should handle errors', async () => {
       // Arrange
       const error = new Error('Test error');
-      (mockLinearClient.executeQuery as jest.Mock).mockRejectedValue(error as any);
+      mockLinearClient.executeQuery = mockRejectedValue(error);
 
       // Act & Assert
       await expect(changeDetector.detectChanges(

@@ -159,7 +159,7 @@ export interface HealthMonitorConfig {
   /** Whether to send notifications */
   notificationsEnabled: boolean;
   /** Environment-specific settings */
-  environment: 'development' | 'staging' | 'production';
+  environment: 'development' | 'staging' | 'production' | 'test';
 }
 
 /**

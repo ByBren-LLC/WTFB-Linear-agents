@@ -8,6 +8,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { Epic, Feature, Story, Enabler, PlanningDocument } from '../../src/planning/models';
 
 // =============================================================================
 // CORE MOCK TYPES
@@ -66,6 +67,7 @@ export interface SafeStory {
   readonly title: string;
   readonly description: string;
   readonly featureId: string;
+  readonly acceptanceCriteria: string[];
   readonly attributes: Record<string, unknown>;
 }
 
@@ -77,6 +79,8 @@ export interface SafeEnabler {
   readonly type: 'enabler';
   readonly title: string;
   readonly description: string;
+  readonly enablerType: 'architecture' | 'infrastructure' | 'technical_debt' | 'research';
+  readonly acceptanceCriteria?: string[];
   readonly attributes: Record<string, unknown>;
 }
 
@@ -213,22 +217,91 @@ export interface SyncStore {
 // =============================================================================
 
 /**
- * Creates a properly typed mock function with resolved value
- */
-export function createMockResolvedValue<T>(value: T): AsyncMockFunction<any[], T> {
-  return jest.fn().mockResolvedValue(value) as AsyncMockFunction<any[], T>;
-}
-
-/**
- * Creates a properly typed mock function with rejected value
- */
-export function createMockRejectedValue(error: Error): AsyncMockFunction<any[], never> {
-  return jest.fn().mockRejectedValue(error) as AsyncMockFunction<any[], never>;
-}
-
-/**
  * Creates a properly typed mock function with return value
  */
 export function createMockReturnValue<T>(value: T): TypedMockFunction<any[], T> {
   return jest.fn().mockReturnValue(value) as TypedMockFunction<any[], T>;
+}
+
+// =============================================================================
+// TEST OBJECT FACTORIES
+// =============================================================================
+
+/**
+ * Creates a valid Epic object for testing
+ */
+export function createTestEpic(overrides: Partial<Epic> = {}): Epic {
+  return {
+    id: 'epic-test-1',
+    type: 'epic',
+    title: 'Test Epic',
+    description: 'Test epic description',
+    attributes: {},
+    features: [],
+    ...overrides
+  };
+}
+
+/**
+ * Creates a valid Feature object for testing
+ */
+export function createTestFeature(overrides: Partial<Feature> = {}): Feature {
+  return {
+    id: 'feature-test-1',
+    type: 'feature',
+    title: 'Test Feature',
+    description: 'Test feature description',
+    attributes: {},
+    stories: [],
+    enablers: [],
+    ...overrides
+  };
+}
+
+/**
+ * Creates a valid Story object for testing
+ */
+export function createTestStory(overrides: Partial<Story> = {}): Story {
+  return {
+    id: 'story-test-1',
+    type: 'story',
+    title: 'Test Story',
+    description: 'Test story description',
+    attributes: {},
+    acceptanceCriteria: ['Test acceptance criteria'],
+    storyPoints: 3,
+    priority: 2,
+    ...overrides
+  };
+}
+
+/**
+ * Creates a valid Enabler object for testing
+ */
+export function createTestEnabler(overrides: Partial<Enabler> = {}): Enabler {
+  return {
+    id: 'enabler-test-1',
+    type: 'enabler',
+    title: 'Test Enabler',
+    description: 'Test enabler description',
+    attributes: {},
+    enablerType: 'architecture',
+    acceptanceCriteria: ['Test enabler criteria'],
+    ...overrides
+  };
+}
+
+/**
+ * Creates a valid PlanningDocument object for testing
+ */
+export function createTestPlanningDocument(overrides: Partial<PlanningDocument> = {}): PlanningDocument {
+  return {
+    id: 'planning-doc-test-1',
+    title: 'Test Planning Document',
+    epics: [],
+    features: [],
+    stories: [],
+    enablers: [],
+    ...overrides
+  };
 }

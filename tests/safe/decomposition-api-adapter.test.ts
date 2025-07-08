@@ -30,14 +30,16 @@ describe('DecompositionAPIAdapter', () => {
 
   const sampleLargeStory: LargeStory = {
     id: 'story-123',
+    type: 'story',
     title: 'Implement user authentication system',
     description: 'Create a comprehensive user authentication system with login, registration, and password reset functionality',
     estimate: 8,
-    priority: 'High',
+    priority: 1,
     storyPoints: 8,
+    attributes: {},
     acceptanceCriteria: [
       'Users can register with email',
-      'Users can login with credentials', 
+      'Users can login with credentials',
       'Users can reset forgotten passwords'
     ]
   };
@@ -47,23 +49,29 @@ describe('DecompositionAPIAdapter', () => {
     subStories: [
       {
         id: 'story-123-1',
+        type: 'story',
         title: 'User Registration',
         description: 'Implement user registration functionality',
         storyPoints: 3,
+        attributes: {},
         acceptanceCriteria: ['Users can register with email']
       },
       {
-        id: 'story-123-2', 
+        id: 'story-123-2',
+        type: 'story',
         title: 'User Login',
         description: 'Implement user login functionality',
         storyPoints: 3,
+        attributes: {},
         acceptanceCriteria: ['Users can login with credentials']
       },
       {
         id: 'story-123-3',
+        type: 'story',
         title: 'Password Reset',
         description: 'Implement password reset functionality',
         storyPoints: 2,
+        attributes: {},
         acceptanceCriteria: ['Users can reset forgotten passwords']
       }
     ],
@@ -151,30 +159,42 @@ describe('DecompositionAPIAdapter', () => {
     const sampleDecomposedStories: DecomposedStory[] = [
       {
         id: 'story-123-1',
+        type: 'story',
         title: 'User Registration',
+        description: 'User registration functionality',
         parentStoryId: 'story-123',
         decompositionIndex: 0,
         originalStoryPoints: 8,
         businessValuePortion: 0.375,
-        storyPoints: 3
+        storyPoints: 3,
+        attributes: {},
+        acceptanceCriteria: ['Users can register with email']
       },
       {
         id: 'story-123-2',
-        title: 'User Login', 
+        type: 'story',
+        title: 'User Login',
+        description: 'User login functionality',
         parentStoryId: 'story-123',
         decompositionIndex: 1,
         originalStoryPoints: 8,
         businessValuePortion: 0.375,
-        storyPoints: 3
+        storyPoints: 3,
+        attributes: {},
+        acceptanceCriteria: ['Users can login with credentials']
       },
       {
         id: 'story-123-3',
+        type: 'story',
         title: 'Password Reset',
-        parentStoryId: 'story-123', 
+        description: 'Password reset functionality',
+        parentStoryId: 'story-123',
         decompositionIndex: 2,
         originalStoryPoints: 8,
         businessValuePortion: 0.25,
-        storyPoints: 2
+        storyPoints: 2,
+        attributes: {},
+        acceptanceCriteria: ['Users can reset forgotten passwords']
       }
     ];
 
@@ -271,10 +291,13 @@ describe('DecompositionAPIAdapter', () => {
   describe('getBusinessValueMapping', () => {
     const sampleStory: Story = {
       id: 'story-456',
+      type: 'story',
       title: 'Improve user interface performance',
       description: 'Optimize UI rendering to improve user experience and reduce customer complaints',
       storyPoints: 5,
-      priority: 'High'
+      priority: 1,
+      attributes: {},
+      acceptanceCriteria: ['UI performance is improved', 'User experience is enhanced']
     };
 
     it('should calculate business value mapping', async () => {

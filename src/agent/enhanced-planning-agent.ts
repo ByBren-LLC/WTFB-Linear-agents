@@ -325,6 +325,9 @@ export class EnhancedPlanningAgent {
     }
 
     const issue = await issueResponse.issue;
+    if (!issue) {
+      throw new Error('Failed to retrieve created issue');
+    }
 
     return {
       createdIssues: [{
